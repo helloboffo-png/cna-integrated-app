@@ -1,0 +1,618 @@
+<title>OT Builder Integration Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  /* ---- tokens: light is the base, both themes defined at token level ---- */
+  :root {
+    --paper:      #F2F3EF;
+    --surface:    #FBFBF9;
+    --ink:        #1C2126;
+    --ink-muted:  #6B7480;
+    --rule:       #D7DAD2;
+    --rule-soft:  #E6E8E2;
+    --stamp:      #C44026;
+    --stamp-soft: #F6E4DF;
+    --ledger:     #2E6F52;
+    --ledger-soft:#E2EFE7;
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #15191D;
+      --surface:    #1D2227;
+      --ink:        #E6E8E4;
+      --ink-muted:  #98A0A8;
+      --rule:       #2E353C;
+      --rule-soft:  #242A30;
+      --stamp:      #F0765A;
+      --stamp-soft: #3A211B;
+      --ledger:     #6FB08B;
+      --ledger-soft:#1C2E24;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #15191D;
+    --surface:    #1D2227;
+    --ink:        #E6E8E4;
+    --ink-muted:  #98A0A8;
+    --rule:       #2E353C;
+    --rule-soft:  #242A30;
+    --stamp:      #F0765A;
+    --stamp-soft: #3A211B;
+    --ledger:     #6FB08B;
+    --ledger-soft:#1C2E24;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 47rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 2.5rem) 5rem;
+  }
+
+  /* ---- masthead ---- */
+
+  .docket {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.4rem;
+    align-items: baseline;
+
+    padding-bottom: .7rem;
+    border-bottom: 2px solid var(--ink);
+
+    font-family: var(--mono);
+    font-size: .69rem;
+    font-weight: 500;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .docket b { color: var(--ink); font-weight: 600; }
+
+  h1 {
+    margin: 1.6rem 0 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(2.1rem, 6.2vw, 3.1rem);
+    line-height: 1.04;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    margin: .9rem 0 0;
+    font-size: 1.14rem;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    max-width: 34rem;
+  }
+
+  /* ---- section rhythm ---- */
+
+  section { margin-top: 3.4rem; }
+
+  h2 {
+    margin: 0 0 1.1rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--rule);
+
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.32rem;
+    letter-spacing: -.012em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    margin: 2rem 0 .5rem;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: -.005em;
+  }
+
+  p { margin: 0 0 1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  .lede { font-size: 1.06rem; }
+
+  strong { font-weight: 600; }
+
+  code, .num {
+    font-family: var(--mono);
+    font-size: .87em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  code {
+    padding: .1em .38em;
+    border-radius: 3px;
+    background: var(--rule-soft);
+    color: var(--ink);
+  }
+
+  /* ---- the stamp: used exactly once ---- */
+
+  .verdict {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.6rem;
+
+    margin: 1.4rem 0 0;
+    padding: 1.5rem 1.6rem;
+
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+
+  .stamp {
+    flex: 0 0 auto;
+    transform: rotate(-4.5deg);
+
+    padding: .55rem 1rem .5rem;
+    border: 2.5px solid var(--stamp);
+    border-radius: 3px;
+
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--stamp);
+    text-align: center;
+    line-height: 1.15;
+  }
+
+  .stamp span {
+    display: block;
+    font-family: var(--mono);
+    font-size: .58rem;
+    font-weight: 500;
+    letter-spacing: .16em;
+    margin-top: .2rem;
+    opacity: .82;
+  }
+
+  .verdict p {
+    flex: 1 1 15rem;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  /* ---- ledger table ---- */
+
+  .scroll { overflow-x: auto; margin-top: 1.1rem; }
+
+  table {
+    width: 100%;
+    min-width: 30rem;
+    border-collapse: collapse;
+    font-size: .93rem;
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: .6rem;
+    font-family: var(--mono);
+    font-size: .67rem;
+    font-weight: 500;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  th {
+    text-align: left;
+    padding: 0 .8rem .5rem 0;
+    border-bottom: 1.5px solid var(--ink);
+
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: .74rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: .62rem .8rem .62rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+
+  td:first-child { font-family: var(--mono); font-size: .84rem; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag {
+    display: inline-block;
+    padding: .16rem .5rem .12rem;
+    border-radius: 2px;
+
+    font-family: var(--mono);
+    font-size: .66rem;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tag-same  { background: var(--ledger-soft); color: var(--ledger); }
+  .tag-edit  { background: var(--stamp-soft);  color: var(--stamp); }
+
+  /* ---- checklist ---- */
+
+  ul.checks {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: .52rem;
+  }
+
+  ul.checks li {
+    display: grid;
+    grid-template-columns: 1.35rem 1fr;
+    gap: .55rem;
+    align-items: baseline;
+    font-size: .98rem;
+  }
+
+  ul.checks li::before {
+    content: "✓";
+    font-family: var(--mono);
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ledger);
+  }
+
+  .result {
+    font-family: var(--mono);
+    font-size: .86rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+
+  /* ---- ordered steps: a real sequence, so numbered ---- */
+
+  ol.steps {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: grid;
+    gap: 1.15rem;
+  }
+
+  ol.steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2.1rem 1fr;
+    gap: .8rem;
+  }
+
+  ol.steps li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--stamp);
+    padding-top: .22rem;
+  }
+
+  ol.steps p { margin: 0; }
+  ol.steps p + p { margin-top: .25rem; color: var(--ink-muted); font-size: .95rem; }
+
+  /* ---- callout for the one action needed ---- */
+
+  .action {
+    margin-top: 1.2rem;
+    padding: 1.25rem 1.4rem;
+    background: var(--stamp-soft);
+    border-left: 3px solid var(--stamp);
+  }
+
+  .action h3 { margin-top: 0; color: var(--stamp); }
+  .action p:last-child { margin-bottom: 0; }
+
+  /* ---- status note for what is not built yet ---- */
+
+  .pending {
+    margin-top: 1.1rem;
+    padding: 1.1rem 1.3rem;
+    background: var(--surface);
+    border: 1px dashed var(--rule);
+    font-size: .97rem;
+  }
+
+  .pending p:last-child { margin-bottom: 0; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--ink);
+
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  a { color: var(--stamp); text-underline-offset: .18em; }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="sheet">
+
+  <header>
+    <div class="docket">
+      <span>Source <b>v1.4-integration-ready</b></span>
+      <span>Host <b>CNA Integrated App</b></span>
+      <span>Stage <b>1 of 7</b></span>
+      <span>31 Aug 2026</span>
+    </div>
+
+    <h1>OT Builder is becoming a module</h1>
+
+    <p class="standfirst">
+      It now sits inside a container app alongside DOT.log. Its own code was not
+      rewritten, reorganised, or optimised. Here is exactly what moved and what
+      did not.
+    </p>
+  </header>
+
+  <section>
+    <h2>The short version</h2>
+
+    <p class="lede">
+      The container gives each app its own page rather than merging them into one.
+      OT Builder keeps its own document, its own stylesheet, its own bottom
+      navigation and its own web address. Nothing from DOT.log can reach it.
+    </p>
+
+    <p>
+      This was chosen over embedding because DOT.log styles the whole page rather
+      than scoping to a root element, and because both apps place a fixed
+      navigation bar at the bottom of the screen. Sharing one document would have
+      meant reworking OT Builder's styling to survive it. Separate pages avoid
+      that entirely.
+    </p>
+
+    <div class="verdict">
+      <div class="stamp">
+        Unchanged
+        <span>Verified by checksum</span>
+      </div>
+      <p>
+        <code>app.js</code>, <code>styles.css</code> and
+        <code>templates/Blank OT form.pdf</code> in the container are
+        byte-for-byte identical to the files at the source tag. The OT
+        calculations, PDF generation, signature handling and project storage were
+        not touched.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every change, in full</h2>
+
+    <p>
+      Two added lines in one file. That is the complete list — nothing else in the
+      OT Builder folder differs from what was handed over.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <caption>OT Builder folder · container copy vs source tag</caption>
+        <thead>
+          <tr>
+            <th scope="col">File</th>
+            <th scope="col">Status</th>
+            <th scope="col">What and why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>index.html</td>
+            <td><span class="tag tag-edit">2 lines</span></td>
+            <td>
+              A stylesheet link for the container's top bar, and the bar itself —
+              placed <strong>outside</strong> <code>#ot-form-builder</code>, so the
+              app's scoped styles and its <code>otRoot.querySelector</code> lookups
+              never see it.
+            </td>
+          </tr>
+          <tr>
+            <td>app.js</td>
+            <td><span class="tag tag-same">Identical</span></td>
+            <td>Not opened.</td>
+          </tr>
+          <tr>
+            <td>styles.css</td>
+            <td><span class="tag tag-same">Identical</span></td>
+            <td>Not opened.</td>
+          </tr>
+          <tr>
+            <td>templates/…pdf</td>
+            <td><span class="tag tag-same">Identical</span></td>
+            <td>Not opened.</td>
+          </tr>
+          <tr>
+            <td>icons/</td>
+            <td><span class="tag tag-same">Identical</span></td>
+            <td>Not opened.</td>
+          </tr>
+          <tr>
+            <td>manifest.json</td>
+            <td><span class="tag tag-same">Shipped, unused</span></td>
+            <td>
+              Present but not linked. The container declares one install identity
+              for the whole app, per your integration guide.
+            </td>
+          </tr>
+          <tr>
+            <td>sw.js</td>
+            <td><span class="tag tag-same">Shipped, unused</span></td>
+            <td>
+              Present but never registered. Your
+              <code>disableServiceWorkerCaching()</code> cleanup still matches only
+              this file, so it stays correct and finds nothing.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>What was tested after the move</h2>
+
+    <p>
+      Driven through a real three-day assignment, not smoke-tested. Every result
+      below was read back out of the app or its storage.
+    </p>
+
+    <ul class="checks">
+      <li>Date range generated the day rows <span class="result">3 days, calendar in sync</span></li>
+      <li>Shift suggestion from start time <span class="result">0800 → 1730, the 9.5 h shift</span></li>
+      <li>OT hours from OT start and end <span class="result">1730–2000 = 2.5 h</span></li>
+      <li>Meal break deducted <span class="result">same span less 0.5 h = 2 h</span></li>
+      <li>Transfer hours added <span class="result">2100–2230 = 1.5 h</span></li>
+      <li>Total across the assignment <span class="result">6 h, correct</span></li>
+      <li>Original Template PDF <span class="result">889 KB, saved to Files</span></li>
+      <li>Clean Table PDF <span class="result">10 KB, saved to Files</span></li>
+      <li>Both signature pads drew and rendered into the preview</li>
+      <li>Project saved to the device and read back with rows, totals and both signatures intact</li>
+      <li>Draft auto-saved, and offered to resume on reopening</li>
+      <li>Debug panel opened at <code>?otDebug=1</code></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Shipping an OT Builder update from now on</h2>
+
+    <p>
+      Update ownership stays split: DOT.log is maintained by Bruce, OT Builder by
+      you. The container is arranged so the two of you never edit the same file
+      and never need to coordinate a release.
+    </p>
+
+    <ol class="steps">
+      <li>
+        <p>Build and tag your release exactly as you do today.</p>
+        <p>Nothing about how you develop OT Builder changes.</p>
+      </li>
+      <li>
+        <p>Replace the contents of the container's <code>/ot/</code> folder.</p>
+        <p>Keep the two added lines in <code>index.html</code>, or re-add them.</p>
+      </li>
+      <li>
+        <p>Bump the version and file list in <code>/ot/version.json</code>.</p>
+        <p>
+          This is the only file that tells the container an update exists. It lives
+          in your folder, so shipping never touches anything shared.
+        </p>
+      </li>
+    </ol>
+
+    <p style="margin-top:1.4rem">
+      Users then see <strong>OT Builder — update ready</strong> on the container's
+      front page, with its own button. Pressing it refreshes your app only.
+      DOT.log's stored copy is not touched, and vice versa.
+    </p>
+
+    <div class="pending">
+      <p>
+        <strong>Not built yet.</strong> Stage 1 delivered the container and both
+        apps in their own pages. Offline support, the shared appearance switch and
+        the update system described above are stages 3 to 5. The
+        <code>version.json</code> contract is fixed, so you can add the file now.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>One thing needed from you</h2>
+
+    <div class="action">
+      <h3>The version number disagrees with itself</h3>
+      <p>
+        The folder is tagged <code>v1.4-integration-ready</code>, but
+        <code>APP_VERSION</code> in <code>app.js</code> still reads
+        <code>v1.3.0</code>, and that is what the debug panel reports.
+      </p>
+      <p>
+        The update system reads the version to decide what to show users, so this
+        should agree before stage 5. It was left alone deliberately — changing it
+        means editing <code>app.js</code>, which was out of scope here.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Facts worth carrying forward</h2>
+
+    <h3>Nothing about storage changed</h3>
+    <p>
+      <code>otFormBuilder.theme</code>, <code>otFormBuilder.draft</code> and the
+      <code>ot-form-builder-files</code> database are untouched and uncontested.
+      DOT.log uses entirely different keys and a different database, so there is no
+      shared state between the two apps and nothing to migrate.
+    </p>
+
+    <h3>Do not name a container cache <code>ot-form-builder-*</code></h3>
+    <p>
+      Your <code>disableServiceWorkerCaching()</code> deletes every cache key with
+      that prefix on load. A container cache using that name would erase its own
+      offline copy on every visit. The container's caches are named
+      <code>cna-ot-*</code> to stay clear of it — worth remembering if the cleanup
+      prefix ever widens.
+    </p>
+
+    <h3>The debug mode survives intact</h3>
+    <p>
+      Because OT Builder keeps its own address, <code>?otDebug=1</code> works
+      exactly as documented. That is the first thing to reach for if a user reports
+      a problem after the move.
+    </p>
+
+    <h3>The top bar is the container's, not yours</h3>
+    <p>
+      It is a fixed bar rather than a floating chip because a chip sat on top of the
+      OT Form Builder title. The bar reserves its own strip via a
+      <code>:has()</code> rule on <code>body</code>, so nothing in your layout is
+      covered, and your fixed bottom navigation is unaffected.
+    </p>
+  </section>
+
+  <footer>
+    CNA Integrated App · Stage 1 complete · Source tag v1.4-integration-ready
+  </footer>
+
+</div>
