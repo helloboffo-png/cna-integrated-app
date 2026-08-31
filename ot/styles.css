@@ -1,0 +1,2238 @@
+body.ot-form-builder-standalone {
+  margin: 0;
+}
+
+#ot-form-builder {
+  color-scheme: light;
+  --bg: #f6f7fb;
+  --panel: #ffffff;
+  --panel-soft: #f3f5fb;
+  --ink: #18202f;
+  --muted: #667085;
+  --line: #d9deea;
+  --line-strong: #a6b0c5;
+  --accent: #ff714d;
+  --accent-strong: #e65335;
+  --teal: #0f9f8f;
+  --blue: #6657e8;
+  --gold: #f5b942;
+  --danger: #c2412d;
+  --shadow: 0 20px 60px rgba(42, 53, 94, 0.16);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#ot-form-builder[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #16111f;
+  --panel: #211a30;
+  --panel-soft: #2b233d;
+  --ink: #f7f4ff;
+  --muted: #b7abc8;
+  --line: #514365;
+  --line-strong: #725c96;
+  --accent: #ff875a;
+  --accent-strong: #ff6f47;
+  --teal: #28d0c0;
+  --blue: #b18cff;
+  --danger: #ff8a75;
+  --shadow: 0 22px 58px rgba(7, 5, 12, 0.42);
+}
+
+#ot-form-builder,
+#ot-form-builder * {
+  box-sizing: border-box;
+}
+
+#ot-form-builder {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    linear-gradient(135deg, rgba(232, 93, 63, 0.16) 0%, rgba(15, 159, 143, 0.12) 44%, rgba(70, 88, 214, 0.12) 100%),
+    var(--bg);
+  color: var(--ink);
+}
+
+#ot-form-builder[data-theme="dark"] {
+  background:
+    radial-gradient(circle at 12% -8%, rgba(177, 140, 255, 0.26), transparent 34%),
+    radial-gradient(circle at 96% 8%, rgba(255, 135, 90, 0.18), transparent 28%),
+    linear-gradient(180deg, #20172f 0%, #171120 44%, #130f1a 100%),
+    var(--bg);
+}
+
+#ot-form-builder button,
+#ot-form-builder input,
+#ot-form-builder select {
+  font: inherit;
+}
+
+#ot-form-builder[data-theme="dark"] input,
+#ot-form-builder[data-theme="dark"] select {
+  border-color: rgba(154, 130, 196, 0.36);
+  background: rgba(19, 15, 29, 0.76);
+  color: var(--ink);
+}
+
+#ot-form-builder button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+#ot-form-builder button:disabled,
+#ot-form-builder input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+#ot-form-builder input[readonly] {
+  cursor: default;
+}
+
+#ot-form-builder input,
+#ot-form-builder select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0 11px;
+  outline: none;
+}
+
+#ot-form-builder input:focus,
+#ot-form-builder select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232, 93, 63, 0.16);
+}
+
+#ot-form-builder ::placeholder {
+  color: rgba(105, 115, 134, 0.42);
+}
+
+#ot-form-builder label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+#ot-form-builder .app-shell {
+  width: calc(100% - 16px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 12px 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+#ot-form-builder .hero {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+#ot-form-builder .eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#ot-form-builder h1,
+#ot-form-builder h2,
+#ot-form-builder p {
+  margin: 0;
+}
+
+#ot-form-builder h1 {
+  font-size: clamp(2.2rem, 4vw, 4.4rem);
+  line-height: 0.92;
+  letter-spacing: 0;
+}
+
+#ot-form-builder h2 {
+  font-size: 1.05rem;
+  letter-spacing: 0;
+}
+
+#ot-form-builder .hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#ot-form-builder .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+#ot-form-builder .project-message {
+  min-width: 132px;
+  color: var(--teal);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+#ot-form-builder .project-message.is-error {
+  color: var(--danger);
+}
+
+#ot-form-builder .project-message:empty {
+  display: none;
+}
+
+#ot-form-builder .total-pill {
+  min-width: 132px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 10px 14px;
+}
+
+#ot-form-builder .total-pill span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+#ot-form-builder .total-pill strong {
+  display: block;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+#ot-form-builder #dayCount[readonly] {
+  background: var(--panel-soft);
+  color: var(--muted);
+  opacity: 0.72;
+}
+
+#ot-form-builder[data-theme="dark"] #dayCount[readonly] {
+  background: rgba(19, 15, 29, 0.48);
+  color: var(--muted);
+}
+
+#ot-form-builder .primary-button {
+  background: linear-gradient(135deg, var(--accent), #f09849);
+  color: #fff;
+  padding: 0 18px;
+}
+
+#ot-form-builder .primary-button:hover {
+  background: linear-gradient(135deg, var(--accent-strong), #dc7c28);
+}
+
+#ot-form-builder .secondary-button {
+  border: 1px solid rgba(15, 159, 143, 0.35);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0 14px;
+}
+
+#ot-form-builder[data-theme="dark"] .secondary-button,
+#ot-form-builder[data-theme="dark"] .icon-toggle,
+#ot-form-builder[data-theme="dark"] .mini-button,
+#ot-form-builder[data-theme="dark"] .edge-toggle {
+  border-color: rgba(151, 122, 201, 0.38);
+  background: rgba(43, 35, 61, 0.88);
+  color: var(--ink);
+}
+
+#ot-form-builder .icon-toggle {
+  width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
+#ot-form-builder .secondary-button:hover {
+  border-color: var(--accent);
+}
+
+#ot-form-builder .app-view {
+  display: none;
+}
+
+#ot-form-builder .app-view.is-active {
+  display: block;
+}
+
+#ot-form-builder .draft-prompt[hidden],
+#ot-form-builder .mobile-sticky-actions,
+#ot-form-builder .mobile-bottom-nav {
+  display: none;
+}
+
+#ot-form-builder .draft-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(16, 20, 28, 0.48);
+}
+
+#ot-form-builder .draft-prompt-card {
+  width: min(100%, 420px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+#ot-form-builder .draft-prompt-card p {
+  color: var(--muted);
+}
+
+#ot-form-builder .draft-prompt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+#ot-form-builder .app-version {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+#ot-form-builder .ot-debug-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9999;
+  display: grid;
+  gap: 8px;
+  width: min(480px, calc(100vw - 24px));
+  max-height: min(58svh, 560px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 135, 90, 0.5);
+  border-radius: 10px;
+  background: rgba(18, 15, 26, 0.94);
+  color: #f8fafc;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  padding: 10px;
+  font-size: 12px;
+}
+
+#ot-form-builder .ot-debug-panel header,
+#ot-form-builder .ot-debug-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#ot-form-builder .ot-debug-panel header {
+  justify-content: space-between;
+}
+
+#ot-form-builder .ot-debug-panel button {
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+#ot-form-builder .ot-debug-summary {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 8px;
+  line-height: 1.35;
+}
+
+#ot-form-builder .ot-debug-summary div {
+  overflow-wrap: anywhere;
+}
+
+#ot-form-builder .ot-debug-log {
+  min-height: 120px;
+  max-height: 31svh;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #dbeafe;
+  margin: 0;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#ot-form-builder .ot-debug-panel.is-collapsed {
+  width: min(220px, calc(100vw - 24px));
+}
+
+#ot-form-builder .ot-debug-panel.is-collapsed .ot-debug-summary,
+#ot-form-builder .ot-debug-panel.is-collapsed .ot-debug-actions,
+#ot-form-builder .ot-debug-panel.is-collapsed .ot-debug-log {
+  display: none;
+}
+
+#ot-form-builder .workspace {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+#ot-form-builder .workspace.is-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#ot-form-builder .workspace.is-collapsed .setup-panel {
+  display: none;
+}
+
+#ot-form-builder .setup-panel,
+#ot-form-builder .sheet-panel,
+#ot-form-builder .preview-panel,
+#ot-form-builder .preview-side-panel,
+#ot-form-builder .preview-main-panel {
+  border: 1px solid rgba(145, 162, 170, 0.32);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: var(--shadow);
+}
+
+#ot-form-builder[data-theme="dark"] .total-pill,
+#ot-form-builder[data-theme="dark"] .setup-panel,
+#ot-form-builder[data-theme="dark"] .sheet-panel,
+#ot-form-builder[data-theme="dark"] .preview-side-panel,
+#ot-form-builder[data-theme="dark"] .preview-main-panel,
+#ot-form-builder[data-theme="dark"] .draft-prompt-card {
+  border-color: rgba(151, 122, 201, 0.38);
+  box-shadow:
+    0 18px 40px rgba(6, 4, 12, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#ot-form-builder[data-theme="dark"] .total-pill {
+  background:
+    linear-gradient(135deg, rgba(255, 135, 90, 0.1), rgba(177, 140, 255, 0.14)),
+    #211a30;
+}
+
+#ot-form-builder[data-theme="dark"] .setup-panel,
+#ot-form-builder[data-theme="dark"] .preview-side-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+    #241c34;
+}
+
+#ot-form-builder[data-theme="dark"] .sheet-panel,
+#ot-form-builder[data-theme="dark"] .preview-main-panel {
+  background:
+    linear-gradient(180deg, rgba(177, 140, 255, 0.055), transparent 42%),
+    #1b1627;
+}
+
+#ot-form-builder .setup-panel {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 16px;
+  overflow: auto;
+}
+
+#ot-form-builder .edge-toggle {
+  position: absolute;
+  left: 318px;
+  top: 50%;
+  z-index: 3;
+  width: 28px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 8px 22px rgba(42, 53, 94, 0.18);
+  transform: translateY(-50%);
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+#ot-form-builder .workspace.is-collapsed .edge-toggle {
+  left: 0;
+  transform: translate(-4px, -50%);
+}
+
+#ot-form-builder .calendar-spacer {
+  flex: 1 1 auto;
+  min-height: 10px;
+}
+
+#ot-form-builder .panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+#ot-form-builder .panel-header p {
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+#ot-form-builder .step-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: #ffe6de;
+  color: var(--accent-strong);
+  font-weight: 850;
+}
+
+#ot-form-builder[data-theme="dark"] .step-badge {
+  background: rgba(255, 135, 90, 0.16);
+  color: #ff9a73;
+}
+
+#ot-form-builder .role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px;
+  background: var(--panel-soft);
+}
+
+#ot-form-builder[data-theme="dark"] .role-toggle,
+#ot-form-builder[data-theme="dark"] .table-wrap,
+#ot-form-builder[data-theme="dark"] .form-preview {
+  border-color: rgba(151, 122, 201, 0.32);
+}
+
+#ot-form-builder[data-theme="dark"] .role-toggle {
+  background: rgba(19, 15, 29, 0.58);
+}
+
+#ot-form-builder .role-toggle button {
+  min-height: 38px;
+  background: transparent;
+  color: var(--muted);
+}
+
+#ot-form-builder .role-toggle button.is-active {
+  background: var(--teal);
+  color: #fff;
+}
+
+#ot-form-builder .date-builder {
+  display: grid;
+  gap: 10px;
+}
+
+#ot-form-builder .date-grid,
+#ot-form-builder .defaults {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+#ot-form-builder .date-grid label:first-child {
+  grid-column: 1 / -1;
+}
+
+#ot-form-builder .defaults {
+  grid-template-columns: 1fr 1fr;
+}
+
+#ot-form-builder .signature-block {
+  display: grid;
+  gap: 7px;
+}
+
+#ot-form-builder .signature-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+#ot-form-builder .mini-button {
+  min-height: 28px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  padding: 0 9px;
+  font-size: 0.72rem;
+}
+
+#ot-form-builder .signature-pad {
+  width: 100%;
+  height: 132px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(to bottom, transparent calc(100% - 18px), rgba(24, 32, 47, 0.2) calc(100% - 17px), transparent calc(100% - 16px)),
+    #fff;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#ot-form-builder[data-theme="dark"] .signature-pad {
+  background:
+    linear-gradient(to bottom, transparent calc(100% - 18px), rgba(237, 242, 255, 0.24) calc(100% - 17px), transparent calc(100% - 16px)),
+    #f8fbff;
+}
+
+#ot-form-builder .wide-button {
+  width: 100%;
+}
+
+#ot-form-builder .mini-calendar {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 96%, var(--panel-soft));
+  padding: 14px;
+  box-shadow: 0 -10px 24px color-mix(in srgb, var(--bg) 72%, transparent);
+  max-height: min(58vh, 620px);
+  overflow: auto;
+}
+
+#ot-form-builder .calendar-month + .calendar-month {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+#ot-form-builder .calendar-title {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+#ot-form-builder .calendar-nav {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#ot-form-builder .calendar-nav:hover {
+  border-color: var(--line-strong);
+  background: var(--panel);
+}
+
+#ot-form-builder .calendar-weekdays,
+#ot-form-builder .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+#ot-form-builder .calendar-weekdays {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+#ot-form-builder .calendar-day {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid transparent;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 0;
+}
+
+#ot-form-builder .calendar-day.is-outside {
+  color: color-mix(in srgb, var(--muted) 68%, transparent);
+}
+
+#ot-form-builder .calendar-day:hover {
+  border-color: var(--line-strong);
+  background: var(--panel-soft);
+}
+
+#ot-form-builder .calendar-day.is-selected {
+  border-color: color-mix(in srgb, var(--teal) 42%, var(--line));
+  background: color-mix(in srgb, var(--teal) 16%, var(--panel));
+  color: var(--ink);
+}
+
+#ot-form-builder .calendar-day.is-start,
+#ot-form-builder .calendar-day.is-end {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+#ot-form-builder[data-theme="dark"] .mini-calendar {
+  background:
+    linear-gradient(180deg, rgba(177, 140, 255, 0.08), transparent 48%),
+    #211a30;
+  border-color: rgba(151, 122, 201, 0.4);
+  box-shadow: 0 -12px 28px rgba(6, 4, 12, 0.34);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-title,
+#ot-form-builder[data-theme="dark"] .calendar-day {
+  color: var(--ink);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-weekdays {
+  color: var(--muted);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-day:hover {
+  background: rgba(177, 140, 255, 0.16);
+  border-color: rgba(177, 140, 255, 0.48);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-nav {
+  background: rgba(43, 35, 61, 0.88);
+  border-color: rgba(151, 122, 201, 0.38);
+  color: var(--ink);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-nav:hover {
+  background: rgba(177, 140, 255, 0.18);
+  border-color: rgba(177, 140, 255, 0.54);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-day.is-selected {
+  background: rgba(177, 140, 255, 0.2);
+  border-color: rgba(177, 140, 255, 0.62);
+  color: var(--ink);
+}
+
+#ot-form-builder[data-theme="dark"] .calendar-day.is-start,
+#ot-form-builder[data-theme="dark"] .calendar-day.is-end {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1022;
+}
+
+#ot-form-builder .sheet-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+#ot-form-builder .sheet-heading {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+#ot-form-builder .sheet-heading > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: start;
+}
+
+#ot-form-builder .sheet-heading p {
+  grid-column: 2;
+}
+
+#ot-form-builder .sheet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#ot-form-builder .table-wrap {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+#ot-form-builder .mobile-details-toggle,
+#ot-form-builder .mobile-entry-cards,
+#ot-form-builder .mobile-collapse-all {
+  display: none;
+}
+
+#ot-form-builder .entry-table {
+  width: 100%;
+  min-width: 1320px;
+  border-collapse: collapse;
+  background: var(--panel);
+}
+
+#ot-form-builder .entry-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 44px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+#ot-form-builder .entry-table td {
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  padding: 7px;
+  vertical-align: middle;
+}
+
+#ot-form-builder .entry-table td:first-child,
+#ot-form-builder .entry-table th:first-child {
+  width: 48px;
+  text-align: center;
+}
+
+#ot-form-builder .entry-table input,
+#ot-form-builder .entry-table select {
+  height: 36px;
+  border-color: transparent;
+  background: var(--panel-soft);
+  text-align: center;
+}
+
+#ot-form-builder[data-theme="dark"] .entry-table input,
+#ot-form-builder[data-theme="dark"] .entry-table select {
+  background: rgba(19, 15, 29, 0.78);
+}
+
+#ot-form-builder[data-theme="dark"] .entry-table {
+  background: #1b1627;
+}
+
+#ot-form-builder[data-theme="dark"] .entry-table th {
+  background: #2b233d;
+  border-bottom-color: rgba(151, 122, 201, 0.48);
+}
+
+#ot-form-builder[data-theme="dark"] .entry-table td {
+  border-color: rgba(151, 122, 201, 0.22);
+}
+
+#ot-form-builder[data-theme="dark"] .calc-cell input {
+  background: rgba(177, 140, 255, 0.12);
+  color: var(--blue);
+}
+
+#ot-form-builder .entry-table .col-no {
+  width: 48px;
+}
+
+#ot-form-builder .entry-table .col-day {
+  width: 116px;
+}
+
+#ot-form-builder .entry-table .col-date {
+  width: 108px;
+}
+
+#ot-form-builder .entry-table .col-time {
+  width: 92px;
+}
+
+#ot-form-builder .entry-table .col-time-small {
+  width: 82px;
+}
+
+#ot-form-builder .entry-table .col-meal {
+  width: 72px;
+}
+
+#ot-form-builder .entry-table .col-transfer {
+  width: 100px;
+}
+
+#ot-form-builder .entry-table .col-ot {
+  width: 82px;
+}
+
+#ot-form-builder .entry-table .col-off {
+  width: 110px;
+}
+
+#ot-form-builder .entry-table .col-remarks {
+  width: 150px;
+}
+
+#ot-form-builder .entry-table .col-delete {
+  width: 50px;
+}
+
+#ot-form-builder .entry-table input[data-field="remarks"] {
+  text-align: left;
+}
+
+#ot-form-builder .day-cell {
+  text-align: center;
+}
+
+#ot-form-builder .day-cell select {
+  color: var(--blue);
+  font-weight: 850;
+}
+
+#ot-form-builder .readonly-day {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  font-weight: 850;
+}
+
+#ot-form-builder .calc-cell {
+  min-width: 76px;
+}
+
+#ot-form-builder .calc-cell input {
+  background: #eef1fb;
+  color: var(--blue);
+  font-weight: 850;
+}
+
+#ot-form-builder .calc-cell input[readonly] {
+  cursor: default;
+}
+
+#ot-form-builder .entry-table td.has-warning {
+  vertical-align: top;
+}
+
+#ot-form-builder .entry-table td.has-warning input {
+  border-color: rgba(194, 65, 45, 0.55);
+  background: #fff5f3;
+  color: var(--danger);
+}
+
+#ot-form-builder .field-warning {
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: left;
+}
+
+#ot-form-builder .delete-row {
+  width: 36px;
+  min-height: 36px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--danger);
+}
+
+#ot-form-builder .delete-row:hover {
+  border-color: rgba(180, 35, 24, 0.28);
+  background: #fff5f3;
+}
+
+#ot-form-builder .form-preview {
+  margin-top: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 14px;
+}
+
+#ot-form-builder .preview-page {
+  min-height: 0;
+}
+
+#ot-form-builder .files-panel {
+  border: 1px solid rgba(145, 162, 170, 0.32);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+#ot-form-builder .files-list {
+  display: grid;
+  gap: 10px;
+}
+
+#ot-form-builder .files-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 5px;
+}
+
+#ot-form-builder .files-tabs button {
+  min-height: 38px;
+  background: transparent;
+  color: var(--muted);
+}
+
+#ot-form-builder .files-tabs button.is-active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+#ot-form-builder .files-section {
+  display: none;
+}
+
+#ot-form-builder .files-section.is-active {
+  display: grid;
+  gap: 10px;
+}
+
+#ot-form-builder .project-tools {
+  display: grid;
+  gap: 10px;
+}
+
+#ot-form-builder .file-card,
+#ot-form-builder .files-empty {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+#ot-form-builder .file-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+#ot-form-builder .file-card h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  overflow-wrap: anywhere;
+}
+
+#ot-form-builder .file-card p,
+#ot-form-builder .file-card span,
+#ot-form-builder .files-empty span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+#ot-form-builder .file-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#ot-form-builder .danger-button {
+  color: var(--danger);
+}
+
+#ot-form-builder .confirm-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: 18px 12px calc(18px + env(safe-area-inset-bottom));
+  background: rgba(16, 20, 28, 0.46);
+}
+
+#ot-form-builder .confirm-card {
+  width: min(100%, 420px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+#ot-form-builder .confirm-card h2 {
+  font-size: 1rem;
+}
+
+#ot-form-builder .confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+#ot-form-builder .danger-confirm {
+  background: linear-gradient(135deg, var(--danger), #f09849);
+}
+
+#ot-form-builder .preview-workspace {
+  min-height: calc(100vh - 128px);
+  display: grid;
+  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+#ot-form-builder .preview-side-panel {
+  align-self: stretch;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+}
+
+#ot-form-builder .preview-main-panel {
+  min-width: 0;
+  padding: 14px;
+}
+
+#ot-form-builder .preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+#ot-form-builder .preview-toolbar p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+#ot-form-builder .preview-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#ot-form-builder .preview-page .form-preview {
+  max-height: none;
+  min-height: calc(100vh - 170px);
+}
+
+#ot-form-builder .paper {
+  width: 1188px;
+  min-height: 840px;
+  background: #fff;
+  border: 1px solid #1e1e1e;
+  color: #111;
+  padding: 36px 28px 28px;
+  font-family: Arial, Helvetica, sans-serif;
+  transform-origin: top left;
+}
+
+#ot-form-builder .preview-signature {
+  width: 100%;
+  height: 24px;
+  display: block;
+  overflow: visible;
+}
+
+#ot-form-builder .preview-signature path {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#ot-form-builder .bottom-signature {
+  height: 24px;
+  margin-top: 0;
+}
+
+#ot-form-builder .pdf-table .preview-signature {
+  max-width: 92%;
+  margin: 0 auto;
+}
+
+#ot-form-builder .sig-line span:last-child .preview-signature {
+  height: 22px;
+  margin-bottom: 3px;
+}
+
+#ot-form-builder .paper-top {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+#ot-form-builder .paper-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+  font-size: 19px;
+}
+
+#ot-form-builder .paper-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+#ot-form-builder .paper-line span:last-child {
+  min-height: 25px;
+  border-bottom: 2px solid #111;
+  color: var(--blue);
+  text-align: center;
+  font-weight: 600;
+}
+
+#ot-form-builder .pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+#ot-form-builder .pdf-table th,
+#ot-form-builder .pdf-table td {
+  border: 2px solid #111;
+  height: 39px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 3px;
+}
+
+#ot-form-builder .pdf-table th {
+  background: #d8d8d8;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+#ot-form-builder .pdf-table .subhead th {
+  background: #d8d8d8;
+  height: 28px;
+}
+
+#ot-form-builder .pdf-table .signature-header {
+  font-size: 11px;
+}
+
+#ot-form-builder .pdf-table td {
+  color: var(--blue);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+#ot-form-builder .pdf-table .remarks-cell {
+  color: var(--blue);
+}
+
+#ot-form-builder .total-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 72px 72px 284px;
+  align-items: stretch;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+#ot-form-builder .total-row div {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+}
+
+#ot-form-builder .total-row .total-box {
+  border: 2px solid #111;
+  border-top: 0;
+  color: var(--blue);
+  font-size: 18px;
+}
+
+#ot-form-builder .signatures {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 800;
+}
+
+#ot-form-builder .sig-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+#ot-form-builder .sig-line span:last-child {
+  min-height: 28px;
+  border-bottom: 2px solid #111;
+  color: var(--blue);
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  #ot-form-builder .app-shell {
+    min-height: 100vh;
+    grid-template-rows: auto auto;
+  }
+
+  #ot-form-builder .hero {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+    gap: 10px;
+  }
+
+  #ot-form-builder .hero-actions {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  #ot-form-builder .preview-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #ot-form-builder .workspace {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  #ot-form-builder .workspace.is-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  #ot-form-builder .edge-toggle {
+    display: none;
+  }
+
+  #ot-form-builder .setup-panel {
+    min-height: auto;
+    grid-template-rows: none;
+    overflow: visible;
+  }
+
+  #ot-form-builder .sheet-panel {
+    min-height: min(640px, calc(100vh - 24px));
+  }
+
+  #ot-form-builder .sheet-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #ot-form-builder .sheet-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  #ot-form-builder .sheet-actions button {
+    flex: 1 1 160px;
+  }
+
+  #ot-form-builder .preview-workspace {
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  #ot-form-builder .preview-side-panel {
+    order: 1;
+  }
+
+  #ot-form-builder .preview-main-panel {
+    order: 2;
+    min-height: min(640px, calc(100vh - 24px));
+  }
+}
+
+@media (max-width: 620px) {
+  #ot-form-builder .app-shell {
+    width: calc(100% - 12px);
+    padding-top: 10px;
+    padding-bottom: calc(178px + env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  #ot-form-builder .hero {
+    position: sticky;
+    top: env(safe-area-inset-top);
+    z-index: 18;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin-inline: -6px;
+    padding: 10px 6px 12px;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, transparent), color-mix(in srgb, var(--bg) 82%, transparent));
+    backdrop-filter: blur(16px);
+  }
+
+  #ot-form-builder.is-files-view .hero {
+    display: none;
+  }
+
+  #ot-form-builder .hero > div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-right: 54px;
+  }
+
+  #ot-form-builder h1 {
+    order: 1;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  #ot-form-builder .eyebrow {
+    order: 2;
+    margin-top: 6px;
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+  }
+
+  #ot-form-builder .hero-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+    transition: gap 180ms ease;
+  }
+
+  #ot-form-builder .total-pill {
+    order: 1;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    border-color: color-mix(in srgb, var(--line) 55%, transparent);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--teal) 11%, transparent), color-mix(in srgb, var(--blue) 8%, transparent)),
+      var(--panel);
+    padding: 13px 14px;
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--ink) 8%, transparent);
+    max-height: 86px;
+    overflow: hidden;
+    transform: translateY(0);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      max-height 180ms ease,
+      padding 180ms ease,
+      border-color 180ms ease;
+  }
+
+  #ot-form-builder.is-summary-hidden .hero-actions {
+    gap: 0;
+  }
+
+  #ot-form-builder.is-summary-hidden .total-pill {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+  }
+
+  #ot-form-builder .total-pill span {
+    font-size: 0.68rem;
+  }
+
+  #ot-form-builder .total-pill strong {
+    margin-top: 3px;
+    font-size: 1.7rem;
+  }
+
+  #ot-form-builder #totalOt::after {
+    content: " hrs";
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--muted);
+  }
+
+  #ot-form-builder #themeToggle {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    width: 42px;
+    height: 44px;
+    min-height: 42px;
+    border-color: color-mix(in srgb, var(--line) 60%, transparent);
+    background: color-mix(in srgb, var(--panel) 84%, var(--panel-soft));
+    box-shadow: none;
+  }
+
+  #ot-form-builder #saveProject,
+  #ot-form-builder #loadProject,
+  #ot-form-builder #clearDraft {
+    display: none;
+  }
+
+  #ot-form-builder #openPreview {
+    display: none;
+  }
+
+  #ot-form-builder #openPreview.is-back-action {
+    border-color: color-mix(in srgb, var(--line) 65%, transparent);
+    background: color-mix(in srgb, var(--panel) 88%, var(--panel-soft));
+    color: var(--ink);
+    box-shadow: none;
+  }
+
+  #ot-form-builder #openPreview,
+  #ot-form-builder .project-message {
+    width: 100%;
+  }
+
+  #ot-form-builder .project-message {
+    order: 5;
+    flex: 1 0 100%;
+    min-width: 0;
+    min-height: 18px;
+  }
+
+  #ot-form-builder button {
+    min-height: 40px;
+  }
+
+  #ot-form-builder .primary-button,
+  #ot-form-builder .secondary-button {
+    width: 100%;
+    padding: 0 12px;
+  }
+
+  #ot-form-builder .date-builder,
+  #ot-form-builder .date-grid,
+  #ot-form-builder .defaults {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  #ot-form-builder .setup-panel,
+  #ot-form-builder .sheet-panel,
+  #ot-form-builder .preview-side-panel,
+  #ot-form-builder .preview-main-panel {
+    width: 100%;
+    min-width: 0;
+    border-color: color-mix(in srgb, var(--line) 58%, transparent);
+    background: color-mix(in srgb, var(--panel) 94%, var(--panel-soft));
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--ink) 7%, transparent);
+    padding: 14px;
+  }
+
+  #ot-form-builder .setup-panel {
+    gap: 10px;
+  }
+
+  #ot-form-builder .mobile-details-toggle {
+    width: 34px;
+    min-height: 34px;
+    margin-left: auto;
+    border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    background: var(--panel-soft);
+    color: var(--ink);
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    font-size: 1rem;
+  }
+
+  #ot-form-builder .setup-panel.is-mobile-collapsed > :not(.panel-header) {
+    display: none;
+  }
+
+  #ot-form-builder .sheet-panel,
+  #ot-form-builder .preview-main-panel {
+    min-height: 0;
+  }
+
+  #ot-form-builder .sheet-heading {
+    position: relative;
+    padding-right: 46px;
+  }
+
+  #ot-form-builder .panel-header p {
+    font-size: 0.82rem;
+  }
+
+  #ot-form-builder .step-badge {
+    background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  }
+
+  #ot-form-builder label,
+  #ot-form-builder .date-builder,
+  #ot-form-builder .date-grid,
+  #ot-form-builder .defaults {
+    min-width: 0;
+  }
+
+  #ot-form-builder .date-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #ot-form-builder .date-grid label:first-child {
+    grid-column: auto;
+  }
+
+  #ot-form-builder .date-grid label:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  #ot-form-builder input,
+  #ot-form-builder select,
+  #ot-form-builder textarea {
+    height: 40px;
+    font-size: 16px;
+    border-color: color-mix(in srgb, var(--line) 55%, transparent);
+    background: color-mix(in srgb, var(--panel-soft) 78%, var(--panel));
+    padding-inline: 9px;
+  }
+
+  #ot-form-builder input[type="date"] {
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  #ot-form-builder .table-wrap {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-entry-cards {
+    display: grid;
+    gap: 10px;
+    padding-bottom: calc(152px + env(safe-area-inset-bottom));
+  }
+
+  #ot-form-builder .mobile-add-day {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    color: var(--ink);
+  }
+
+  #ot-form-builder .mobile-add-day[hidden] {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-collapse-all {
+    display: inline-grid;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 34px;
+    min-height: 34px;
+    border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    border-radius: 8px;
+    place-items: center;
+    background: var(--panel-soft);
+    color: var(--ink);
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  #ot-form-builder .mobile-entry-card {
+    border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--panel) 96%, var(--panel-soft));
+    padding: 14px;
+    display: grid;
+    gap: 13px;
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+
+  #ot-form-builder .mobile-entry-card.is-collapsed {
+    border-color: color-mix(in srgb, var(--line) 42%, transparent);
+    background: color-mix(in srgb, var(--panel-soft) 84%, var(--panel));
+    padding-block: 12px;
+    gap: 10px;
+    box-shadow: 0 5px 16px color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+
+  #ot-form-builder .mobile-entry-card.is-locked {
+    border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
+      color-mix(in srgb, var(--panel) 94%, var(--panel-soft));
+    box-shadow:
+      0 10px 24px color-mix(in srgb, var(--accent) 10%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
+  #ot-form-builder .mobile-entry-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px 40px 40px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #ot-form-builder .mobile-card-toggle {
+    grid-column: 1 / 3;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  #ot-form-builder .mobile-card-title {
+    display: block;
+    min-width: 0;
+  }
+
+  #ot-form-builder .mobile-card-title span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  #ot-form-builder .mobile-card-title strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink);
+    font-size: 1rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #ot-form-builder .mobile-card-toggle b {
+    display: inline-grid;
+    width: 34px;
+    min-height: 34px;
+    border-radius: 999px;
+    place-items: center;
+    background: color-mix(in srgb, var(--accent) 92%, white);
+    color: white;
+    font-size: 1.14rem;
+    font-weight: 900;
+    line-height: 1;
+    vertical-align: middle;
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+
+  #ot-form-builder .mobile-lock-row,
+  #ot-form-builder .mobile-entry-card-header .mobile-delete-row {
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    line-height: 1;
+  }
+
+  #ot-form-builder .mobile-lock-row {
+    border: 1px solid color-mix(in srgb, var(--blue) 32%, transparent);
+    background: color-mix(in srgb, var(--blue) 9%, var(--panel));
+    color: var(--blue);
+    font-size: 1rem;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  #ot-form-builder .mobile-lock-row span {
+    transform: translateY(-1px);
+  }
+
+  #ot-form-builder .mobile-lock-row.is-active {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: linear-gradient(135deg, var(--accent), #f09849);
+    color: #fff;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+
+  #ot-form-builder .mobile-lock-row:disabled {
+    border-color: color-mix(in srgb, var(--line) 42%, transparent);
+    background: color-mix(in srgb, var(--panel-soft) 72%, transparent);
+    color: var(--muted);
+    opacity: 0.42;
+  }
+
+  #ot-form-builder .locked-badge {
+    justify-self: start;
+    margin-top: -4px;
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+    color: var(--accent-strong);
+    padding: 4px 9px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-card-toggle b {
+    color: #111827;
+  }
+
+  #ot-form-builder .mobile-entry-card-header .mobile-delete-row {
+    border: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+    background: color-mix(in srgb, var(--danger) 5%, transparent);
+    color: var(--danger);
+    font-size: 1.15rem;
+  }
+
+  #ot-form-builder .mobile-entry-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 11px 10px;
+  }
+
+  #ot-form-builder .mobile-meal-field {
+    grid-column: 1;
+  }
+
+  #ot-form-builder .mobile-offrest-field {
+    grid-column: 2;
+  }
+
+  #ot-form-builder .mobile-entry-full,
+  #ot-form-builder .mobile-entry-grid .has-warning {
+    grid-column: 1 / -1;
+  }
+
+  #ot-form-builder .mobile-entry-card.is-collapsed .mobile-entry-grid {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-entry-totals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  #ot-form-builder .mobile-entry-totals span {
+    border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    border-radius: 8px;
+    background: var(--panel-soft);
+    padding: 8px;
+  }
+
+  #ot-form-builder .mobile-entry-totals strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--blue);
+    font-size: 1rem;
+  }
+
+  #ot-form-builder .mobile-entry-total {
+    grid-column: 1 / -1;
+  }
+
+  #ot-form-builder .signature-pad {
+    height: 190px;
+  }
+
+  #ot-form-builder .preview-side-panel {
+    gap: 14px;
+    padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+
+  #ot-form-builder .preview-side-panel .preview-actions {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-sticky-actions {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+    padding: 8px;
+    backdrop-filter: blur(14px);
+  }
+
+  #ot-form-builder .mobile-sticky-actions.is-hidden {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-sticky-actions button {
+    min-height: 44px;
+  }
+
+  #ot-form-builder .mobile-sticky-actions #stickyBack,
+  #ot-form-builder .mobile-sticky-actions #stickyDownload {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-sticky-actions.is-preview {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #ot-form-builder .mobile-sticky-actions.is-preview #stickyPreview {
+    display: none;
+  }
+
+  #ot-form-builder .mobile-sticky-actions.is-preview #stickyBack,
+  #ot-form-builder .mobile-sticky-actions.is-preview #stickyDownload {
+    display: block;
+  }
+
+  #ot-form-builder .mobile-bottom-nav {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 21;
+    width: min(360px, calc(100% - 32px));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--line) 48%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    box-shadow:
+      0 18px 44px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    padding: 8px;
+    transform: translateX(-50%);
+    backdrop-filter: blur(16px);
+  }
+
+  #ot-form-builder .mobile-bottom-nav button {
+    min-height: 50px;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  #ot-form-builder .mobile-bottom-nav button span {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  #ot-form-builder .mobile-bottom-nav button strong {
+    font-size: 0.72rem;
+  }
+
+  #ot-form-builder .mobile-bottom-nav button.is-active {
+    border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--blue) 8%, transparent)),
+      color-mix(in srgb, var(--panel) 92%, transparent);
+    color: var(--ink);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+
+  #ot-form-builder .app-version {
+    position: static;
+    margin: -4px 6px calc(104px + env(safe-area-inset-bottom));
+    text-align: right;
+  }
+
+  #ot-form-builder .preview-actions .primary-button {
+    min-height: 44px;
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  #ot-form-builder .form-preview {
+    padding: 8px;
+  }
+
+  #ot-form-builder .preview-page .form-preview {
+    min-height: 45vh;
+    max-height: calc(100svh - 190px);
+  }
+
+  #ot-form-builder .preview-main-panel {
+    display: none;
+  }
+
+  #ot-form-builder .files-page {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  }
+
+  #ot-form-builder .files-panel {
+    padding: 14px;
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+
+  #ot-form-builder .file-card {
+    grid-template-columns: 1fr;
+  }
+
+  #ot-form-builder .file-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+  }
+
+  #ot-form-builder .file-actions button {
+    width: 100%;
+  }
+
+  #ot-form-builder .file-actions .danger-button {
+    grid-column: 1 / -1;
+  }
+
+  #ot-form-builder[data-theme="dark"] .total-pill,
+  #ot-form-builder[data-theme="dark"] .setup-panel,
+  #ot-form-builder[data-theme="dark"] .sheet-panel,
+  #ot-form-builder[data-theme="dark"] .preview-side-panel,
+  #ot-form-builder[data-theme="dark"] .preview-main-panel,
+  #ot-form-builder[data-theme="dark"] .mobile-entry-card {
+    border-color: rgba(151, 122, 201, 0.34);
+    box-shadow:
+      0 14px 30px rgba(6, 4, 12, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  #ot-form-builder[data-theme="dark"] .total-pill {
+    background:
+      linear-gradient(135deg, rgba(255, 135, 90, 0.13), rgba(177, 140, 255, 0.17)),
+      #251d35;
+  }
+
+  #ot-form-builder[data-theme="dark"] .setup-panel,
+  #ot-form-builder[data-theme="dark"] .preview-side-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+      #261e36;
+  }
+
+  #ot-form-builder[data-theme="dark"] .sheet-panel,
+  #ot-form-builder[data-theme="dark"] .preview-main-panel {
+    background:
+      linear-gradient(180deg, rgba(177, 140, 255, 0.06), transparent 46%),
+      #1a1525;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-entry-card {
+    border-color: rgba(151, 122, 201, 0.42);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 36%),
+      #241c34;
+  }
+
+  #ot-form-builder[data-theme="dark"] input,
+  #ot-form-builder[data-theme="dark"] select {
+    border-color: rgba(151, 122, 201, 0.34);
+    background: rgba(19, 15, 29, 0.82);
+  }
+
+  #ot-form-builder[data-theme="dark"] #themeToggle,
+  #ot-form-builder[data-theme="dark"] #saveProject,
+  #ot-form-builder[data-theme="dark"] #loadProject,
+  #ot-form-builder[data-theme="dark"] #clearDraft,
+  #ot-form-builder[data-theme="dark"] .mobile-collapse-all,
+  #ot-form-builder[data-theme="dark"] .mobile-sticky-actions,
+  #ot-form-builder[data-theme="dark"] .mobile-bottom-nav,
+  #ot-form-builder[data-theme="dark"] .mobile-entry-totals span {
+    border-color: rgba(151, 122, 201, 0.38);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+      rgba(43, 35, 61, 0.9);
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-entry-totals span {
+    background: rgba(19, 15, 29, 0.52);
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-entry-card.is-collapsed {
+    border-color: rgba(151, 122, 201, 0.28);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 34%),
+      #1f192c;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-entry-card.is-locked {
+    border-color: rgba(255, 135, 90, 0.58);
+    background:
+      linear-gradient(135deg, rgba(255, 135, 90, 0.12), transparent 48%),
+      #241c34;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-lock-row,
+  #ot-form-builder[data-theme="dark"] .mobile-add-day {
+    border-color: rgba(177, 140, 255, 0.38);
+    background: rgba(177, 140, 255, 0.12);
+    color: var(--blue);
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-lock-row.is-active {
+    border-color: rgba(255, 135, 90, 0.66);
+    background: linear-gradient(135deg, var(--accent), #f09849);
+    color: #fff;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-lock-row:disabled {
+    border-color: rgba(151, 122, 201, 0.22);
+    background: rgba(43, 35, 61, 0.42);
+    color: rgba(183, 171, 200, 0.72);
+  }
+
+  #ot-form-builder[data-theme="dark"] .locked-badge {
+    border-color: rgba(255, 135, 90, 0.44);
+    background: rgba(255, 135, 90, 0.13);
+    color: #ffb08f;
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-sticky-actions {
+    background: rgba(33, 26, 48, 0.9);
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-bottom-nav {
+    border-color: rgba(151, 122, 201, 0.32);
+    background: rgba(33, 26, 48, 0.78);
+    box-shadow:
+      0 18px 44px rgba(6, 4, 12, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  #ot-form-builder[data-theme="dark"] .mobile-bottom-nav button.is-active {
+    border-color: rgba(255, 135, 90, 0.34);
+    background:
+      linear-gradient(135deg, rgba(255, 135, 90, 0.16), rgba(177, 140, 255, 0.14)),
+      rgba(43, 35, 61, 0.86);
+    color: var(--ink);
+  }
+
+  #ot-form-builder[data-theme="dark"] .file-card,
+  #ot-form-builder[data-theme="dark"] .files-empty,
+  #ot-form-builder[data-theme="dark"] .files-panel,
+  #ot-form-builder[data-theme="dark"] .confirm-card {
+    border-color: rgba(151, 122, 201, 0.34);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+      #241c34;
+  }
+
+  #ot-form-builder[data-theme="dark"] .files-tabs {
+    border-color: rgba(151, 122, 201, 0.34);
+    background: rgba(19, 15, 29, 0.58);
+  }
+
+  #ot-form-builder[data-theme="dark"] .files-tabs button.is-active {
+    background: rgba(177, 140, 255, 0.16);
+    color: var(--ink);
+  }
+
+  #ot-form-builder .mini-calendar {
+    display: none;
+  }
+
+  #ot-form-builder .ot-debug-panel {
+    right: 10px;
+    bottom: calc(152px + env(safe-area-inset-bottom));
+    width: calc(100vw - 20px);
+    max-height: min(48svh, 460px);
+  }
+
+  #ot-form-builder .ot-debug-log {
+    max-height: 24svh;
+  }
+}

@@ -1,0 +1,218 @@
+/* Shell styles for the CNA Integrated App.
+
+   Every rule here is prefixed .cna- so it can never collide with anything
+   inside a sub-app. The two module pages load this file alongside their own
+   stylesheet; the only thing it styles in there is the back chip. */
+
+:root {
+  --cna-paper: #F4F5F2;
+  --cna-card: #FFFFFF;
+  --cna-ink: #22282E;
+  --cna-ink-soft: #5B646D;
+  --cna-line: #DDE1DC;
+  --cna-accent: #E8A020;
+  --cna-accent-ink: #2A2008;
+  --cna-shadow: 0 1px 3px rgba(30, 36, 42, .08), 0 4px 14px rgba(30, 36, 42, .06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cna-paper: #171B20;
+    --cna-card: #21262D;
+    --cna-ink: #E9ECEE;
+    --cna-ink-soft: #9AA4AD;
+    --cna-line: #333B44;
+    --cna-accent: #EFAF35;
+    --cna-accent-ink: #241C06;
+    --cna-shadow: 0 1px 3px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+}
+
+/* An explicit choice always wins over the device setting, in both
+   directions — same three-state model DOT.log already uses. */
+:root[data-cna-theme="light"] {
+  --cna-paper: #F4F5F2; --cna-card: #FFFFFF; --cna-ink: #22282E;
+  --cna-ink-soft: #5B646D; --cna-line: #DDE1DC; --cna-accent: #E8A020;
+  --cna-accent-ink: #2A2008;
+  --cna-shadow: 0 1px 3px rgba(30, 36, 42, .08), 0 4px 14px rgba(30, 36, 42, .06);
+}
+
+:root[data-cna-theme="dark"] {
+  --cna-paper: #171B20; --cna-card: #21262D; --cna-ink: #E9ECEE;
+  --cna-ink-soft: #9AA4AD; --cna-line: #333B44; --cna-accent: #EFAF35;
+  --cna-accent-ink: #241C06;
+  --cna-shadow: 0 1px 3px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .25);
+}
+
+/* ---------------------------------------------------------------
+   The shell's top bar. This is the ONLY part of this file that
+   renders inside a sub-app, and it sits outside that app's root
+   element so the app's own styles and DOM lookups never see it.
+
+   It is a bar rather than a floating chip on purpose: a chip that
+   hovers over the page always ends up covering the app's own title.
+   A bar reserves its own strip, so nothing is ever hidden.
+   --------------------------------------------------------------- */
+
+.cna-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483000;
+
+  display: flex;
+  align-items: center;
+
+  height: calc(44px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 10px 0 calc(10px + env(safe-area-inset-left));
+
+  background: var(--cna-paper);
+  border-bottom: 1px solid var(--cna-line);
+}
+
+/* Reserve the bar's strip so the app below is never covered. */
+body:has(> .cna-topbar) {
+  padding-top: calc(44px + env(safe-area-inset-top));
+}
+
+.cna-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--cna-line);
+  border-radius: 999px;
+
+  background: var(--cna-card);
+  color: var(--cna-ink);
+
+  font: 600 13px/1 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-back:active { transform: scale(.96); }
+.cna-back-arrow { font-size: 15px; line-height: 1; }
+
+/* ---------------------------------------------------------------
+   The front door itself.
+   --------------------------------------------------------------- */
+
+.cna-hub {
+  margin: 0;
+  padding: 0;
+  background: var(--cna-paper);
+  color: var(--cna-ink);
+  font: 16px/1.5 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.cna-hub * { box-sizing: border-box; }
+
+.cna-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+}
+
+.cna-header { margin-bottom: 22px; }
+
+.cna-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.cna-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--cna-ink-soft);
+}
+
+.cna-section-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--cna-ink-soft);
+}
+
+.cna-apps {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.cna-app {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 16px;
+  border: 1px solid var(--cna-line);
+  border-radius: 14px;
+
+  background: var(--cna-card);
+  box-shadow: var(--cna-shadow);
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-app:active { transform: scale(.99); }
+
+.cna-app-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+}
+
+.cna-app-icon svg { width: 24px; height: 24px; }
+
+.cna-app-text { flex: 1 1 auto; min-width: 0; }
+
+.cna-app-text strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.cna-app-text span {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--cna-ink-soft);
+}
+
+.cna-app-go {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--cna-ink-soft);
+}
+
+.cna-foot {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--cna-ink-soft);
+}
+
+.cna-foot-note {
+  margin: 22px 0 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--cna-line);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--cna-ink-soft);
+}

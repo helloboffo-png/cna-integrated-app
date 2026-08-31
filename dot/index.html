@@ -1,0 +1,2905 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>
+/* applied before first paint so switching Appearance never flashes the
+   wrong theme for a frame on the next load */
+(function () {
+  try {
+    var raw = localStorage.getItem("driveotlog.v1");
+    var t = raw && JSON.parse(raw).settings && JSON.parse(raw).settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<title>DOT.log</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Log which company vehicle you drove and your overtime hours, then export monthly claims — works fully offline, no account needed.">
+
+<!-- PWA: installable, works offline -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="../shell.css">
+<meta name="theme-color" content="#171B20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DOT.log">
+
+<style>
+  :root {
+    --paper: #F4F5F2;
+    --card: #FFFFFF;
+    --ink: #22282E;
+    --ink-soft: #5B646D;
+    --line: #DDE1DC;
+    --accent: #E8A020;      /* road-sign amber */
+    --accent-ink: #2A2008;
+    --good: #3E9B6B;
+    --good-soft: #E3F1E9;
+    --danger: #C9553D;
+    --plate-bg: #22282E;    /* license-plate chip */
+    --plate-ink: #F5F6F4;
+    --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #171B20;
+      --card: #21262D;
+      --ink: #E9ECEE;
+      --ink-soft: #9AA4AD;
+      --line: #333B44;
+      --accent: #EFAF35;
+      --accent-ink: #241C06;
+      --good: #52B983;
+      --good-soft: #22352B;
+      --danger: #E07A63;
+      --plate-bg: #F0F1EE;
+      --plate-ink: #22282E;
+      --tab-bg: #21262D;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
+    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
+    --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
+    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+    --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+    --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
+    --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    /* installed as a standalone app (viewport-fit=cover), the page draws
+       under the phone's status bar/notch — clear it with the top safe area.
+       In a normal browser tab that inset is 0, so this is a no-op there. */
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));
+  }
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  header.top h1 {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 0;
+  }
+  header.top .date-line { font-size: 13px; color: var(--ink-soft); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink-soft);
+  }
+  .card .hint { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
+
+  /* ---- plate select + recent chips ---- */
+  select#plate-select, select#rcpt-plate {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-weight: 700; letter-spacing: 0.06em;
+    appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+                      linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+    background-size: 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 38px;
+  }
+  .plate-row { display: flex; align-items: center; gap: 10px; }
+  .plate-static {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--plate-bg); color: var(--plate-ink);
+    border-radius: 6px; padding: 4px 10px; font-size: 14px;
+    display: inline-block;
+  }
+
+  /* ---- day-type segmented control ---- */
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button {
+    flex: 1 1 30%;
+    font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg button.on {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  }
+  .seg button small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
+  /* three fixed labels that must each sit on one line at 375px */
+  #theme-picker button { font-size: 12px; padding: 10px 2px; }
+  /* month pickers sit directly under their card heading */
+  #history-month, #taxi-month { margin: 8px 0 10px; font-weight: 600; }
+
+  /* ---- inputs ---- */
+  label.field { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin: 12px 0 4px; }
+  input[type="date"], input[type="month"], input[type="number"], input[type="text"], textarea, select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    font: inherit; color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* iOS Safari's native date/month pickers can render wider than the box
+     they're given (a known platform quirk, independent of our own CSS —
+     it affects both type=date and type=month here) and will visually
+     protrude past the card instead of shrinking to fit. A colored custom
+     icon was tried here twice and broke differently on two real phones
+     (invisible on Android, this overflow on iOS), so that's been dropped
+     in favor of the plain native icon. This wrapper is the actual fix:
+     it clips anything the OS renders wider than 100% back down to the
+     card's width, so the control can never spill past its container. */
+  .field-clip { overflow: hidden; border-radius: 10px; }
+
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+
+  .formula-box {
+    background: var(--paper);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+  .formula-text {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    margin: 0;
+  }
+
+  button.primary {
+    width: 100%;
+    margin-top: 16px;
+    font: inherit; font-weight: 700; font-size: 16px;
+    background: var(--accent); color: var(--accent-ink);
+    border: none; border-radius: 12px;
+    padding: 13px;
+    cursor: pointer;
+  }
+  button.primary:active { filter: brightness(0.95); }
+  button.secondary {
+    font: inherit; font-weight: 600; font-size: 14px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 14px; cursor: pointer;
+  }
+  button.secondary.danger { color: var(--danger); border-color: var(--danger); }
+  button.secondary.accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.danger-link {
+    font: inherit; font-size: 13px; font-weight: 600;
+    background: none; border: none; color: var(--danger);
+    cursor: pointer; padding: 8px 4px; min-height: 32px;
+  }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row button { flex: 1; }
+
+  .status-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--good-soft); color: var(--good);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
+
+  .claim-banner {
+    background: color-mix(in srgb, var(--accent) 16%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .claim-banner strong { display: block; margin-bottom: 2px; }
+  .claim-banner .btn-row { margin-top: 10px; }
+
+  /* ---- history / lists ---- */
+  .entry {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .entry:last-child { border-bottom: none; }
+  .entry .when { font-size: 14px; font-weight: 600; }
+  .entry .when small { display: block; font-weight: 400; color: var(--ink-soft); }
+  .entry .what { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  /* Edit + Delete always travel together, with more breathing room between
+     them than the rest of the row — keeps them from wrapping apart from
+     each other and reduces mis-taps between a safe and a destructive action */
+  .entry .actions { display: flex; gap: 18px; white-space: nowrap; flex: 0 0 auto; }
+  /* History rows: date + plate + actions on one line, everything else on a
+     full-width line beneath. Squeezing the day and OT into a ~100px column
+     beside the plate made them wrap, so rows with OT stood 36px taller than
+     rows without and the list looked ragged. Separate class from .entry
+     because Settings' vehicle list still wants the plain flex row. */
+  .dayrow { padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .dayrow:last-child { border-bottom: none; }
+  .dayrow-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .dayrow .when { font-size: 14px; font-weight: 600; }
+  .dayrow .what { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  .dayrow .actions { display: flex; gap: 18px; white-space: nowrap; }
+  .dayrow-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+
+  .ot-pill {
+    font-size: 12px; font-weight: 700;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--ink);
+    border-radius: 999px; padding: 3px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- month summary ---- */
+  .stat-row { display: flex; gap: 10px; margin: 12px 0 0; }
+  .stat {
+    flex: 1; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .stat .n { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; }
+  th.num { text-align: right; }
+  .totals-line { margin-top: 10px; font-size: 14px; }
+
+  .empty { color: var(--ink-soft); font-size: 14px; text-align: center; padding: 18px 0; }
+
+  /* ---- collapsible settings sections ----
+     Settings had grown to six tall stacked cards, so the screen read as one
+     long wall with the 22-plate vehicle list in the middle of it. Native
+     <details> keeps each one to a single tidy row until it's actually
+     needed — and stays keyboard-operable without any JS of ours. */
+  details.sec { padding: 0; }
+  details.sec > summary {
+    list-style: none;
+    display: flex; align-items: center; gap: 10px;
+    padding: 15px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  details.sec > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+  .sec-title {
+    flex: 1;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink);
+  }
+  .sec-meta { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .chev {
+    flex: none; width: 8px; height: 8px; margin: -3px 2px 0 0;
+    border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
+    transform: rotate(45deg);
+    transition: transform .15s ease;
+  }
+  details.sec[open] > summary .chev { transform: rotate(-135deg); margin-top: 3px; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  .sec-body { padding: 0 16px 16px; }
+  .sec-body > .field:first-child { margin-top: 0; }
+
+  /* ---- taxi / ride claims ---- */
+  .photo-add {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--paper);
+    border: 1.5px dashed var(--line);
+    border-radius: 12px;
+    padding: 20px 12px;
+    font: inherit; font-size: 14px; font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .photo-prev { display: flex; gap: 12px; align-items: flex-start; }
+  .photo-prev img {
+    width: 74px; height: 94px; object-fit: cover;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper); cursor: zoom-in; flex: none;
+  }
+  .photo-prev .btn-row { margin-top: 0; flex-direction: column; }
+
+  .ride-month {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-soft);
+    padding: 14px 2px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ride-month:first-child { padding-top: 4px; }
+  .ride { display: flex; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .ride:last-child { border-bottom: none; }
+  .ride-thumb {
+    width: 44px; height: 56px; flex: none;
+    border-radius: 8px; border: 1px solid var(--line);
+    object-fit: cover; background: var(--paper); cursor: zoom-in;
+  }
+  .ride-thumb.none {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    cursor: default; text-align: center; line-height: 1.2;
+  }
+  .ride-main { flex: 1; min-width: 0; }
+  .ride-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .ride-amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ride-sub {
+    font-size: 12px; color: var(--ink-soft);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ride-acts { display: flex; gap: 16px; margin-top: 6px; }
+  .ride-acts button { padding: 2px 0; min-height: 0; font-size: 12px; }
+  .tag {
+    flex: none;
+    font: inherit; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border: none; border-radius: 999px; padding: 4px 9px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .tag.done { background: var(--good-soft); color: var(--good); }
+  .tag.todo { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--ink); }
+
+  /* ---- tabs ---- */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--tab-bg);
+    border-top: 1px solid var(--line);
+    display: flex;
+    max-width: 480px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabs button {
+    flex: 1;
+    font: inherit; font-size: 11px; font-weight: 600;
+    background: none; border: none;
+    color: var(--ink-soft);
+    padding: 9px 0 10px;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.tabs button.active { color: var(--ink); }
+  /* line icons rather than emoji: emoji render at different weights, colours
+     and baselines on every platform, so the bar never looked like one set */
+  nav.tabs button svg { width: 22px; height: 22px; display: block; }
+  nav.tabs button.active .ico-bar { background: var(--accent); }
+  .ico-bar { width: 22px; height: 3px; border-radius: 2px; background: transparent; margin-top: 2px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    background: var(--ink); color: var(--paper);
+    font-size: 14px; font-weight: 600;
+    border-radius: 999px; padding: 9px 18px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    max-width: 90vw; text-align: center;
+    z-index: 10;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  /* ---- export modal ---- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 20;
+  }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%; max-width: 420px;
+    max-height: 85vh; overflow-y: auto;
+    padding: 18px;
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 16px; }
+  .modal textarea {
+    width: 100%;
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    resize: none;
+  }
+  .modal .hint { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+  .modal img#modal-img {
+    width: 100%; height: auto; display: block;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper);
+  }
+</style>
+</head>
+<body>
+
+<div class="cna-topbar"><a class="cna-back" href="../"><span class="cna-back-arrow" aria-hidden="true">‹</span>Apps</a></div>
+
+<div class="app">
+  <header class="top">
+    <h1 id="app-title">DOT.log</h1>
+    <span class="date-line" id="today-line"></span>
+  </header>
+
+  <!-- ============ TODAY ============ -->
+  <section class="screen active" id="screen-log">
+    <div id="claim-reminder"></div>
+    <div id="today-status"></div>
+
+    <div class="card">
+      <h2>Log a day</h2>
+      <p class="hint">Pick the date, tap the plate you drove, add OT if any.</p>
+
+      <label class="field" for="log-date">Date</label>
+      <div class="field-clip"><input type="date" id="log-date" max="2100-12-31"></div>
+
+      <label class="field" for="plate-select">Vehicle driven</label>
+      <select id="plate-select"></select>
+
+      <label class="field" for="ot-hours">Overtime hours <span style="font-weight:400">(leave 0 if none)</span></label>
+      <input type="number" id="ot-hours" min="0" max="24" step="0.5" value="0" inputmode="decimal">
+
+      <label class="field">Day type <span style="font-weight:400">(sets the OT rate)</span></label>
+      <div class="seg" id="day-type" role="group" aria-label="Day type">
+        <button type="button" data-v="normal" class="on">Normal day<small>OT at 1.5&times;</small></button>
+        <button type="button" data-v="off">Off day callback<small>1.5&times;</small></button>
+        <button type="button" data-v="rest">Rest day callback<small>2&times; first 8h, then 1.5&times;</small></button>
+      </div>
+
+      <button class="primary" id="save-entry">Save this day</button>
+    </div>
+    <!-- version sits here too, not only in Settings: asking a colleague
+         what they're running should take one screenshot of the main screen -->
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">DOT.log · v2.6</p>
+  </section>
+
+  <!-- ============ TAXI ============ -->
+  <section class="screen" id="screen-taxi">
+    <div class="card">
+      <h2 id="taxi-form-title">Log a ride</h2>
+      <p class="hint" id="taxi-form-hint">Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.</p>
+
+      <div class="seg" id="rcpt-kind" role="group" aria-label="Receipt type">
+        <button type="button" data-v="taxi" class="on">Taxi / Grab</button>
+        <button type="button" data-v="parking">Parking</button>
+      </div>
+
+      <label class="field" for="taxi-date">Date</label>
+      <div class="field-clip"><input type="date" id="taxi-date" max="2100-12-31"></div>
+
+      <div class="row2">
+        <div>
+          <label class="field" for="taxi-amount">Amount ($)</label>
+          <input type="number" id="taxi-amount" min="0" step="0.01" inputmode="decimal" placeholder="12.40">
+        </div>
+        <div>
+          <label class="field" for="taxi-receipt"><span id="lbl-receipt">Receipt no.</span></label>
+          <input type="text" id="taxi-receipt" placeholder="A-3F92KQ" autocapitalize="characters">
+        </div>
+      </div>
+
+      <div id="parking-vehicle" style="display:none;">
+        <label class="field" for="rcpt-plate">Vehicle parked</label>
+        <select id="rcpt-plate"></select>
+      </div>
+
+      <label class="field" for="taxi-note"><span id="lbl-note">Trip</span> <span style="font-weight:400">(optional)</span></label>
+      <input type="text" id="taxi-note" placeholder="e.g. Caldecott to Punggol shoot">
+
+      <label class="field">Receipt screenshot</label>
+      <div id="taxi-photo-slot"></div>
+      <input type="file" id="taxi-file" accept="image/*" style="display:none">
+
+      <button class="primary" id="save-taxi">Save ride</button>
+      <button class="secondary" id="cancel-taxi" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
+    </div>
+
+    <div class="card">
+      <h2>Logged receipts</h2>
+      <p class="hint" id="taxi-summary"></p>
+      <select id="taxi-month" aria-label="Receipts to show"></select>
+      <div id="taxi-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen" id="screen-history">
+    <div class="card">
+      <h2>Days logged</h2>
+      <select id="history-month" aria-label="Month to show"></select>
+      <p class="hint" id="history-summary"></p>
+      <div id="history-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ MONTH ============ -->
+  <section class="screen" id="screen-month">
+    <div class="card">
+      <h2>Month summary</h2>
+      <label class="field" for="month-pick">Month</label>
+      <div class="field-clip"><input type="month" id="month-pick" max="2100-12"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stat-days">0</div><div class="l">Days driven</div></div>
+        <div class="stat"><div class="n" id="stat-allow">$0</div><div class="l">Driving allowance</div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stat-ot">0</div><div class="l">OT hours</div></div>
+        <div class="stat"><div class="n" id="stat-pay">–</div><div class="l">Expected OT pay</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Vehicle claims</h2>
+      <p class="hint">Exactly what you key into the company system: date, plate, and the $ per-day driving allowance.</p>
+      <div class="tbl-wrap"><table id="claims-table"></table></div>
+      <div class="totals-line" id="claims-total"></div>
+      <label class="field" for="range-months">Export range (for claims done every few months)</label>
+      <select id="range-months">
+        <option value="1">This month only</option>
+        <option value="2">Last 2 months</option>
+        <option value="3">Last 3 months</option>
+        <option value="6">Last 6 months</option>
+      </select>
+      <div class="btn-row">
+        <button class="secondary" id="copy-claims">Copy list</button>
+        <button class="secondary" id="pdf-claims">Download PDF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Receipt claims</h2>
+      <p class="hint">Taxi fares and parking logged this month. The screenshots stay on the Receipts tab — upload those to the portal yourself.</p>
+      <div class="tbl-wrap"><table id="taxi-table"></table></div>
+      <div class="totals-line" id="taxi-month-total"></div>
+      <div class="btn-row"><button class="secondary" id="copy-taxi">Copy list</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Overtime breakdown</h2>
+      <p class="hint">Check this against your payslip.</p>
+      <div class="tbl-wrap"><table id="ot-table"></table></div>
+      <div class="totals-line" id="ot-totals"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen" id="screen-settings">
+    <details class="card sec" id="sec-vehicles">
+      <summary>
+        <span class="sec-title">My vehicles</span>
+        <span class="sec-meta" id="veh-count"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Plates you rotate between. They appear in the Vehicle driven dropdown on the Log screen, with your most recently driven plate listed first.</p>
+        <div id="vehicle-list"></div>
+        <div class="row2" style="margin-top:12px;">
+          <div><input type="text" id="new-plate" placeholder="e.g. SKV 1234 A" autocapitalize="characters"></div>
+        </div>
+        <button class="primary" id="add-plate">Add vehicle</button>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Pay rules</span>
+        <span class="sec-meta" id="pay-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+      <label class="field" for="allowance">Driving allowance per day ($)</label>
+      <input type="number" id="allowance" min="0" step="0.5" value="14" inputmode="decimal">
+      <label class="field" for="base-rate">Base hourly rate ($/hour)</label>
+      <input type="number" id="base-rate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 12.50">
+
+      <div class="formula-box">
+        <p class="hint" style="margin:0 0 6px;">Not sure of your rate? Singapore's standard formula (Employment Act, 44-hour work week):</p>
+        <p class="formula-text">hourly rate = monthly basic pay &times; 12 &divide; (52 &times; 44)</p>
+        <div class="row2" style="margin-top:10px; align-items:flex-end;">
+          <div>
+            <label class="field" for="monthly-pay" style="margin-top:0;">Monthly basic pay ($)</label>
+            <input type="number" id="monthly-pay" min="0" step="1" inputmode="decimal" placeholder="e.g. 3000">
+          </div>
+          <div>
+            <button class="secondary" id="use-computed-rate" type="button" style="width:100%;">Use <span id="computed-rate">$0.00</span>/hr</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label class="field" for="mult-low">Standard OT rate</label>
+          <input type="number" id="mult-low" min="1" step="0.1" value="1.5" inputmode="decimal">
+        </div>
+        <div>
+          <label class="field" for="mult-high">Rest day rate (first 8h)</label>
+          <input type="number" id="mult-high" min="1" step="0.1" value="2" inputmode="decimal">
+        </div>
+      </div>
+      <p class="hint" style="margin-top:10px;">Normal day and off day callback OT pay the standard rate. Rest day callback pays the rest day rate for the first 8 hours, then drops back to the standard rate. Public holidays have no special rate on shift work.</p>
+      <button class="primary" id="save-settings">Save pay rules</button>
+      </div>
+    </details>
+
+    <div class="card">
+      <h2>Appearance</h2>
+      <div class="seg" id="theme-picker" role="group" aria-label="Appearance">
+        <button type="button" data-v="light">Day mode</button>
+        <button type="button" data-v="dark">Night mode</button>
+        <button type="button" data-v="auto" class="on">Follow device</button>
+      </div>
+    </div>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Month-end reminder</span>
+        <span class="sec-meta" id="notif-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">When a month ends, the Log screen shows a banner that the month's claim PDF is ready until you dismiss it. Turn on notifications to also get a pop-up when you open the app.</p>
+        <button class="secondary" id="enable-notif" style="width:100%">Turn on notifications</button>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Backup</span>
+        <span class="sec-meta" id="storage-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Your data lives only on this device. Export a backup now and then; import it on a new phone to restore everything.</p>
+        <div class="formula-box" id="storage-box">
+          <p class="hint" style="margin:0" id="storage-detail"></p>
+        </div>
+        <div class="btn-row">
+          <button class="secondary" id="export-data">Backup</button>
+          <button class="secondary" id="import-data">Restore</button>
+        </div>
+        <p class="hint" style="margin-top:14px;">The plain backup above is small and quick, but holds no receipt screenshots. The full one includes every screenshot, so it is large and takes a while — use it before changing phones.</p>
+        <div class="btn-row">
+          <button class="secondary" id="export-archive">Full backup, with screenshots</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Feedback</span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Spot a bug, or have an idea to make this better? Send it straight over — this opens your own mail app with a message pre-filled, addressed to the developer, so you just need to hit send.</p>
+        <label class="field" for="feedback-name">Your name</label>
+        <input type="text" id="feedback-name" placeholder="e.g. Ryan">
+        <label class="field" for="feedback-text">Feedback</label>
+        <textarea id="feedback-text" rows="4" placeholder="What's working, what's not, what you wish it did..."></textarea>
+        <button class="primary" id="send-feedback">Send Feedback</button>
+      </div>
+    </details>
+
+    <!-- hidden by default and revealed only by the service-worker code, so
+         the artifact build never shows a button that can't do anything -->
+    <div class="card" id="update-section" style="display:none;">
+      <h2>App version</h2>
+      <p class="hint" id="update-status">You're on v2.6.</p>
+      <button class="secondary" id="check-update" style="width:100%;">Check for update</button>
+    </div>
+
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">DOT.log · v2.6 (21 Aug 2026)<br>Gimme the moolah</p>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <button data-screen="screen-log" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.7"/>
+      <path d="M3.3 10.6h6M15 10.6h5.7M12 14.7V21"/>
+    </svg>Log<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-taxi">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M5 3h14v18l-3.5-2-3.5 2-3.5-2L5 21V3z"/><path d="M9 8.5h6M9 12.5h6"/>
+    </svg>Receipts<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>
+    </svg>History<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-month">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
+    </svg>Month<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 8h9M19 8h1M4 16h3M13 16h7"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/>
+    </svg>Settings<span class="ico-bar"></span>
+  </button>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p class="hint" id="modal-message" style="display:none"></p>
+    <img id="modal-img" alt="Receipt screenshot" style="display:none">
+    <textarea id="modal-text" readonly rows="9"></textarea>
+    <div class="btn-row" id="modal-actions"></div>
+    <p class="hint" id="modal-hint"></p>
+    <button class="primary" id="modal-close">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- storage ---------- */
+  var KEY = "driveotlog.v1";
+  /* company fleet, pre-loaded into My Vehicles on first run */
+  var SEED_PLATES = [
+    "PC5758J","PC5767H","PC5787J","PC7355A","PC9083X","PC9085R","PC9124L",
+    "PD1451P","PD1515P","PD1620T",
+    "SLH7959D","SLH7961X",
+    "SNP2084H","SNP2708D","SNP2784H","SNP2789U","SNP2794D","SNP2797X",
+    "SNW7769H","SNW7807G","SNW7810X","SNW7849K"
+  ];
+  /* plates retired from the fleet — stripped from every install, even ones already seeded */
+  var RETIRED_PLATES = ["SNW7808G", "SNW7807H", "SNT4123G", "SNP7769H"];
+  /* Bump this whenever SEED_PLATES or RETIRED_PLATES changes. The old
+     one-shot fleetSeeded / retiredCleaned flags meant a phone applied the
+     roster exactly once and then froze — four plates were retired in the
+     first month alone, so every install was going to drift out of date and
+     never catch up. A version number lets later changes reach phones that
+     are already set up. */
+  var FLEET_VERSION = 1;
+  /* Plates introduced AFTER the original roster, listed against the version
+     that introduced them. Existing installs get exactly these, never the
+     whole of SEED_PLATES — otherwise a bump would resurrect every plate the
+     user had deleted. SEED_PLATES is only for a first-time install.
+     To add a vehicle later: put it in SEED_PLATES (for new installs), add it
+     here under the next version number, and bump FLEET_VERSION to match. */
+  var PLATE_ADDITIONS = {
+    /* 2: ["SBB1111Z"], */
+  };
+  var fleetChange = null; /* what this load actually changed, shown once on the Log screen */
+
+  /* plates are compared with spaces removed, so "SNW 1234 A" and
+     "SNW1234A" are one vehicle rather than two near-identical dropdown
+     entries that split a month's claims between them */
+  function plateKey(p) { return String(p).toUpperCase().replace(/\s+/g, ""); }
+  function hasPlate(list, p) {
+    var k = plateKey(p);
+    for (var i = 0; i < list.length; i++) if (plateKey(list[i]) === k) return true;
+    return false;
+  }
+  function defaults() {
+    return {
+      vehicles: SEED_PLATES.slice(),
+      entries: {},
+      taxi: [],
+      settings: { baseRate: null, multLow: 1.5, multHigh: 2, allowance: 14, theme: "auto" },
+      dismissed: {}
+    };
+  }
+  function load() {
+    var db;
+    try { db = JSON.parse(localStorage.getItem(KEY)) || defaults(); }
+    catch (e) { db = defaults(); }
+    /* defend against a valid-but-partial saved blob (e.g. an old format,
+       or a hand-edited/corrupted one) so the app never fails to boot */
+    if (!db || typeof db !== "object") db = defaults();
+    if (!Array.isArray(db.vehicles)) db.vehicles = [];
+    if (!db.entries || typeof db.entries !== "object") db.entries = {};
+    /* taxi arrived in v2.2 — installs older than that simply have no such
+       key, so it backfills empty and every existing log is left untouched */
+    if (!Array.isArray(db.taxi)) db.taxi = [];
+    /* v2.3 added parking alongside taxi in the same list; anything saved
+       before that is by definition a taxi fare. Malformed rows are dropped
+       rather than left to blow up rendering later. */
+    db.taxi = db.taxi.filter(function (r) { return r && typeof r === "object" && r.id && r.date; });
+    db.taxi.forEach(function (r) {
+      if (r.kind !== "parking") r.kind = "taxi";
+      if (typeof r.plate !== "string") r.plate = "";
+      if (typeof r.amount !== "number" || isNaN(r.amount)) r.amount = 0;
+    });
+    if (!db.settings) db.settings = defaults().settings;
+    /* migrate v1 fields (weekday/weekend multipliers, holiday flag) */
+    if (db.settings.multWeekday !== undefined) {
+      db.settings.multLow = db.settings.multWeekday;
+      db.settings.multHigh = db.settings.multWeekend;
+      delete db.settings.multWeekday;
+      delete db.settings.multWeekend;
+    }
+    if (db.settings.allowance === undefined || isNaN(db.settings.allowance)) db.settings.allowance = 14;
+    if (db.settings.multLow === undefined || isNaN(db.settings.multLow)) db.settings.multLow = 1.5;
+    if (db.settings.multHigh === undefined || isNaN(db.settings.multHigh)) db.settings.multHigh = 2;
+    if (["light", "dark", "auto"].indexOf(db.settings.theme) === -1) db.settings.theme = "auto";
+    if (!db.dismissed) db.dismissed = {};
+    /* Fleet roster, applied once per FLEET_VERSION rather than once ever.
+       Installs from before this existed carry the old fleetSeeded /
+       retiredCleaned flags; treat those as having completed version 1 so
+       nobody gets the current roster re-applied over their own edits. */
+    if (db.fleetVersion === undefined) {
+      db.fleetVersion = (db.fleetSeeded && db.retiredCleaned) ? 1 : 0;
+    }
+    /* an install that has never held the roster at all gets it in full,
+       exactly as the old fleetSeeded flag did */
+    if (db.fleetVersion === 0) {
+      SEED_PLATES.forEach(function (p) {
+        if (!hasPlate(db.vehicles, p)) db.vehicles.push(p);
+      });
+    }
+    if (db.fleetVersion < FLEET_VERSION) {
+      var added = [], removed = [];
+      /* walk every version the user has missed, so skipping one still
+         delivers its vehicles */
+      for (var v = db.fleetVersion + 1; v <= FLEET_VERSION; v++) {
+        (PLATE_ADDITIONS[v] || []).forEach(function (p) {
+          if (!hasPlate(db.vehicles, p)) { db.vehicles.push(p); added.push(p); }
+        });
+      }
+      RETIRED_PLATES.forEach(function (p) {
+        for (var i = db.vehicles.length - 1; i >= 0; i--) {
+          if (plateKey(db.vehicles[i]) === plateKey(p)) {
+            removed.push(db.vehicles[i]);
+            db.vehicles.splice(i, 1);
+          }
+        }
+      });
+      /* only worth telling the user about on an update, not a fresh install
+         where every plate is "new" and the message would be noise */
+      if (db.fleetVersion > 0 && (added.length || removed.length)) {
+        fleetChange = { added: added, removed: removed };
+      }
+      db.fleetVersion = FLEET_VERSION;
+    }
+    delete db.fleetSeeded;
+    delete db.retiredCleaned;
+    Object.keys(db.entries).forEach(function (k) {
+      var e = db.entries[k];
+      if (!e.dayType) e.dayType = "normal";
+      delete e.holiday;
+    });
+    return db;
+  }
+  var db = load();
+  function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+  save(); /* persist any migration/fleet merge immediately */
+
+  function applyTheme() {
+    var t = db.settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme"); /* auto: follow the device via prefers-color-scheme */
+  }
+  applyTheme();
+
+  /* ---------- helpers ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DAY_TYPE_LABEL = { normal: "Normal", off: "Off day CB", rest: "Rest day CB" };
+
+  function todayISO() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function fmt(iso) { // 2026-07-17 -> 17/07/2026
+    var p = iso.split("-");
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+  function dayName(iso) {
+    var p = iso.split("-");
+    return DAYS[new Date(+p[0], p[1]-1, +p[2]).getDay()];
+  }
+  function monthLabel(ym) { // 2026-06 -> June 2026
+    var p = ym.split("-");
+    return MONTHS[+p[1]-1] + " " + p[0];
+  }
+  function prevYm(ym) {
+    var p = ym.split("-"), y = +p[0], m = +p[1] - 1;
+    if (m === 0) { m = 12; y--; }
+    return y + "-" + String(m).padStart(2, "0");
+  }
+  function money(n) {
+    return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  function hoursStr(n) { return (n % 1 ? n.toFixed(1) : String(n)); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+  }
+
+  /* ---------- receipt photos (IndexedDB) ----------
+     Deliberately NOT in localStorage. The entire app state lives under one
+     localStorage key with a ~5MB budget; a few receipt screenshots would
+     blow through it, and a quota error mid-save would fail the write for
+     everything — taking the driving and OT logs down with the photo.
+     IndexedDB has its own, far larger quota and its own failure surface,
+     so a photo that won't fit can only ever cost you that photo.
+     Every call degrades to "no photo" rather than throwing, so the app
+     still works where IndexedDB is unavailable (e.g. private browsing). */
+  var IDB = { conn: null, dead: false };
+  function idb(cb) {
+    if (IDB.conn) return cb(IDB.conn);
+    if (IDB.dead || !window.indexedDB) return cb(null);
+    var req;
+    try { req = indexedDB.open("dotlog-photos", 1); }
+    catch (e) { IDB.dead = true; return cb(null); }
+    req.onupgradeneeded = function () {
+      if (!req.result.objectStoreNames.contains("photos")) req.result.createObjectStore("photos");
+    };
+    req.onsuccess = function () { IDB.conn = req.result; cb(IDB.conn); };
+    req.onerror = function () { IDB.dead = true; cb(null); };
+    req.onblocked = function () { IDB.dead = true; cb(null); };
+  }
+  function photoPut(id, blob, cb) {
+    idb(function (d) {
+      if (!d) return cb(false);
+      try {
+        var tx = d.transaction("photos", "readwrite");
+        tx.objectStore("photos").put(blob, id);
+        tx.oncomplete = function () { cb(true); };
+        tx.onerror = function () { cb(false); };
+        tx.onabort = function () { cb(false); };
+      } catch (e) { cb(false); }
+    });
+  }
+  function photoGet(id, cb) {
+    idb(function (d) {
+      if (!d) return cb(null);
+      try {
+        var r = d.transaction("photos", "readonly").objectStore("photos").get(id);
+        r.onsuccess = function () { cb(r.result || null); };
+        r.onerror = function () { cb(null); };
+      } catch (e) { cb(null); }
+    });
+  }
+  function photoDel(id) {
+    idb(function (d) {
+      if (!d) return;
+      try { d.transaction("photos", "readwrite").objectStore("photos").delete(id); } catch (e) {}
+    });
+  }
+
+  /* Ask the browser not to evict this site's storage. Without this, a phone
+     under storage pressure can quietly bin the receipt screenshots — the
+     exact failure the "gone" placeholder below was written for. Installed
+     web apps are usually granted this without prompting. Should have been
+     called the day the photo store was built. */
+  var persistState = "unknown";
+  function requestPersist() {
+    if (!navigator.storage || !navigator.storage.persist) { persistState = "unsupported"; return; }
+    navigator.storage.persisted().then(function (already) {
+      if (already) { persistState = "granted"; renderStorage(); return; }
+      navigator.storage.persist().then(function (ok) {
+        persistState = ok ? "granted" : "denied";
+        renderStorage();
+      }, function () { persistState = "unknown"; });
+    }, function () { persistState = "unknown"; });
+  }
+
+  function photoCount() {
+    return db.taxi.filter(function (r) { return r.photo; }).length;
+  }
+  function renderStorage() {
+    var meta = $("storage-meta"), detail = $("storage-detail");
+    if (!meta || !detail) return;
+    var n = photoCount();
+    meta.textContent = n + (n === 1 ? " photo" : " photos");
+    var lines = [n + " receipt screenshot" + (n === 1 ? "" : "s") + " stored on this phone."];
+    if (persistState === "granted") lines.push("Protected — the phone has been told not to delete them.");
+    else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space. Take a full backup regularly.");
+    else if (persistState === "unsupported") lines.push("This browser can't protect them from being deleted when space runs low.");
+    detail.textContent = lines.join(" ");
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(function (est) {
+        if (!est || !est.usage) return;
+        var mb = est.usage / 1048576;
+        detail.textContent = lines.join(" ") + " Using about " +
+          (mb < 0.1 ? Math.max(1, Math.round(est.usage / 1024)) + " KB" : mb.toFixed(1) + " MB") + ".";
+      }, function () {});
+    }
+  }
+
+  /* Phone screenshots are 3-4MB of mostly flat colour. Resize to a sane
+     ceiling before storing — but not so far that the booking ID and fare
+     stop being legible, since that's the entire point of keeping it. */
+  function shrinkImage(file, cb) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var MAX = 1400;
+      var scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      var cw = Math.max(1, Math.round(img.naturalWidth * scale));
+      var ch = Math.max(1, Math.round(img.naturalHeight * scale));
+      var c = document.createElement("canvas");
+      c.width = cw; c.height = ch;
+      c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+      URL.revokeObjectURL(url);
+      if (!c.toBlob) return cb(file);
+      c.toBlob(function (b) { cb(b || file); }, "image/jpeg", 0.82);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); cb(null); };
+    img.src = url;
+  }
+
+  /* object URLs handed to <img> tags must be released or the blobs stay
+     pinned in memory for the life of the page — every re-render clears
+     the ones the previous render created */
+  var liveUrls = [];
+  function objUrl(blob) { var u = URL.createObjectURL(blob); liveUrls.push(u); return u; }
+  function releaseUrls() {
+    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    liveUrls = [];
+  }
+
+  /* ---------- OT pay rules (shift work) ----------
+     normal day OT / off day callback: all hours at multLow (1.5x)
+     rest day callback: first 8h at multHigh (2x), hours beyond 8 at multLow (1.5x)
+     public holidays: no special rate                                            */
+  function otBreakdown(e) { // -> [{hours, mult}]
+    if (e.ot <= 0) return [];
+    if (e.dayType === "rest") {
+      var first = Math.min(e.ot, 8), extra = Math.max(e.ot - 8, 0);
+      var parts = [{ hours: first, mult: db.settings.multHigh }];
+      if (extra > 0) parts.push({ hours: extra, mult: db.settings.multLow });
+      return parts;
+    }
+    return [{ hours: e.ot, mult: db.settings.multLow }];
+  }
+  function otWeightedHours(e) {
+    return otBreakdown(e).reduce(function (s, p) { return s + p.hours * p.mult; }, 0);
+  }
+  function otPay(e) {
+    return db.settings.baseRate ? otWeightedHours(e) * db.settings.baseRate : null;
+  }
+  function rateLabel(e) {
+    return otBreakdown(e).map(function (p) { return p.mult + "×"; }).join(" / ");
+  }
+
+  /* ---------- tabs ---------- */
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  function switchTab(screenId) {
+    tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
+    document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+    $(screenId).classList.add("active");
+    if (screenId === "screen-taxi") renderTaxi();
+    if (screenId === "screen-history") renderHistory();
+    if (screenId === "screen-month") renderMonth();
+    if (screenId === "screen-settings") renderSettings();
+    window.scrollTo(0, 0);
+  }
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () { switchTab(btn.dataset.screen); });
+  });
+
+  /* ---------- log screen ---------- */
+  var selectedPlate = null;
+  var selectedDayType = "normal";
+
+  var segButtons = document.querySelectorAll("#day-type button");
+  function setDayType(v) {
+    selectedDayType = v;
+    segButtons.forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); });
+  }
+  segButtons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      setDayType(b.dataset.v);
+      /* rest day callback is almost always an 8h shift — prefill it, but
+         never clobber hours the user already typed in past 8 */
+      if (b.dataset.v === "rest") {
+        var otField = $("ot-hours");
+        var current = parseFloat(otField.value) || 0;
+        if (current <= 8) otField.value = 8;
+      }
+    });
+  });
+
+  function lastUsedMap() {
+    var lastUsed = {};
+    Object.keys(db.entries).forEach(function (iso) {
+      var p = db.entries[iso].plate;
+      if (p && (!lastUsed[p] || iso > lastUsed[p])) lastUsed[p] = iso;
+    });
+    return lastUsed;
+  }
+  function platesByRecency() {
+    /* plates you drove most recently come first; never-driven keep list order */
+    var lastUsed = lastUsedMap();
+    return db.vehicles.slice().sort(function (a, b) {
+      var la = lastUsed[a] || "", lb = lastUsed[b] || "";
+      if (la !== lb) return la > lb ? -1 : 1;
+      return db.vehicles.indexOf(a) - db.vehicles.indexOf(b);
+    });
+  }
+
+  function renderPlates() {
+    /* dropdown of every plate, most recently driven first */
+    var sel = $("plate-select");
+    sel.textContent = "";
+    var none = el("option", null, db.vehicles.length ? "NIL" : "No plates yet — add one below");
+    none.value = "";
+    sel.appendChild(none);
+    /* "add a new plate" sits right after NIL, not after 24+ plates, so it's
+       reachable without scrolling the whole list every time */
+    var add = el("option", null, "＋ Add a new plate…");
+    add.value = "__add__";
+    sel.appendChild(add);
+    platesByRecency().forEach(function (v) {
+      var o = el("option", null, v);
+      o.value = v;
+      sel.appendChild(o);
+    });
+    sel.value = selectedPlate || "";
+  }
+
+  $("plate-select").addEventListener("change", function () {
+    if (this.value === "__add__") {
+      selectedPlate = null;
+      renderPlates();
+      switchTab("screen-settings");
+      $("sec-vehicles").open = true; /* the section is collapsed by default — the field has to be on screen to focus it */
+      toast("Add your new plate below, then go back to Log");
+      setTimeout(function () { $("new-plate").focus(); }, 50);
+      return;
+    }
+    selectedPlate = this.value || null;
+    renderPlates();
+  });
+
+  function renderTodayStatus() {
+    var box = $("today-status");
+    box.textContent = "";
+    var iso = todayISO();
+    var e = db.entries[iso];
+    var rides = db.taxi.filter(function (r) { return r.date === iso; });
+    if (!e && !rides.length) return;
+    var banner = el("div", "status-banner");
+    banner.appendChild(el("span", "dot"));
+    var bits = [];
+    if (e && e.plate) bits.push("Drove " + e.plate);
+    if (e && e.ot > 0) bits.push(hoursStr(e.ot) + "h OT (" + DAY_TYPE_LABEL[e.dayType] + ")");
+    ["taxi", "parking"].forEach(function (k) {
+      var of = rides.filter(function (r) { return r.kind === k; });
+      if (!of.length) return;
+      bits.push(of.length + " " + KIND[k].label.toLowerCase() + " " +
+        money(of.reduce(function (s, r) { return s + r.amount; }, 0)));
+    });
+    banner.appendChild(el("span", null, "Today logged: " + (bits.join(" · ") || "nothing")));
+    box.appendChild(banner);
+  }
+
+  /* tracks whichever date is currently loaded into the form, so we can tell
+     if there's an unsaved edit before switching dates out from under it */
+  var formDate = todayISO();
+
+  function loadEntryIntoForm(iso) {
+    formDate = iso;
+    $("log-date").value = iso;
+    var e = db.entries[iso];
+    selectedPlate = e ? e.plate : null;
+    $("ot-hours").value = e ? e.ot : 0;
+    setDayType(e ? e.dayType : "normal");
+    renderPlates();
+  }
+
+  function formIsDirty() {
+    var existing = db.entries[formDate];
+    var curOt = parseFloat($("ot-hours").value) || 0;
+    if (!existing) return !!selectedPlate || curOt > 0;
+    return selectedPlate !== existing.plate || curOt !== existing.ot || selectedDayType !== existing.dayType;
+  }
+
+  /* single gate for every place that wants to load a different date into
+     the form — used by the date picker AND History's Edit button, so an
+     unsaved entry can never get silently overwritten from either path */
+  function goToDate(newDate, afterLoad) {
+    if (formIsDirty()) {
+      confirmDialog({
+        title: "Discard unsaved entry?",
+        message: "You have unsaved changes for " + fmt(formDate) + ". Switch to " + fmt(newDate) + " and lose them?",
+        confirmLabel: "Discard",
+        onConfirm: function () { loadEntryIntoForm(newDate); if (afterLoad) afterLoad(); }
+      });
+      return;
+    }
+    loadEntryIntoForm(newDate);
+    if (afterLoad) afterLoad();
+  }
+
+  $("log-date").value = todayISO();
+  $("log-date").addEventListener("change", function () {
+    var newDate = this.value;
+    if (!newDate) return;
+    var revertTo = formDate;
+    this.value = revertTo; /* hold the picker on the old date; goToDate moves it forward once safe */
+    goToDate(newDate);
+  });
+
+  $("save-entry").addEventListener("click", function () {
+    var iso = $("log-date").value;
+    if (!iso) { toast("Pick a date first"); return; }
+    var otRaw = $("ot-hours").value.trim();
+    var ot = otRaw === "" ? 0 : parseFloat(otRaw);
+    if (isNaN(ot) || ot < 0 || ot > 24) { toast("OT hours must be a number between 0 and 24"); return; }
+    if (!selectedPlate && ot === 0) {
+      if (db.entries[iso]) {
+        /* Saving a blank form over a day that already has an entry deletes
+           it. That used to happen on a single tap with only a toast, which
+           is a real way to lose a logged day — so it now has to be asked
+           for, with the entry being destroyed spelled out. */
+        var old = db.entries[iso];
+        var had = [];
+        if (old.plate) had.push(old.plate);
+        if (old.ot > 0) had.push(hoursStr(old.ot) + "h OT (" + DAY_TYPE_LABEL[old.dayType] + ")");
+        confirmDialog({
+          title: "Delete this day?",
+          message: fmt(iso) + " currently has " + (had.join(" · ") || "an entry") +
+            ". Saving with no plate and no OT deletes it. This can't be undone.",
+          confirmLabel: "Delete it",
+          onConfirm: function () {
+            delete db.entries[iso];
+            save();
+            renderTodayStatus();
+            renderPlates(); /* clearing an entry can change recency order too */
+            toast("Entry for " + fmt(iso) + " deleted");
+          }
+        });
+      } else {
+        toast("Nothing to save — pick a plate or add OT hours");
+      }
+      return;
+    }
+    db.entries[iso] = { date: iso, plate: selectedPlate, ot: ot, dayType: selectedDayType };
+    save();
+    wantHistoryMonth = iso.slice(0, 7); /* so History opens on the month just saved into */
+    renderTodayStatus();
+    renderPlates(); /* re-sort the dropdown now that this plate is the most recently driven */
+    toast("Saved " + fmt(iso) + (selectedPlate ? " · " + selectedPlate : "") + (ot ? " · " + hoursStr(ot) + "h OT" : ""));
+  });
+
+  /* ---------- month-end claim reminder ---------- */
+  function pendingClaimMonths() {
+    var cur = todayISO().slice(0, 7);
+    var seen = {};
+    Object.keys(db.entries).forEach(function (iso) {
+      var ym = iso.slice(0, 7);
+      if (ym < cur) seen[ym] = true;
+    });
+    return Object.keys(seen).filter(function (ym) { return !db.dismissed[ym]; }).sort();
+  }
+
+  /* one-off note when an update changed the company vehicle list, so a
+     plate appearing or vanishing from the dropdown isn't a mystery */
+  function renderFleetChange() {
+    if (!fleetChange) return;
+    var box = $("claim-reminder");
+    var b = el("div", "claim-banner");
+    b.appendChild(el("strong", null, "Vehicle list updated"));
+    var bits = [];
+    if (fleetChange.added.length) bits.push("Added: " + fleetChange.added.join(", "));
+    if (fleetChange.removed.length) bits.push("Removed: " + fleetChange.removed.join(", "));
+    b.appendChild(el("span", null, bits.join(". ") + ". Past entries keep whatever plate they were saved with."));
+    var row = el("div", "btn-row");
+    var ok = el("button", "secondary", "OK");
+    ok.addEventListener("click", function () { fleetChange = null; b.remove(); });
+    row.appendChild(ok);
+    b.appendChild(row);
+    box.insertBefore(b, box.firstChild);
+  }
+
+  function renderClaimReminder() {
+    var box = $("claim-reminder");
+    /* this clears the whole container, which also holds the roster-change
+       note — so that has to be put back on every pass, or dismissing a
+       claim reminder silently takes the roster note with it */
+    box.textContent = "";
+    var pending = pendingClaimMonths();
+    if (!pending.length) { renderFleetChange(); return; }
+    var ym = pending[pending.length - 1]; // most recent finished month
+    var entries = monthEntries(ym);
+    var driven = entries.filter(function (e) { return e.plate; }).length;
+    var otH = entries.reduce(function (s, e) { return s + e.ot; }, 0);
+
+    var banner = el("div", "claim-banner");
+    banner.appendChild(el("strong", null, "📤 " + monthLabel(ym) + " claim is ready"));
+    var line = driven + " day" + (driven === 1 ? "" : "s") + " driven (" + money(driven * db.settings.allowance) + " allowance)";
+    if (otH > 0) line += " · " + hoursStr(otH) + "h OT";
+    if (pending.length > 1) line += " — plus " + (pending.length - 1) + " earlier month" + (pending.length > 2 ? "s" : "") + " not yet exported";
+    banner.appendChild(el("span", null, line + "."));
+
+    var row = el("div", "btn-row");
+    var go = el("button", "secondary", "Open month summary");
+    go.addEventListener("click", function () {
+      $("month-pick").value = ym;
+      switchTab("screen-month");
+    });
+    var dis = el("button", "secondary", "Dismiss");
+    dis.addEventListener("click", function () {
+      /* only dismiss the month actually shown above — an earlier unclaimed
+         month the user never saw stays queued and will surface next */
+      db.dismissed[ym] = true;
+      save();
+      renderClaimReminder();
+    });
+    row.appendChild(go);
+    row.appendChild(dis);
+    banner.appendChild(row);
+    box.appendChild(banner);
+    renderFleetChange(); /* re-add the roster note the clear above removed */
+
+    /* system notification too, once per month, if the user turned them on */
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        var flag = "driveotlog.notified." + ym;
+        if (!localStorage.getItem(flag)) {
+          new Notification("DOT.log", { body: monthLabel(ym) + " claim is ready — " + line });
+          localStorage.setItem(flag, "1");
+        }
+      }
+    } catch (err) { /* notifications unavailable in this browser */ }
+  }
+
+  /* ---------- history ---------- */
+  /* every month that has at least one logged day, newest first */
+  function monthsWithEntries() {
+    var seen = {};
+    Object.keys(db.entries).forEach(function (iso) { seen[iso.slice(0, 7)] = true; });
+    return Object.keys(seen).sort().reverse();
+  }
+
+  /* History shows ONE month at a time, defaulting to the current one.
+     The old flat list was capped at 60 rows with no indication, so once
+     roughly three months had been logged the oldest simply stopped
+     appearing — invisible, and impossible to tell from a complete list. */
+  var wantHistoryMonth = null; /* same purpose as wantTaxiMonth */
+  function renderHistoryMonths() {
+    var sel = $("history-month");
+    var months = monthsWithEntries();
+    var cur = todayISO().slice(0, 7);
+    /* the current month belongs in the list even before anything is logged
+       in it, otherwise the picker jumps to last month on the 1st */
+    if (months.indexOf(cur) === -1) months.unshift(cur);
+    var keep = wantHistoryMonth || sel.value;
+    wantHistoryMonth = null;
+    sel.textContent = "";
+    months.forEach(function (ym) {
+      var o = el("option", null, monthLabel(ym) + (ym === cur ? " (this month)" : ""));
+      o.value = ym;
+      sel.appendChild(o);
+    });
+    sel.value = months.indexOf(keep) !== -1 ? keep : cur;
+  }
+
+  function renderHistory() {
+    renderHistoryMonths();
+    var ym = $("history-month").value;
+    var list = $("history-list");
+    list.textContent = "";
+
+    var dates = Object.keys(db.entries)
+      .filter(function (iso) { return iso.slice(0, 7) === ym; })
+      .sort().reverse();
+
+    var driven = dates.filter(function (iso) { return db.entries[iso].plate; }).length;
+    var otH = dates.reduce(function (s, iso) { return s + db.entries[iso].ot; }, 0);
+    var bits = [dates.length + " day" + (dates.length === 1 ? "" : "s") + " logged"];
+    if (driven) bits.push(driven + " driven · " + money(driven * db.settings.allowance));
+    if (otH > 0) bits.push(hoursStr(otH) + "h OT");
+    $("history-summary").textContent = dates.length ? bits.join(" · ") + "." : "";
+
+    if (!dates.length) {
+      list.appendChild(el("div", "empty",
+        ym === todayISO().slice(0, 7)
+          ? "Nothing logged this month yet — start on the Log tab."
+          : "Nothing logged in " + monthLabel(ym) + "."));
+      return;
+    }
+    dates.forEach(function (iso) {
+      var e = db.entries[iso];
+      var row = el("div", "dayrow");
+      var top = el("div", "dayrow-top");
+      var when = el("div", "when", fmt(iso));
+      var sub = dayName(iso);
+      if (e.dayType !== "normal") sub += " · " + DAY_TYPE_LABEL[e.dayType];
+      if (e.ot > 0) sub += " · " + hoursStr(e.ot) + "h OT @ " + rateLabel(e);
+      var what = el("div", "what");
+      if (e.plate) what.appendChild(el("span", "plate-static", e.plate));
+      var edit = el("button", "danger-link", "Edit");
+      edit.style.color = "var(--ink-soft)";
+      edit.addEventListener("click", function () {
+        goToDate(iso, function () {
+          switchTab("screen-log");
+          toast("Editing " + fmt(iso) + " — change it and press Save");
+        });
+      });
+      var del = el("button", "danger-link", "Delete");
+      del.addEventListener("click", function () {
+        confirmDialog({
+          title: "Delete entry?",
+          message: "Delete the entry for " + fmt(iso) + "? This can't be undone.",
+          confirmLabel: "Delete",
+          onConfirm: function () {
+            delete db.entries[iso];
+            save();
+            /* if the entry just deleted was the one sitting in the Log
+               form, clear the form state too — otherwise formIsDirty()
+               compares the still-displayed fields against "no entry" and
+               wrongly thinks there's an unsaved edit to protect */
+            if (iso === formDate) loadEntryIntoForm(formDate);
+            renderHistory();
+            renderTodayStatus();
+            renderClaimReminder();
+          }
+        });
+      });
+      var actions = el("div", "actions");
+      actions.appendChild(edit);
+      actions.appendChild(del);
+      what.appendChild(actions);
+      top.appendChild(when);
+      top.appendChild(what);
+      row.appendChild(top);
+      row.appendChild(el("div", "dayrow-sub", sub));
+      list.appendChild(row);
+    });
+  }
+  $("history-month").addEventListener("change", renderHistory);
+
+  /* ---------- taxi / ride claims ---------- */
+  var editingRide = null;      /* id of the receipt loaded into the form, if any */
+  var formPhoto = null;        /* newly picked screenshot, not yet written */
+  var formPhotoHas = false;    /* the receipt being edited already has one stored */
+  var formKind = "taxi";       /* which of the two receipt types the form is on */
+
+  var KIND = {
+    taxi: {
+      title: "Log a ride", editTitle: "Edit ride",
+      save: "Save ride", update: "Update ride", label: "Taxi",
+      hint: "Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.",
+      refLabel: "Receipt no.", refPlaceholder: "A-3F92KQ", amtPlaceholder: "12.40",
+      noteLabel: "Trip", notePlaceholder: "e.g. Caldecott to Punggol shoot"
+    },
+    parking: {
+      title: "Log parking", editTitle: "Edit parking",
+      save: "Save parking", update: "Update parking", label: "Parking",
+      hint: "Roadside parking you paid through Parking.sg. Screenshot the session receipt, save it here, then upload it to the portal and mark it claimed.",
+      refLabel: "Session no.", refPlaceholder: "e.g. 8821047", amtPlaceholder: "1.20",
+      noteLabel: "Location", notePlaceholder: "e.g. Tanjong Pagar Rd"
+    }
+  };
+
+  /* the plate dropdown on a parking receipt — the company wants to know
+     which vehicle was parked, and you've usually already logged that on
+     the Log tab for the same date, so it fills itself in */
+  function renderRcptPlates(selected) {
+    var sel = $("rcpt-plate");
+    sel.textContent = "";
+    var none = el("option", null, "— none —");
+    none.value = "";
+    sel.appendChild(none);
+    db.vehicles.forEach(function (v) {
+      var o = el("option", null, v);
+      o.value = v;
+      sel.appendChild(o);
+    });
+    /* an old receipt can name a plate that's since been retired from the
+       fleet list — keep it selectable rather than silently blanking it */
+    if (selected && db.vehicles.indexOf(selected) === -1) {
+      var o = el("option", null, selected);
+      o.value = selected;
+      sel.appendChild(o);
+    }
+    sel.value = selected || "";
+  }
+  function plateLoggedOn(iso) {
+    var e = iso && db.entries[iso];
+    return (e && e.plate) || "";
+  }
+
+  function setRcptKind(v, keepPlate) {
+    formKind = v;
+    var k = KIND[v];
+    document.querySelectorAll("#rcpt-kind button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === v);
+    });
+    $("lbl-receipt").textContent = k.refLabel;
+    $("taxi-receipt").placeholder = k.refPlaceholder;
+    $("taxi-amount").placeholder = k.amtPlaceholder;
+    $("lbl-note").textContent = k.noteLabel;
+    $("taxi-note").placeholder = k.notePlaceholder;
+    $("taxi-form-hint").textContent = k.hint;
+    $("taxi-form-title").textContent = editingRide ? k.editTitle : k.title;
+    $("save-taxi").textContent = editingRide ? k.update : k.save;
+    $("parking-vehicle").style.display = v === "parking" ? "" : "none";
+    if (v === "parking" && !keepPlate) renderRcptPlates(plateLoggedOn($("taxi-date").value));
+  }
+
+  document.querySelectorAll("#rcpt-kind button").forEach(function (b) {
+    b.addEventListener("click", function () { setRcptKind(b.dataset.v); });
+  });
+
+  $("taxi-date").addEventListener("change", function () {
+    /* follow the date to that day's vehicle, but never overwrite a plate
+       the user picked deliberately */
+    if (formKind === "parking" && !$("rcpt-plate").value) renderRcptPlates(plateLoggedOn(this.value));
+  });
+
+  function ridesSorted() {
+    /* newest first, and stable for two rides on the same date via the id,
+       which carries the timestamp it was created at */
+    return db.taxi.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+      return a.id > b.id ? -1 : 1;
+    });
+  }
+  function monthRides(ym) {
+    return db.taxi.filter(function (r) { return r.date.slice(0, 7) === ym; })
+      .sort(function (a, b) { return a.date > b.date ? 1 : a.date < b.date ? -1 : (a.id > b.id ? 1 : -1); });
+  }
+
+  function resetTaxiForm() {
+    editingRide = null;
+    formPhoto = null;
+    formPhotoHas = false;
+    $("taxi-date").value = todayISO();
+    $("taxi-amount").value = "";
+    $("taxi-receipt").value = "";
+    $("taxi-note").value = "";
+    $("cancel-taxi").style.display = "none";
+    /* deliberately stays on whichever type was just used — logging three
+       parking sessions in a row shouldn't flip back to taxi each time */
+    setRcptKind(formKind);
+    renderPhotoSlot();
+  }
+
+  function renderPhotoSlot() {
+    var slot = $("taxi-photo-slot");
+    slot.textContent = "";
+
+    function addButton(label) {
+      var b = el("button", "photo-add", label);
+      b.type = "button";
+      b.addEventListener("click", function () { $("taxi-file").click(); });
+      slot.appendChild(b);
+    }
+    function preview(blob) {
+      var wrap = el("div", "photo-prev");
+      var img = document.createElement("img");
+      img.src = objUrl(blob);
+      img.alt = "Receipt screenshot";
+      img.addEventListener("click", function () { openPhoto(blob); });
+      var col = el("div", "btn-row");
+      var rep = el("button", "secondary", "Replace");
+      rep.type = "button";
+      rep.addEventListener("click", function () { $("taxi-file").click(); });
+      var rem = el("button", "secondary danger", "Remove");
+      rem.type = "button";
+      rem.addEventListener("click", function () {
+        formPhoto = null;
+        formPhotoHas = false;
+        renderPhotoSlot();
+      });
+      col.appendChild(rep);
+      col.appendChild(rem);
+      wrap.appendChild(img);
+      wrap.appendChild(col);
+      slot.appendChild(wrap);
+    }
+
+    if (formPhoto) { preview(formPhoto); return; }
+    if (formPhotoHas && editingRide) {
+      photoGet(editingRide, function (blob) {
+        /* the form may have moved on while this read was in flight */
+        if (!blob || editingRide === null || formPhoto) { if (!formPhoto) { slot.textContent = ""; addButton("＋ Add screenshot"); } return; }
+        slot.textContent = "";
+        preview(blob);
+      });
+      return;
+    }
+    addButton("＋ Add screenshot");
+  }
+
+  $("taxi-month").addEventListener("change", renderTaxi);
+
+  $("taxi-file").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { toast("Pick an image file"); return; }
+    toast("Processing screenshot…");
+    shrinkImage(f, function (blob) {
+      if (!blob) { toast("Couldn't read that image"); return; }
+      formPhoto = blob;
+      formPhotoHas = false;
+      renderPhotoSlot();
+    });
+  });
+
+  $("cancel-taxi").addEventListener("click", function () {
+    resetTaxiForm();
+    toast("Edit cancelled");
+  });
+
+  $("save-taxi").addEventListener("click", function () {
+    var date = $("taxi-date").value;
+    if (!date) { toast("Pick a date first"); return; }
+    var amtRaw = $("taxi-amount").value.trim();
+    var amt = parseFloat(amtRaw);
+    if (amtRaw === "" || isNaN(amt) || amt <= 0) { toast("Enter the fare amount"); return; }
+    /* keep receipt numbers ASCII — the copy/export paths assume it, same
+       reason plates are restricted on the Log screen */
+    var receipt = $("taxi-receipt").value.trim().toUpperCase().replace(/[^A-Z0-9 \-\/]/g, "");
+    var note = $("taxi-note").value.trim().replace(/[^\x20-\x7E]/g, "");
+
+    var id = editingRide || ("r" + Date.now() + Math.random().toString(36).slice(2, 6));
+    var existing = editingRide ? db.taxi.filter(function (r) { return r.id === id; })[0] : null;
+
+    function commit(hasPhoto) {
+      var rec = {
+        id: id,
+        kind: formKind,
+        date: date,
+        amount: Math.round(amt * 100) / 100,
+        receipt: receipt,
+        note: note,
+        plate: formKind === "parking" ? $("rcpt-plate").value : "",
+        photo: hasPhoto,
+        claimed: existing ? !!existing.claimed : false
+      };
+      if (existing) db.taxi[db.taxi.indexOf(existing)] = rec;
+      else db.taxi.push(rec);
+      save();
+      resetTaxiForm();
+      wantTaxiMonth = rec.date.slice(0, 7); /* show the month it just went into */
+      renderTaxi();
+      renderTodayStatus();
+      toast((existing ? "Updated " : "Saved ") + money(rec.amount) + " " + KIND[rec.kind].label.toLowerCase());
+    }
+
+    if (formPhoto) {
+      photoPut(id, formPhoto, function (ok) {
+        commit(ok);
+        /* A failed screenshot save used to be a toast, which reads like a
+           minor notice. The portal needs that image, so a missing one means
+           the claim can't be filed — that has to stop the user, and tell
+           them where to get the picture back from. */
+        if (!ok) {
+          confirmDialog({
+            title: "Screenshot not saved",
+            message: "The receipt details were saved, but the screenshot could not be stored — this phone is probably out of space. " +
+              "You'll need the picture to claim, so get it again from the Grab or Parking.sg app, then edit this receipt and add it.",
+            confirmLabel: "Got it",
+            onConfirm: function () {}
+          });
+        }
+      });
+      return;
+    }
+    /* photo removed during an edit — drop the stored blob too, so deleted
+       screenshots don't sit in IndexedDB forever taking up the quota */
+    if (existing && existing.photo && !formPhotoHas) photoDel(id);
+    commit(formPhotoHas);
+  });
+
+  function monthsWithRides() {
+    var seen = {};
+    db.taxi.forEach(function (r) { seen[r.date.slice(0, 7)] = true; });
+    return Object.keys(seen).sort().reverse();
+  }
+  /* set when something is saved, so the list jumps to the month it landed
+     in. Without this, saving a receipt while looking at an older month left
+     the new one invisible — the entry was stored fine, but the screen still
+     showed the old month, which reads as the save having failed. */
+  var wantTaxiMonth = null;
+  function renderTaxiMonths() {
+    var sel = $("taxi-month");
+    var months = monthsWithRides();
+    var cur = todayISO().slice(0, 7);
+    if (months.indexOf(cur) === -1) months.unshift(cur);
+    var open = db.taxi.filter(function (r) { return !r.claimed; }).length;
+    var keep = wantTaxiMonth || sel.value;
+    wantTaxiMonth = null;
+    sel.textContent = "";
+    if (open) {
+      var o = el("option", null, "Still to claim (" + open + ")");
+      o.value = "__open__";
+      sel.appendChild(o);
+    }
+    months.forEach(function (ym) {
+      var m = el("option", null, monthLabel(ym) + (ym === cur ? " (this month)" : ""));
+      m.value = ym;
+      sel.appendChild(m);
+    });
+    var valid = (keep === "__open__" && open) || months.indexOf(keep) !== -1;
+    sel.value = valid ? keep : cur;
+  }
+
+  function renderTaxi() {
+    releaseUrls();
+    var list = $("taxi-list");
+    list.textContent = "";
+
+    var cur = todayISO().slice(0, 7);
+    var thisMonth = monthRides(cur);
+    var unclaimed = db.taxi.filter(function (r) { return !r.claimed; });
+    /* two separate facts, stated separately — a single "·" list reads as
+       though the unclaimed count is also scoped to this month, when it's
+       deliberately every outstanding receipt regardless of age */
+    var summary;
+    if (!thisMonth.length) {
+      summary = "This month: nothing logged yet.";
+    } else {
+      var byKind = ["taxi", "parking"].map(function (k) {
+        var of = thisMonth.filter(function (r) { return r.kind === k; });
+        if (!of.length) return null;
+        return of.length + " " + KIND[k].label.toLowerCase() + " · " +
+          money(of.reduce(function (s, r) { return s + r.amount; }, 0));
+      }).filter(Boolean);
+      summary = "This month: " + byKind.join(", ") + ".";
+    }
+    if (unclaimed.length) {
+      summary += " " + unclaimed.length + " receipt" + (unclaimed.length === 1 ? "" : "s") + " still to claim (" +
+        money(unclaimed.reduce(function (s, r) { return s + r.amount; }, 0)) + ").";
+    }
+    $("taxi-summary").textContent = summary;
+
+    renderTaxiMonths();
+    var pick = $("taxi-month").value;
+    var rides;
+    if (pick === "__open__") {
+      /* unclaimed receipts are the whole point of this screen and they
+         outlive the month they were logged in, so they get their own view
+         rather than being buried behind a month the user has moved past */
+      rides = unclaimed.slice().sort(function (a, b) {
+        if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+        return a.id > b.id ? -1 : 1;
+      });
+    } else {
+      rides = monthRides(pick).slice().reverse();
+    }
+
+    if (!rides.length) {
+      list.appendChild(el("div", "empty",
+        pick === "__open__" ? "Nothing outstanding — everything is marked claimed."
+          : pick === cur ? "Nothing logged this month yet."
+          : "Nothing logged in " + monthLabel(pick) + "."));
+      return;
+    }
+
+    var shownMonth = null;
+    rides.forEach(function (r) {
+      /* only the outstanding view spans months, so that's the only place
+         month headers earn their space */
+      var ym = r.date.slice(0, 7);
+      if (pick === "__open__" && ym !== shownMonth) {
+        shownMonth = ym;
+        var mOpen = monthRides(ym).filter(function (x) { return !x.claimed; });
+        list.appendChild(el("div", "ride-month", monthLabel(ym) + " · " +
+          money(mOpen.reduce(function (s, x) { return s + x.amount; }, 0)) + " to claim"));
+      }
+      var row = el("div", "ride");
+
+      var thumb;
+      if (r.photo) {
+        thumb = document.createElement("img");
+        thumb.className = "ride-thumb";
+        thumb.alt = "Receipt for " + fmt(r.date);
+        photoGet(r.id, function (blob) {
+          if (blob) {
+            thumb.src = objUrl(blob);
+            thumb.addEventListener("click", function () { openPhoto(blob); });
+          } else {
+            /* metadata says there's a photo but the blob is gone — most
+               likely the browser evicted the store to reclaim space */
+            var miss = el("div", "ride-thumb none", "gone");
+            if (thumb.parentNode) thumb.parentNode.replaceChild(miss, thumb);
+          }
+        });
+      } else {
+        thumb = el("div", "ride-thumb none", "no pic");
+      }
+      row.appendChild(thumb);
+
+      var main = el("div", "ride-main");
+      var top = el("div", "ride-top");
+      top.appendChild(el("div", "ride-amt", money(r.amount)));
+      var tag = el("button", "tag " + (r.claimed ? "done" : "todo"), r.claimed ? "Claimed" : "To claim");
+      tag.type = "button";
+      tag.title = "Tap to change";
+      tag.addEventListener("click", function () {
+        r.claimed = !r.claimed;
+        save();
+        renderTaxi();
+      });
+      top.appendChild(tag);
+      main.appendChild(top);
+
+      /* type leads the line: at a glance you can tell a $1.20 parking
+         session from a fare without reading the amount twice */
+      var sub = KIND[r.kind].label + " · " + fmt(r.date) + (r.receipt ? " · " + r.receipt : "");
+      main.appendChild(el("div", "ride-sub", sub));
+      var sub2 = [];
+      if (r.kind === "parking" && r.plate) sub2.push(r.plate);
+      if (r.note) sub2.push(r.note);
+      if (sub2.length) main.appendChild(el("div", "ride-sub", sub2.join(" · ")));
+
+      var acts = el("div", "ride-acts");
+      var edit = el("button", "danger-link", "Edit");
+      edit.style.color = "var(--ink-soft)";
+      edit.addEventListener("click", function () {
+        editingRide = r.id;
+        formPhoto = null;
+        formPhotoHas = !!r.photo;
+        $("taxi-date").value = r.date;
+        $("taxi-amount").value = r.amount;
+        $("taxi-receipt").value = r.receipt || "";
+        $("taxi-note").value = r.note || "";
+        renderRcptPlates(r.plate || "");
+        /* keepPlate: show exactly what this receipt was saved with, rather
+           than re-deriving it from whatever is logged for that date now */
+        setRcptKind(r.kind || "taxi", true);
+        $("cancel-taxi").style.display = "";
+        renderPhotoSlot();
+        window.scrollTo(0, 0);
+        toast("Editing " + fmt(r.date) + " — change it and press Update");
+      });
+      var del = el("button", "danger-link", "Delete");
+      del.addEventListener("click", function () {
+        confirmDialog({
+          title: "Delete receipt?",
+          message: "Delete the " + money(r.amount) + " " + KIND[r.kind].label.toLowerCase() + " receipt from " + fmt(r.date) +
+            (r.photo ? ", including its receipt screenshot" : "") + "? This can't be undone.",
+          confirmLabel: "Delete",
+          onConfirm: function () {
+            var i = db.taxi.indexOf(r);
+            if (i !== -1) db.taxi.splice(i, 1);
+            if (r.photo) photoDel(r.id);
+            if (editingRide === r.id) resetTaxiForm();
+            save();
+            renderTaxi();
+            renderTodayStatus();
+            toast("Receipt deleted");
+          }
+        });
+      });
+      acts.appendChild(edit);
+      acts.appendChild(del);
+      main.appendChild(acts);
+
+      row.appendChild(main);
+      list.appendChild(row);
+    });
+  }
+
+  /* ---------- month ---------- */
+  function monthEntries(ym) {
+    return Object.keys(db.entries).filter(function (iso) { return iso.slice(0, 7) === ym; })
+      .sort().map(function (iso) { return db.entries[iso]; });
+  }
+  function rangeYms(endYm, n) { // n months ending at endYm, oldest first
+    var out = [endYm];
+    while (out.length < n) out.unshift(prevYm(out[0]));
+    return out;
+  }
+  function rangeEntries(endYm, n) {
+    return rangeYms(endYm, n).reduce(function (acc, ym) { return acc.concat(monthEntries(ym)); }, []);
+  }
+  function rangeName(endYm, n) {
+    return n === 1 ? endYm : rangeYms(endYm, n)[0] + "_to_" + endYm;
+  }
+
+  function renderMonth() {
+    var ym = $("month-pick").value;
+    if (!ym) { ym = todayISO().slice(0, 7); $("month-pick").value = ym; }
+    var entries = monthEntries(ym);
+    var driven = entries.filter(function (e) { return e.plate; });
+    var otEntries = entries.filter(function (e) { return e.ot > 0; });
+
+    var totalOT = otEntries.reduce(function (s, e) { return s + e.ot; }, 0);
+    var pay = db.settings.baseRate
+      ? otEntries.reduce(function (s, e) { return s + otPay(e); }, 0)
+      : null;
+
+    $("stat-days").textContent = driven.length;
+    $("stat-allow").textContent = money(driven.length * db.settings.allowance);
+    $("stat-ot").textContent = hoursStr(totalOT);
+    $("stat-pay").textContent = pay === null ? "–" : money(pay);
+    $("stat-pay").parentNode.title = pay === null ? "Set your hourly rate in Settings to see this" : "";
+
+    /* claims table */
+    var ct = $("claims-table");
+    ct.textContent = "";
+    var totalLine = $("claims-total");
+    totalLine.textContent = "";
+    if (!driven.length) {
+      ct.appendChild(el("caption", "empty", "No driving days logged this month."));
+    } else {
+      var thead = el("thead"); var hr = el("tr");
+      /* day-of-week dropped to keep this readable at phone width without
+         horizontal scrolling — matches the PDF export, which never had it */
+      ["Date", "Plate", "Allowance"].forEach(function (h, i) { hr.appendChild(el("th", i === 2 ? "num" : null, h)); });
+      thead.appendChild(hr); ct.appendChild(thead);
+      var tb = el("tbody");
+      driven.forEach(function (e) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, fmt(e.date) + " (" + dayName(e.date) + ")"));
+        var td = el("td"); td.appendChild(el("span", "plate-static", e.plate));
+        tr.appendChild(td);
+        tr.appendChild(el("td", "num", money(db.settings.allowance)));
+        tb.appendChild(tr);
+      });
+      ct.appendChild(tb);
+      totalLine.textContent = driven.length + " day" + (driven.length === 1 ? "" : "s") + " × " +
+        money(db.settings.allowance) + " = " + money(driven.length * db.settings.allowance) + " total allowance.";
+    }
+
+    /* taxi table */
+    var tt = $("taxi-table");
+    tt.textContent = "";
+    var tTotal = $("taxi-month-total");
+    tTotal.textContent = "";
+    var rides = monthRides(ym);
+    if (!rides.length) {
+      tt.appendChild(el("caption", "empty", "No taxi or parking receipts logged this month."));
+    } else {
+      var thead3 = el("thead"); var hr3 = el("tr");
+      ["Date", "Type", "Ref", "Amount"].forEach(function (h, i) { hr3.appendChild(el("th", i === 3 ? "num" : null, h)); });
+      thead3.appendChild(hr3); tt.appendChild(thead3);
+      var tb3 = el("tbody");
+      rides.forEach(function (r) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, fmt(r.date)));
+        tr.appendChild(el("td", null, KIND[r.kind].label));
+        tr.appendChild(el("td", null, r.receipt || "–"));
+        tr.appendChild(el("td", "num", money(r.amount)));
+        tb3.appendChild(tr);
+      });
+      tt.appendChild(tb3);
+      var tSum = rides.reduce(function (s, r) { return s + r.amount; }, 0);
+      var tLine = rides.length + " receipt" + (rides.length === 1 ? "" : "s") + " = " + money(tSum) + " total";
+      /* broken out by type because they're filed as separate claims */
+      var split = ["taxi", "parking"].map(function (k) {
+        var of = rides.filter(function (r) { return r.kind === k; });
+        return of.length ? KIND[k].label.toLowerCase() + " " + money(of.reduce(function (s, r) { return s + r.amount; }, 0)) : null;
+      }).filter(Boolean);
+      if (split.length > 1) tLine += " (" + split.join(", ") + ")";
+      tLine += ".";
+      var tOpen = rides.filter(function (r) { return !r.claimed; });
+      if (tOpen.length) {
+        tLine += " " + tOpen.length + " still to claim (" +
+          money(tOpen.reduce(function (s, r) { return s + r.amount; }, 0)) + ").";
+      }
+      tTotal.textContent = tLine;
+    }
+
+    /* OT table */
+    var ot = $("ot-table");
+    ot.textContent = "";
+    var totals = $("ot-totals");
+    totals.textContent = "";
+    if (!otEntries.length) {
+      ot.appendChild(el("caption", "empty", "No overtime logged this month."));
+    } else {
+      var thead2 = el("thead"); var hr2 = el("tr");
+      ["Date", "Type", "Hours", "Rate", "Pay"].forEach(function (h, i) { hr2.appendChild(el("th", i > 1 ? "num" : null, h)); });
+      thead2.appendChild(hr2); ot.appendChild(thead2);
+      var tb2 = el("tbody");
+      var hAt = {};
+      otEntries.forEach(function (e) {
+        otBreakdown(e).forEach(function (p) { hAt[p.mult] = (hAt[p.mult] || 0) + p.hours; });
+        var p2 = otPay(e);
+        var tr = el("tr");
+        tr.appendChild(el("td", null, fmt(e.date) + " (" + dayName(e.date) + ")"));
+        tr.appendChild(el("td", null, DAY_TYPE_LABEL[e.dayType]));
+        tr.appendChild(el("td", "num", hoursStr(e.ot)));
+        tr.appendChild(el("td", "num", rateLabel(e)));
+        tr.appendChild(el("td", "num", p2 === null ? "–" : money(p2)));
+        tb2.appendChild(tr);
+      });
+      ot.appendChild(tb2);
+      var parts = Object.keys(hAt).sort().map(function (r) { return hoursStr(hAt[r]) + "h at " + r + "×"; });
+      var line = parts.join(" + ") + " = " + hoursStr(totalOT) + "h total.";
+      if (pay !== null) line += " Expected OT pay: " + money(pay) + ".";
+      else line += " Set your hourly rate in Settings to see expected pay.";
+      totals.textContent = line;
+    }
+  }
+  $("month-pick").addEventListener("change", renderMonth);
+
+  /* ---------- confirm dialog (replaces window.confirm, which the hosted
+     app page silently blocks — it returns false instantly with no popup) ---------- */
+  function resetModal() {
+    $("modal-message").style.display = "none";
+    $("modal-message").textContent = "";
+    $("modal-img").style.display = "none";
+    $("modal-img").removeAttribute("src");
+    $("modal-text").style.display = "";
+    $("modal-hint").textContent = "";
+    $("modal-close").style.display = "";
+    $("modal-close").textContent = "Close";
+  }
+  function confirmDialog(opts) {
+    resetModal();
+    $("modal-title").textContent = opts.title;
+    $("modal-message").style.display = "block";
+    $("modal-message").textContent = opts.message;
+    $("modal-text").style.display = "none";
+    $("modal-close").style.display = "none";
+    var actions = $("modal-actions");
+    actions.textContent = "";
+    var cancelBtn = el("button", "secondary", "Cancel");
+    cancelBtn.addEventListener("click", function () { $("overlay").hidden = true; });
+    var okBtn = el("button", "secondary danger", opts.confirmLabel || "Confirm");
+    okBtn.addEventListener("click", function () {
+      $("overlay").hidden = true;
+      opts.onConfirm();
+    });
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    $("overlay").hidden = false;
+  }
+
+  /* full-size receipt, with a Share button so it can go straight into the
+     company portal or an email without a detour through Photos */
+  function openPhoto(blob) {
+    resetModal();
+    $("modal-title").textContent = "Receipt";
+    $("modal-text").style.display = "none";
+    var img = $("modal-img");
+    img.src = objUrl(blob);
+    img.style.display = "block";
+    var actions = $("modal-actions");
+    actions.textContent = "";
+
+    var file = null;
+    try { file = new File([blob], "receipt.jpg", { type: blob.type || "image/jpeg" }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      var shareBtn = el("button", "secondary", "Share");
+      shareBtn.addEventListener("click", function () {
+        navigator.share({ files: [file] }).then(function () {}, function () { /* share sheet cancelled */ });
+      });
+      actions.appendChild(shareBtn);
+    }
+    var dl = el("button", "secondary", "Save image");
+    dl.addEventListener("click", function () {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "receipt.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    });
+    actions.appendChild(dl);
+    $("overlay").hidden = false;
+  }
+
+  /* ---------- export modal (clipboard and downloads are often blocked
+     inside the hosted app page, so every path has a manual fallback) ---------- */
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(legacyCopy(text)); });
+    } else {
+      done(legacyCopy(text));
+    }
+  }
+  function legacyCopy(text) {
+    var ta = $("modal-text");
+    var hadModal = !$("overlay").hidden;
+    if (!hadModal) { ta.value = text; }
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    try { return document.execCommand("copy"); } catch (e) { return false; }
+  }
+  function openExport(title, text, filename, onExported) {
+    resetModal();
+    $("modal-title").textContent = title;
+    $("modal-text").value = text;
+    var actions = $("modal-actions");
+    actions.textContent = "";
+
+    var copyBtn = el("button", "secondary", "Copy");
+    copyBtn.addEventListener("click", function () {
+      copyText(text, function (ok) {
+        if (ok) { toast("Copied — paste it anywhere"); if (onExported) onExported(); }
+        else {
+          $("modal-hint").textContent = "Copy was blocked by the browser — press and hold the text above, then Select All and Copy.";
+          $("modal-text").focus();
+          $("modal-text").select();
+        }
+      });
+    });
+    actions.appendChild(copyBtn);
+    $("overlay").hidden = false;
+  }
+
+  /* ---------- PDF export (hand-built — no external library, since the
+     hosted app page's CSP blocks CDN scripts and there's no server) ---------- */
+  function pdfEscape(s) {
+    return String(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  }
+  function asciiSafe(s) {
+    /* the PDF byte offsets assume 1 char = 1 byte, which only holds for
+       ASCII — strip anything outside it so a stray non-ASCII character
+       (e.g. in old data saved before plate input was restricted) can't
+       desync the file's xref table */
+    return String(s).replace(/[^\x20-\x7E]/g, "");
+  }
+  function padRow(a, b, c) {
+    return (a || "").padEnd(14) + (b || "").padEnd(16) + (c || "").padStart(12);
+  }
+  function repeatChar(ch, n) { return new Array(n + 1).join(ch); }
+
+  function buildClaimsPages(title, driven, allowance) {
+    var LINES_PER_PAGE = 48;
+    var sep = repeatChar("-", 42);
+    var headerLines = [padRow("DATE", "PLATE", "ALLOWANCE"), sep];
+    var bodyLines = driven.map(function (e) { return padRow(fmt(e.date), asciiSafe(e.plate), money(allowance)); });
+    var totalBlock = ["", sep, padRow("TOTAL", driven.length + " days", money(driven.length * allowance))];
+
+    var pages = [];
+    var i = 0;
+    do {
+      var lines = [pages.length === 0 ? title : title + " (cont'd)", ""].concat(headerLines);
+      var capacity = LINES_PER_PAGE - lines.length;
+      var chunk = bodyLines.slice(i, i + capacity);
+      i += chunk.length;
+      pages.push(lines.concat(chunk));
+    } while (i < bodyLines.length);
+
+    var last = pages[pages.length - 1];
+    if (last.length + totalBlock.length <= LINES_PER_PAGE) {
+      pages[pages.length - 1] = last.concat(totalBlock);
+    } else {
+      pages.push([title + " (cont'd)", ""].concat(totalBlock));
+    }
+    return pages;
+  }
+
+  function linesToPdf(pagesLines) {
+    var fontSize = 10, leading = 14, marginLeft = 50, topY = 782;
+    var out = "%PDF-1.4\n";
+    var offsets = {};
+    function addObj(num, body) {
+      offsets[num] = out.length;
+      out += num + " 0 obj\n" + body + "\nendobj\n";
+    }
+
+    var nextObjNum = 4;
+    var pageObjNums = [], contentObjNums = [];
+    pagesLines.forEach(function () {
+      pageObjNums.push(nextObjNum++);
+      contentObjNums.push(nextObjNum++);
+    });
+
+    addObj(1, "<< /Type /Catalog /Pages 2 0 R >>");
+    addObj(2, "<< /Type /Pages /Kids [" + pageObjNums.map(function (n) { return n + " 0 R"; }).join(" ") + "] /Count " + pageObjNums.length + " >>");
+    addObj(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>");
+
+    pagesLines.forEach(function (lines, idx) {
+      var ops = ["BT", "/F1 " + fontSize + " Tf", leading + " TL", marginLeft + " " + topY + " Td"];
+      lines.forEach(function (line, li) {
+        ops.push("(" + pdfEscape(line) + ") Tj");
+        if (li < lines.length - 1) ops.push("T*");
+      });
+      ops.push("ET");
+      var stream = ops.join("\n");
+      addObj(pageObjNums[idx], "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents " + contentObjNums[idx] + " 0 R >>");
+      addObj(contentObjNums[idx], "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream");
+    });
+
+    var totalObjs = nextObjNum - 1;
+    var xrefStart = out.length;
+    out += "xref\n0 " + (totalObjs + 1) + "\n";
+    out += "0000000000 65535 f \n";
+    for (var n = 1; n <= totalObjs; n++) {
+      out += String(offsets[n]).padStart(10, "0") + " 00000 n \n";
+    }
+    out += "trailer\n<< /Size " + (totalObjs + 1) + " /Root 1 0 R >>\n";
+    out += "startxref\n" + xrefStart + "\n%%EOF";
+    return out;
+  }
+
+  function openPdfExport(title, pdfString, filename, summaryLine, onExported) {
+    resetModal();
+    $("modal-title").textContent = title;
+    $("modal-text").style.display = "none";
+    $("modal-hint").textContent = summaryLine;
+    var actions = $("modal-actions");
+    actions.textContent = "";
+
+    /* Only the Share API gives a reliable "it actually saved" signal (its
+       promise only resolves on success), so only that path auto-marks the
+       range as claimed. A plain download can be silently blocked with no
+       way to detect it — so that one requires the user's own confirmation. */
+    var file = null;
+    try { file = new File([pdfString], filename, { type: "application/pdf" }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      var shareBtn = el("button", "secondary", "Share / Save PDF");
+      shareBtn.addEventListener("click", function () {
+        navigator.share({ files: [file] }).then(function () {
+          toast("Shared"); if (onExported) onExported();
+          $("overlay").hidden = true;
+        }, function () { /* user cancelled the share sheet */ });
+      });
+      actions.appendChild(shareBtn);
+    }
+    var dlBtn = el("button", "secondary", "Download PDF");
+    var claimedBtn = el("button", "secondary", "Mark as claimed");
+    dlBtn.addEventListener("click", function () {
+      var blob = new Blob([pdfString], { type: "application/pdf" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      $("modal-hint").textContent = "Once you've confirmed the PDF saved, tap \"Mark as claimed\" below. If nothing appeared, your browser blocked the download — try Share / Save PDF instead.";
+      /* draw the eye to the one remaining step, since it's easy to tap
+         Close here and forget — leaving the month nagging silently later */
+      claimedBtn.classList.add("accent");
+      claimedBtn.textContent = "✓ Mark as claimed";
+    });
+    actions.appendChild(dlBtn);
+
+    claimedBtn.addEventListener("click", function () {
+      if (onExported) onExported();
+      toast("Marked as claimed");
+      $("overlay").hidden = true;
+    });
+    actions.appendChild(claimedBtn);
+
+    $("overlay").hidden = false;
+  }
+
+  $("modal-close").addEventListener("click", function () { $("overlay").hidden = true; });
+  $("overlay").addEventListener("click", function (ev) { if (ev.target === this) this.hidden = true; });
+
+  function rangeLabel(ym, n) {
+    return n === 1 ? monthLabel(ym) : monthLabel(rangeYms(ym, n)[0]) + " to " + monthLabel(ym);
+  }
+  function claimRows() {
+    var ym = $("month-pick").value || todayISO().slice(0, 7);
+    var n = parseInt($("range-months").value, 10) || 1;
+    var driven = rangeEntries(ym, n).filter(function (e) { return e.plate; });
+    return { ym: ym, n: n, driven: driven };
+  }
+  function markClaimed(ym, n) {
+    rangeYms(ym, n).forEach(function (m) {
+      if (m < todayISO().slice(0, 7)) db.dismissed[m] = true;
+    });
+    save();
+    renderClaimReminder();
+  }
+
+  $("copy-claims").addEventListener("click", function () {
+    var c = claimRows();
+    if (!c.driven.length) { toast("Nothing to copy for this range"); return; }
+    var text = c.driven.map(function (e) { return fmt(e.date) + "\t" + e.plate; }).join("\n");
+    openExport("Claim list — " + (c.n === 1 ? monthLabel(c.ym) : "last " + c.n + " months"), text, null,
+      function () { markClaimed(c.ym, c.n); });
+  });
+
+  $("pdf-claims").addEventListener("click", function () {
+    var c = claimRows();
+    if (!c.driven.length) { toast("Nothing to export for this range"); return; }
+    var title = "Vehicle Claims - " + rangeLabel(c.ym, c.n);
+    var pages = buildClaimsPages(title, c.driven, db.settings.allowance);
+    var pdf = linesToPdf(pages);
+    var summary = c.driven.length + " day" + (c.driven.length === 1 ? "" : "s") +
+      " - " + money(c.driven.length * db.settings.allowance) + " total allowance";
+    openPdfExport(title, pdf, "vehicle-claims-" + rangeName(c.ym, c.n) + ".pdf", summary,
+      function () { markClaimed(c.ym, c.n); });
+  });
+
+  $("copy-taxi").addEventListener("click", function () {
+    var ym = $("month-pick").value || todayISO().slice(0, 7);
+    var rides = monthRides(ym);
+    if (!rides.length) { toast("No receipts to copy for this month"); return; }
+    var text = rides.map(function (r) {
+      return [fmt(r.date), KIND[r.kind].label, r.receipt || "-",
+              r.plate || "", r.amount.toFixed(2)].join("\t");
+    }).join("\n");
+    openExport("Receipt claims — " + monthLabel(ym), text, null);
+  });
+
+  /* ---------- settings ---------- */
+  function renderSettings() {
+    var list = $("vehicle-list");
+    list.textContent = "";
+    if (!db.vehicles.length) {
+      list.appendChild(el("div", "empty", "No vehicles saved yet."));
+    }
+    db.vehicles.forEach(function (v, i) {
+      var row = el("div", "entry");
+      var left = el("div", "plate-row");
+      left.appendChild(el("span", "plate-static", v));
+      var del = el("button", "danger-link", "Remove");
+      del.addEventListener("click", function () {
+        confirmDialog({
+          title: "Remove vehicle?",
+          message: "Remove " + v + " from your vehicle list? Past entries keep this plate.",
+          confirmLabel: "Remove",
+          onConfirm: function () {
+            var idx = db.vehicles.indexOf(v);
+            if (idx !== -1) db.vehicles.splice(idx, 1);
+            if (selectedPlate === v) selectedPlate = null;
+            save();
+            renderSettings();
+            renderPlates();
+          }
+        });
+      });
+      row.appendChild(left);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+    /* each collapsed section shows its own headline value, so Settings can
+       be read at a glance without opening anything */
+    $("veh-count").textContent = db.vehicles.length + (db.vehicles.length === 1 ? " plate" : " plates");
+    $("pay-meta").textContent = money(db.settings.allowance) + "/day" +
+      (db.settings.baseRate ? " · " + money(db.settings.baseRate) + "/hr" : " · no hourly rate set");
+    $("allowance").value = db.settings.allowance;
+    $("base-rate").value = db.settings.baseRate || "";
+    $("mult-low").value = db.settings.multLow;
+    $("mult-high").value = db.settings.multHigh;
+    document.querySelectorAll("#theme-picker button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === db.settings.theme);
+    });
+    renderNotifButton();
+    renderStorage();
+  }
+
+  document.querySelectorAll("#theme-picker button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      db.settings.theme = b.dataset.v;
+      save();
+      applyTheme();
+      document.querySelectorAll("#theme-picker button").forEach(function (btn) {
+        btn.classList.toggle("on", btn === b);
+      });
+    });
+  });
+
+  $("monthly-pay").addEventListener("input", function () {
+    var monthly = parseFloat(this.value) || 0;
+    var hourly = (monthly * 12) / (52 * 44);
+    $("computed-rate").textContent = money(hourly);
+  });
+  $("use-computed-rate").addEventListener("click", function () {
+    var monthly = parseFloat($("monthly-pay").value) || 0;
+    if (monthly <= 0) { toast("Enter your monthly basic pay first"); return; }
+    var hourly = (monthly * 12) / (52 * 44);
+    $("base-rate").value = hourly.toFixed(2);
+    toast("Filled in " + money(hourly) + "/hr — tap Save pay rules to apply it");
+  });
+
+  $("add-plate").addEventListener("click", function () {
+    /* keep plates plain ASCII (letters/digits/spaces) — the hand-built PDF
+       export assumes 1 char = 1 byte, which only holds for ASCII text */
+    var p = $("new-plate").value.trim().toUpperCase().replace(/[^A-Z0-9 ]/g, "");
+    if (!p) { toast("Type a plate number first"); return; }
+    /* compares with spaces ignored, so typing "SNW 1234 A" when
+       "SNW1234A" already exists is caught rather than creating a twin */
+    if (hasPlate(db.vehicles, p)) { toast(p + " is already in your list"); return; }
+    db.vehicles.push(p);
+    $("new-plate").value = "";
+    selectedPlate = p; /* pre-select it — it has no drive history yet, so it'd otherwise bury itself at the bottom of the list */
+    save();
+    renderSettings();
+    renderPlates();
+    toast("Added " + p + " — selected on the Log screen");
+  });
+
+  $("save-settings").addEventListener("click", function () {
+    var rate = parseFloat($("base-rate").value);
+    db.settings.baseRate = isNaN(rate) || rate <= 0 ? null : rate; /* clearing this is a real, intentional "off" state */
+
+    /* an invalid entry here keeps the PREVIOUS value instead of silently
+       snapping to a hard-coded default — the user should never be surprised
+       that their allowance/rate quietly changed */
+    var allow = parseFloat($("allowance").value);
+    var mLow = parseFloat($("mult-low").value);
+    var mHigh = parseFloat($("mult-high").value);
+    var kept = [];
+    if (isNaN(allow) || allow < 0) kept.push("allowance"); else db.settings.allowance = allow;
+    if (isNaN(mLow) || mLow < 1) kept.push("standard OT rate"); else db.settings.multLow = mLow;
+    if (isNaN(mHigh) || mHigh < 1) kept.push("rest day OT rate"); else db.settings.multHigh = mHigh;
+
+    save();
+    renderSettings(); /* re-show the actual stored values, including any kept-as-is fields */
+    if (kept.length) {
+      toast("Kept previous " + kept.join(", ") + " — that field needs a valid number");
+      return;
+    }
+    toast("Pay rules saved");
+  });
+
+  /* Feedback — there's no backend to receive this (the app is a static,
+     account-free page), so "send straight to the developer" honestly means
+     opening the person's own mail app pre-filled and addressed correctly;
+     they still have to tap send themselves from there. */
+  $("send-feedback").addEventListener("click", function () {
+    var name = $("feedback-name").value.trim();
+    var msg = $("feedback-text").value.trim();
+    if (!msg) { toast("Type your feedback first"); return; }
+    var subject = "DOT.log feedback" + (name ? " from " + name : "");
+    var body = (name ? "From: " + name + "\n\n" : "") + msg;
+    var mailto = "mailto:helloboffo@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    window.location.href = mailto;
+    toast("Opening your mail app — hit send there to deliver it");
+  });
+
+  function renderNotifButton() {
+    var b = $("enable-notif");
+    if (!("Notification" in window)) {
+      b.textContent = "Notifications not supported in this browser";
+      b.disabled = true;
+      $("notif-meta").textContent = "Unavailable";
+      return;
+    }
+    if (Notification.permission === "granted") {
+      b.textContent = "Notifications are on ✓";
+      b.disabled = true;
+      $("notif-meta").textContent = "On";
+    } else if (Notification.permission === "denied") {
+      b.textContent = "Notifications blocked — allow them in browser settings";
+      b.disabled = true;
+      $("notif-meta").textContent = "Blocked";
+    } else {
+      b.textContent = "Turn on notifications";
+      b.disabled = false;
+      $("notif-meta").textContent = "Off";
+    }
+  }
+  $("enable-notif").addEventListener("click", function () {
+    if (!("Notification" in window)) return;
+    Notification.requestPermission().then(function () {
+      renderNotifButton();
+      if (Notification.permission === "granted") toast("Notifications on — you'll get a pop-up when a month's claim is ready");
+    });
+  });
+
+  /* ---------- backup ---------- */
+  $("export-data").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "drive-ot-backup-" + todayISO() + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Backup downloaded");
+  });
+
+  /* Full backup — the plain one above carries no screenshots at all, so a
+     restore onto a new phone would silently arrive with every receipt
+     picture missing. This writes them in alongside the data.
+     Built as an array of string pieces handed to Blob rather than one giant
+     JSON.stringify, because a few hundred base64 screenshots is tens of
+     megabytes and building that as a single string can fail outright on a
+     phone. Photos are read one at a time for the same reason. */
+  function blobToDataUrl(blob, cb) {
+    var r = new FileReader();
+    r.onload = function () { cb(r.result); };
+    r.onerror = function () { cb(null); };
+    r.readAsDataURL(blob);
+  }
+  $("export-archive").addEventListener("click", function () {
+    var withPhotos = db.taxi.filter(function (r) { return r.photo; });
+    var parts = ['{"format":"dotlog-archive-1","data":', JSON.stringify(db), ',"photos":{'];
+    var i = 0, written = 0, missing = 0;
+    toast("Building full backup — this can take a while");
+    (function next() {
+      if (i >= withPhotos.length) {
+        parts.push("}}");
+        var blob = new Blob(parts, { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "dotlog-full-backup-" + todayISO() + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+        toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
+          (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
+        return;
+      }
+      var rec = withPhotos[i++];
+      photoGet(rec.id, function (blob) {
+        if (!blob) { missing++; next(); return; }
+        blobToDataUrl(blob, function (url) {
+          if (url) {
+            parts.push((written ? "," : "") + JSON.stringify(rec.id) + ":" + JSON.stringify(url));
+            written++;
+          } else { missing++; }
+          next();
+        });
+      });
+    })();
+  });
+
+  $("import-data").addEventListener("click", function () { $("import-file").click(); });
+  $("import-file").addEventListener("change", function () {
+    var f = this.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(reader.result);
+        /* accept both the plain backup and the full archive */
+        var isArchive = parsed && parsed.format === "dotlog-archive-1";
+        var data = isArchive ? parsed.data : parsed;
+        var photos = isArchive && parsed.photos ? parsed.photos : null;
+        if (!data || typeof data.entries !== "object" || !Array.isArray(data.vehicles)) throw new Error("bad shape");
+        var photoN = photos ? Object.keys(photos).length : 0;
+        confirmDialog({
+          title: "Restore backup?",
+          message: "Replace everything on this device with the backup (" +
+            Object.keys(data.entries).length + " days, " +
+            (Array.isArray(data.taxi) ? data.taxi.length : 0) + " receipts, " +
+            data.vehicles.length + " vehicles" +
+            (photoN ? ", " + photoN + " screenshots" : ", no screenshots") + ")?",
+          confirmLabel: "Restore",
+          onConfirm: function () {
+            localStorage.setItem(KEY, JSON.stringify(data));
+            db = load();
+            save();
+            selectedPlate = null;
+            resetTaxiForm();
+            renderPlates(); renderTodayStatus(); renderSettings(); renderClaimReminder(); renderTaxi();
+            if (!photoN) { toast("Backup restored"); return; }
+            var ids = Object.keys(photos), k = 0, ok = 0;
+            toast("Restoring screenshots…");
+            (function put() {
+              if (k >= ids.length) {
+                renderTaxi();
+                renderStorage();
+                toast("Restored — " + ok + " of " + ids.length + " screenshots");
+                return;
+              }
+              var id = ids[k++];
+              fetch(photos[id]).then(function (r) { return r.blob(); })
+                .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                      function () { put(); });
+            })();
+          }
+        });
+      } catch (e) {
+        toast("That file doesn't look like a backup from this app");
+      }
+    };
+    reader.readAsText(f);
+    this.value = "";
+  });
+
+  /* The GitHub build's "Update ready" prompt reloads the page, which would
+     throw away anything typed but not saved. That prompt lives outside this
+     closure (it's service-worker code, and the artifact build has no service
+     worker at all), so this is the one deliberate seam it can ask through.
+     Unused in the artifact build, where nothing ever calls it. */
+  window.dotlogHasUnsaved = function () {
+    try {
+      return formIsDirty() ||
+        !!editingRide ||
+        !!formPhoto ||
+        $("taxi-amount").value.trim() !== "" ||
+        $("taxi-receipt").value.trim() !== "";
+    } catch (e) { return false; }
+  };
+
+  /* ---------- boot ---------- */
+  var now = new Date();
+  $("today-line").textContent = DAYS[now.getDay()] + " " + fmt(todayISO());
+  /* Load today's saved entry into the form on open. The form used to start
+     blank even when the day already had an entry, so the screen showed
+     "nothing logged" over a day that was in fact logged — and one tap on
+     Save would then wipe it. Loading it means the form always shows what
+     is actually stored. */
+  loadEntryIntoForm(todayISO());
+  resetTaxiForm();
+  renderTodayStatus();
+  renderClaimReminder(); /* puts the roster note up too */
+  requestPersist();
+})();
+</script>
+
+<script>
+/* GITHUB-ONLY — service worker registration and the update prompt.
+   (The artifact build is served without a service worker, so none of this
+   applies there; the fragment-derivation script cuts the file at the
+   GITHUB-ONLY marker above.)
+
+   The app launches from cache on purpose so it opens with no signal, which
+   means a fresh deploy can't show up until a later launch. That left people
+   closing and reopening twice, guessing whether it had worked. Instead the
+   incoming worker waits, and the page offers a one-tap reload the moment
+   the new version is genuinely downloaded and ready. */
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+
+  var CHECK_GAP_MS = 10 * 60 * 1000;
+  var lastCheck = 0;
+  var reg = null;
+
+  function showBar(worker) {
+    if (document.getElementById("update-bar")) return;
+
+    var style = document.createElement("style");
+    style.textContent =
+      ".update-bar{position:fixed;left:16px;right:16px;" +
+      "bottom:calc(72px + env(safe-area-inset-bottom));max-width:448px;margin:0 auto;" +
+      "display:flex;align-items:center;gap:12px;background:var(--accent);" +
+      "color:var(--accent-ink);border-radius:12px;padding:11px 12px 11px 16px;" +
+      "box-shadow:var(--shadow);z-index:15;font-size:14px;font-weight:700}" +
+      ".update-bar span{flex:1}" +
+      ".update-bar button{font:inherit;font-size:13px;font-weight:700;" +
+      "background:var(--accent-ink);color:var(--accent);border:none;border-radius:8px;" +
+      "padding:7px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}";
+    document.head.appendChild(style);
+
+    var bar = document.createElement("div");
+    bar.className = "update-bar";
+    bar.id = "update-bar";
+    var label = document.createElement("span");
+    label.textContent = "Update ready";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Reload";
+
+    /* reloading throws away anything typed but not saved, so when there IS
+       unsaved work the first tap explains rather than acts — no dialog, just
+       an honest label and a second deliberate tap */
+    var armed = false;
+    btn.addEventListener("click", function () {
+      var dirty = false;
+      try { dirty = typeof window.dotlogHasUnsaved === "function" && window.dotlogHasUnsaved(); }
+      catch (e) {}
+      if (dirty && !armed) {
+        armed = true;
+        label.textContent = "You have an unsaved entry — reloading loses it";
+        btn.textContent = "Reload anyway";
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = "Updating…";
+      worker.postMessage({ type: "SKIP_WAITING" });
+    });
+
+    bar.appendChild(label);
+    bar.appendChild(btn);
+    document.body.appendChild(bar);
+  }
+
+  /* If the Update ready bar is ignored for long enough, take the update
+     anyway on the next launch. Removing skipWaiting() gave people a choice,
+     but a phone whose owner never fully closes the app and never taps the
+     bar would otherwise sit on one version forever — which is how
+     colleagues end up months behind with no way to tell anyone. */
+  var STALL_KEY = "driveotlog.updateSeen";
+  var STALL_MS = 7 * 24 * 60 * 60 * 1000;
+  function noteWaiting(worker) {
+    var since = 0;
+    try { since = parseInt(localStorage.getItem(STALL_KEY), 10) || 0; } catch (e) {}
+    if (!since) {
+      try { localStorage.setItem(STALL_KEY, String(Date.now())); } catch (e) {}
+      return;
+    }
+    if (Date.now() - since > STALL_MS) {
+      try { localStorage.removeItem(STALL_KEY); } catch (e) {}
+      worker.postMessage({ type: "SKIP_WAITING" });
+    }
+  }
+  try {
+    /* cleared once the running page is the new version */
+    navigator.serviceWorker.getRegistration().then(function (r) {
+      if (r && !r.waiting) localStorage.removeItem(STALL_KEY);
+    }, function () {});
+  } catch (e) {}
+
+  function watch(r) {
+    /* a worker left waiting from an earlier visit */
+    if (r.waiting && navigator.serviceWorker.controller) { noteWaiting(r.waiting); showBar(r.waiting); }
+    r.addEventListener("updatefound", function () {
+      var incoming = r.installing;
+      if (!incoming) return;
+      incoming.addEventListener("statechange", function () {
+        /* "installed" while a controller already exists means this is an
+           update; without a controller it's just the first install on a
+           new device, which has nothing to announce */
+        if (incoming.state === "installed" && navigator.serviceWorker.controller) showBar(incoming);
+      });
+    });
+  }
+
+  var reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (reloading) return; /* some browsers fire this twice */
+    reloading = true;
+    window.location.reload();
+  });
+
+  /* Manual "Check for update" in Settings. The bar only appears once the
+     browser happens to notice a new version; this is the way to ask on
+     demand instead of closing and reopening and hoping. */
+  function wireCheckButton() {
+    var section = document.getElementById("update-section");
+    var btn = document.getElementById("check-update");
+    var status = document.getElementById("update-status");
+    if (!section || !btn || !status) return;
+    section.style.display = "";
+
+    var armed = false;
+    function takeIt(worker) {
+      status.textContent = "Update ready — reloading…";
+      worker.postMessage({ type: "SKIP_WAITING" });
+    }
+    btn.addEventListener("click", function () {
+      if (!reg) { status.textContent = "Updates aren't available in this browser."; return; }
+
+      /* reloading discards a half-typed entry, same guard as the bar */
+      var dirty = false;
+      try { dirty = typeof window.dotlogHasUnsaved === "function" && window.dotlogHasUnsaved(); }
+      catch (e) {}
+      if (dirty && !armed) {
+        armed = true;
+        status.textContent = "You have an unsaved entry — updating would lose it.";
+        btn.textContent = "Check anyway";
+        return;
+      }
+
+      btn.disabled = true;
+      status.textContent = "Checking…";
+
+      /* one already sitting there from earlier */
+      if (reg.waiting) { takeIt(reg.waiting); return; }
+
+      var settled = false;
+      var giveUp = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        status.textContent = "You're on the latest version (v2.6).";
+        btn.disabled = false;
+        btn.textContent = "Check for update";
+        armed = false;
+      }, 6000);
+
+      function onFound() {
+        var incoming = reg.installing || reg.waiting;
+        if (!incoming || settled) return;
+        status.textContent = "Downloading update…";
+        if (incoming.state === "installed") { settled = true; clearTimeout(giveUp); takeIt(incoming); return; }
+        incoming.addEventListener("statechange", function () {
+          if (settled) return;
+          if (incoming.state === "installed") { settled = true; clearTimeout(giveUp); takeIt(incoming); }
+        });
+      }
+      reg.addEventListener("updatefound", onFound);
+
+      reg.update().then(function () {
+        lastCheck = Date.now();
+        if (reg.waiting && !settled) { settled = true; clearTimeout(giveUp); takeIt(reg.waiting); return; }
+        if (reg.installing) onFound();
+      }, function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
+        status.textContent = "Couldn't check — no internet connection.";
+        btn.disabled = false;
+        btn.textContent = "Check for update";
+        armed = false;
+      });
+    });
+  }
+
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").then(function (r) {
+      reg = r;
+      lastCheck = Date.now();
+      watch(r);
+      wireCheckButton();
+    }).catch(function () {});
+  });
+
+  /* a home-screen app can stay open for days without ever reloading, so
+     checking when it returns to the foreground is the only thing that will
+     ever notice a deploy on a phone that's never fully closed */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || !reg) return;
+    if (Date.now() - lastCheck < CHECK_GAP_MS) return;
+    lastCheck = Date.now();
+    reg.update().catch(function () {});
+  });
+})();
+</script>
+</body>
+</html>

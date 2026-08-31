@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#e85d3f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="OT Builder">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Overseas OT Form Builder</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="../shell.css">
+  </head>
+  <body class="ot-form-builder-standalone">
+    <div class="cna-topbar"><a class="cna-back" href="../"><span class="cna-back-arrow" aria-hidden="true">‹</span>Apps</a></div>
+    <div id="ot-form-builder">
+      <main class="app-shell">
+        <header class="hero">
+        <div>
+          <p class="eyebrow">Overseas Assignment Hours</p>
+          <h1>OT Form Builder</h1>
+        </div>
+        <div class="hero-actions">
+          <div class="total-pill">
+            <span>Total OT</span>
+            <strong id="totalOt">0</strong>
+          </div>
+          <div class="total-pill">
+            <span>Total Days</span>
+            <strong id="totalDays">0</strong>
+          </div>
+          <button id="saveProject" class="secondary-button" type="button">Save Project</button>
+          <button id="loadProject" class="secondary-button" type="button">Load Project</button>
+          <button id="clearDraft" class="secondary-button" type="button">Clear Draft</button>
+          <input id="projectFile" class="visually-hidden" type="file" accept="application/json,.json">
+          <span id="projectMessage" class="project-message" role="status" aria-live="polite"></span>
+          <button id="themeToggle" class="icon-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode" title="Switch theme">☾</button>
+          <button id="openPreview" class="secondary-button" type="button">Preview PDF →</button>
+        </div>
+      </header>
+
+        <section id="editorView" class="app-view is-active">
+          <section id="workspace" class="workspace">
+          <aside class="setup-panel" aria-label="Form details">
+          <div class="panel-header">
+            <span class="step-badge">1</span>
+            <div>
+              <h2>Setup Assignment</h2>
+              <p>These fields appear at the top and bottom of the final form.</p>
+            </div>
+            <button id="toggleMobileDetails" class="mobile-details-toggle" type="button" aria-expanded="true" aria-label="Collapse details">⌃</button>
+          </div>
+
+          <div class="role-toggle" aria-label="Role">
+            <button class="is-active" type="button" data-role="SOUNDMAN">Soundman</button>
+            <button type="button" data-role="CAMERAMAN">Cameraman</button>
+          </div>
+
+          <label>
+            Program Title
+            <input id="programTitle" type="text" placeholder="e.g. Insight - Japan's Work Culture">
+          </label>
+
+          <label>
+            WBS Number
+            <input id="wbsNumber" type="text" placeholder="Optional">
+          </label>
+
+          <label>
+            Crew Name
+            <input id="crewName" type="text" autocomplete="name" placeholder="Name for Soundman/Cameraman line">
+          </label>
+
+          <div class="date-builder">
+            <div class="date-grid">
+              <label>
+                Start Date
+                <input id="firstDate" type="date">
+              </label>
+              <label>
+                End Date
+                <input id="endDate" type="date">
+              </label>
+              <label>
+                Days
+                <input id="dayCount" type="number" min="0" value="0" readonly>
+              </label>
+            </div>
+          </div>
+
+          <div class="defaults">
+            <label>
+              Default Meal Break
+              <select id="defaultMeal">
+                <option value="" selected>None</option>
+                <option value="0.5">0.5 hr</option>
+                <option value="1">1 hr</option>
+              </select>
+            </label>
+            <label>
+              Normal Shift
+              <input value="9.5 hours" disabled>
+            </label>
+          </div>
+
+          <div class="calendar-spacer" aria-hidden="true"></div>
+          <div id="miniCalendar" class="mini-calendar" aria-label="Month calendar"></div>
+        </aside>
+
+        <section class="sheet-panel" aria-label="Daily OT rows">
+          <div class="panel-header sheet-heading">
+            <div>
+              <span class="step-badge">2</span>
+              <h2>Enter Daily Hours</h2>
+              <p>Add each assignment day, filming hours, OT, meal breaks and transfer time.</p>
+            </div>
+            <button id="toggleAllMobileRows" class="mobile-collapse-all" type="button" aria-label="Collapse all daily cards" aria-expanded="true">⌃</button>
+          </div>
+          <button id="toggleSetup" class="edge-toggle" type="button" aria-expanded="true" aria-label="Collapse details panel">‹</button>
+
+          <div class="table-wrap">
+            <table class="entry-table">
+              <colgroup>
+                <col class="col-no">
+                <col class="col-day">
+                <col class="col-date">
+                <col class="col-time">
+                <col class="col-time">
+                <col class="col-time-small">
+                <col class="col-time-small">
+                <col class="col-meal">
+                <col class="col-transfer">
+                <col class="col-transfer">
+                <col class="col-ot">
+                <col class="col-ot">
+                <col class="col-off">
+                <col class="col-remarks">
+                <col class="col-delete">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Day</th>
+                  <th>Date</th>
+                  <th>Filming From</th>
+                  <th>Filming To</th>
+                  <th>OT From</th>
+                  <th>OT To</th>
+                  <th>Meal</th>
+                  <th>Transfer From</th>
+                  <th>Transfer To</th>
+                  <th>Filming OT</th>
+                  <th>Transfer OT</th>
+                  <th>Off / Rest</th>
+                  <th>Remarks</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div id="mobileRows" class="mobile-entry-cards" aria-label="Daily OT cards"></div>
+          <button id="mobileAddDay" class="secondary-button mobile-add-day" type="button" hidden>＋ Add Day</button>
+        </section>
+        </section>
+        </section>
+
+        <section id="previewView" class="app-view preview-page" aria-label="Form preview">
+        <section class="preview-workspace">
+          <aside class="preview-side-panel" aria-label="Preview options and signatures">
+            <div class="panel-header">
+              <span class="step-badge">3</span>
+              <div>
+                <h2>Sign & Generate PDF</h2>
+                <p>Choose output style and add signatures before downloading.</p>
+              </div>
+            </div>
+
+            <label>
+              PDF style
+              <select id="pdfStyle">
+                <option value="template">Original Template</option>
+                <option value="clean">Clean Table</option>
+              </select>
+            </label>
+
+            <div class="signature-block">
+              <div class="signature-block-header">
+                <span>Crew Signature</span>
+                <button id="clearCrewSignature" class="mini-button" type="button">Clear</button>
+              </div>
+              <canvas id="crewSignaturePad" class="signature-pad" width="420" height="160" aria-label="Soundman/Cameraman signature pad"></canvas>
+            </div>
+
+            <div class="signature-block">
+              <div class="signature-block-header">
+                <span>Producer / Reporter Signature</span>
+                <button id="clearProducerSignature" class="mini-button" type="button">Clear</button>
+              </div>
+              <canvas id="producerSignaturePad" class="signature-pad" width="420" height="160" aria-label="Producer/Reporter signature pad"></canvas>
+            </div>
+
+            <div class="preview-actions">
+              <button class="primary-button" type="button" data-download-pdf>Download PDF</button>
+            </div>
+          </aside>
+
+          <section class="preview-main-panel">
+            <div id="formPreview" class="form-preview"></div>
+          </section>
+        </section>
+        </section>
+
+        <section id="filesView" class="app-view files-page" aria-label="Saved PDF files">
+        <section class="files-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Files</h2>
+              <p>Projects and PDFs saved on this device.</p>
+            </div>
+          </div>
+          <div class="files-tabs" role="tablist" aria-label="Files sections">
+            <button class="is-active" type="button" role="tab" aria-selected="true" data-files-tab="projects">Projects</button>
+            <button type="button" role="tab" aria-selected="false" data-files-tab="pdfs">PDFs</button>
+          </div>
+
+          <section id="projectsSection" class="files-section is-active" aria-label="Project files">
+            <div class="project-tools">
+              <button id="mobileSaveProject" class="secondary-button" type="button">Save Current Project</button>
+              <button id="mobileLoadProject" class="secondary-button" type="button">Load Project</button>
+              <button id="mobileClearDraft" class="secondary-button" type="button">Clear Current Draft</button>
+            </div>
+            <span id="filesProjectMessage" class="project-message" role="status" aria-live="polite"></span>
+            <div id="projectsList" class="files-list" aria-live="polite"></div>
+          </section>
+
+          <section id="pdfsSection" class="files-section" aria-label="PDF files">
+            <div id="filesList" class="files-list" aria-live="polite"></div>
+          </section>
+        </section>
+        </section>
+      </main>
+
+      <div id="draftPrompt" class="draft-prompt" role="dialog" aria-modal="true" aria-labelledby="draftPromptTitle" hidden>
+        <div class="draft-prompt-card">
+          <h2 id="draftPromptTitle">Resume previous draft?</h2>
+          <p>A local draft was found on this device. Resume it or start a fresh form.</p>
+          <div class="draft-prompt-actions">
+            <button id="resumeDraft" class="primary-button" type="button">Resume Draft</button>
+            <button id="startNewDraft" class="secondary-button" type="button">Start New Draft</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mobileStickyActions" class="mobile-sticky-actions" aria-label="Mobile quick actions">
+        <button id="stickyPreview" class="primary-button" type="button">Finalise</button>
+        <button id="stickyBack" class="secondary-button" type="button">Back to Edit</button>
+        <button id="stickyDownload" class="primary-button" type="button" data-download-pdf>Download PDF</button>
+      </div>
+
+      <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Mobile navigation">
+        <button class="is-active" type="button" data-mobile-nav="home" aria-current="page">
+          <span aria-hidden="true">⌂</span>
+          <strong>Home</strong>
+        </button>
+        <button type="button" data-mobile-nav="files">
+          <span aria-hidden="true">▣</span>
+          <strong>Files</strong>
+        </button>
+      </nav>
+
+      <footer class="app-version">v1.3.0</footer>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

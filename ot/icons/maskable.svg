@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#e85d3f"/>
+  <circle cx="256" cy="256" r="188" fill="#ffffff"/>
+  <rect x="156" y="138" width="200" height="240" rx="24" fill="#f8fbff"/>
+  <rect x="184" y="178" width="144" height="22" rx="11" fill="#f0b35f"/>
+  <rect x="184" y="232" width="144" height="18" rx="9" fill="#4658d6"/>
+  <rect x="184" y="280" width="104" height="18" rx="9" fill="#0f9f8f"/>
+  <text x="256" y="356" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700" fill="#18202f">OT</text>
+</svg>
