@@ -227,6 +227,54 @@ body:has(> .cna-topbar) {
   color: #FFF3EF;
 }
 
+.cna-icon-fw {
+  background: linear-gradient(160deg, #2E9182 0%, #175C51 100%);
+  color: #EAF7F4;
+}
+
+/* ---------------------------------------------------------------
+   Moving apps around: hold one down, drag it, tap away to finish.
+   --------------------------------------------------------------- */
+
+.cna-apps.is-editing { touch-action: none; }
+
+.cna-apps.is-editing .cna-app-icon {
+  animation: cna-wiggle .45s ease-in-out infinite alternate;
+}
+
+/* every other tile leans the opposite way, so the grid reads as
+   restless rather than as one block sliding */
+.cna-apps.is-editing .cna-app:nth-child(even) .cna-app-icon {
+  animation-name: cna-wiggle-alt;
+}
+
+@keyframes cna-wiggle {
+  from { transform: rotate(-1.6deg); }
+  to   { transform: rotate(1.6deg); }
+}
+
+@keyframes cna-wiggle-alt {
+  from { transform: rotate(1.6deg); }
+  to   { transform: rotate(-1.6deg); }
+}
+
+.cna-app.is-dragging {
+  position: relative;
+  z-index: 2147483001;
+}
+
+.cna-app.is-dragging .cna-app-icon {
+  animation: none;
+  transform: scale(1.12);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .32);
+}
+
+body.cna-editing { -webkit-user-select: none; user-select: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cna-apps.is-editing .cna-app-icon { animation: none; outline: 2px dashed var(--cna-accent); outline-offset: 3px; }
+}
+
 /* Very narrow phones get three across so the icons stay tappable. */
 @media (max-width: 340px) {
   .cna-apps { grid-template-columns: repeat(3, 1fr); }

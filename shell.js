@@ -199,6 +199,179 @@
   }
 
   /* ------------------------------------------------------------------
+     Home screen order
+
+     Hold an icon down to start moving things, drag it where you want it,
+     tap anywhere else to finish — the way a phone does it. The order is
+     remembered on this device only.
+     ------------------------------------------------------------------ */
+
+  var ORDER_KEY = "cna.appOrder";
+
+  function initHomeScreen() {
+    var grid = document.getElementById("cna-app-grid");
+    if (!grid) return null;
+
+    var tiles = function () { return [].slice.call(grid.querySelectorAll(".cna-app")); };
+
+    function saveOrder() {
+      try {
+        localStorage.setItem(ORDER_KEY, JSON.stringify(tiles().map(function (t) { return t.dataset.appId; })));
+      } catch (e) {}
+    }
+
+    function applySavedOrder() {
+      var saved;
+      try { saved = JSON.parse(localStorage.getItem(ORDER_KEY) || "null"); } catch (e) { saved = null; }
+      if (!saved || !saved.length) return;
+      saved.forEach(function (id) {
+        var tile = grid.querySelector('[data-app-id="' + id + '"]');
+        if (tile) grid.appendChild(tile);
+      });
+      /* anything added since the order was saved falls in at the end,
+         which is what a new app should do */
+    }
+    applySavedOrder();
+
+    /* ---- moving mode ---- */
+
+    var editing = false;
+    var dragTile = null;
+    var pressTimer = null;
+    var startX = 0, startY = 0;
+    var offsetX = 0, offsetY = 0;
+    var moved = false;
+
+    function setEditing(on) {
+      editing = on;
+      grid.classList.toggle("is-editing", on);
+      document.body.classList.toggle("cna-editing", on);
+      if (!on) saveOrder();
+    }
+
+    function tileUnder(x, y) {
+      return tiles().filter(function (t) {
+        if (t === dragTile) return false;
+        var r = t.getBoundingClientRect();
+        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      })[0];
+    }
+
+    /* The tile keeps its place in the grid and is only offset visually,
+       so when it swaps position the other icons genuinely shift and you
+       can see where it is going to land. */
+    function rebase(e) {
+      dragTile.style.transform = "";
+      var r = dragTile.getBoundingClientRect();
+      offsetX = e.clientX - r.left;
+      offsetY = e.clientY - r.top;
+    }
+
+    function beginDrag(tile, e) {
+      dragTile = tile;
+      moved = false;
+      tile.classList.add("is-dragging");
+      rebase(e);
+      moveDragTo(e);
+    }
+
+    function moveDragTo(e) {
+      dragTile.style.transform = "";
+      var r = dragTile.getBoundingClientRect();
+      var dx = e.clientX - (r.left + offsetX);
+      var dy = e.clientY - (r.top + offsetY);
+      dragTile.style.transform = "translate(" + dx + "px," + dy + "px)";
+    }
+
+    function endDrag() {
+      if (!dragTile) return;
+      dragTile.classList.remove("is-dragging");
+      dragTile.style.transform = "";
+      dragTile = null;
+      saveOrder();
+    }
+
+    grid.addEventListener("pointerdown", function (e) {
+      var tile = e.target.closest(".cna-app");
+      if (!tile) return;
+
+      startX = e.clientX;
+      startY = e.clientY;
+
+      if (editing) {
+        e.preventDefault();
+        /* capture keeps the drag alive if the finger slides off the tile.
+           If the browser refuses it, dragging still works through the
+           grid's own listeners, so this must never stop the drag. */
+        try { tile.setPointerCapture(e.pointerId); } catch (err) {}
+        beginDrag(tile, e);
+        return;
+      }
+
+      /* a long hold starts moving mode without blocking a normal tap */
+      pressTimer = setTimeout(function () {
+        pressTimer = null;
+        setEditing(true);
+        try { tile.setPointerCapture(e.pointerId); } catch (err) {}
+        beginDrag(tile, e);
+        if (navigator.vibrate) navigator.vibrate(8);
+      }, 450);
+    });
+
+    grid.addEventListener("pointermove", function (e) {
+      if (pressTimer && (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8)) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+      if (!dragTile) return;
+      e.preventDefault();
+      moved = true;
+      moveDragTo(e);
+
+      var over = tileUnder(e.clientX, e.clientY);
+      if (over) {
+        var list = tiles();
+        var from = list.indexOf(dragTile);
+        var to = list.indexOf(over);
+        if (from < to) grid.insertBefore(dragTile, over.nextSibling);
+        else grid.insertBefore(dragTile, over);
+        /* it just moved slot, so re-measure before the next offset */
+        rebase(e);
+        moveDragTo(e);
+      }
+    });
+
+    function release(e) {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      if (dragTile) {
+        /* a drag must not also count as opening the app */
+        if (moved && e) { e.preventDefault(); }
+        endDrag();
+      }
+    }
+    grid.addEventListener("pointerup", release);
+    grid.addEventListener("pointercancel", release);
+
+    /* while moving, tapping an icon must not open it */
+    grid.addEventListener("click", function (e) {
+      if (!editing) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
+
+    /* tap anywhere off the grid to finish */
+    document.addEventListener("pointerdown", function (e) {
+      if (!editing) return;
+      if (e.target.closest("#cna-app-grid")) return;
+      setEditing(false);
+    });
+
+    return { start: function () { setEditing(true); } };
+  }
+
+  var homeScreen = null;
+
+  /* ------------------------------------------------------------------
      Settings screen — only present on the home screen
      ------------------------------------------------------------------ */
 
@@ -319,6 +492,14 @@
 
     checkBtn.addEventListener("click", function () { refreshUpdates(); });
 
+    var rearrangeBtn = document.getElementById("cna-rearrange");
+    if (rearrangeBtn) {
+      rearrangeBtn.addEventListener("click", function () {
+        show(false);
+        if (homeScreen) homeScreen.start();
+      });
+    }
+
     list.addEventListener("click", function (e) {
       var btn = e.target.closest(".cna-update-btn");
       if (!btn) return;
@@ -335,6 +516,11 @@
        offline use quietly in the background. */
     if (navigator.serviceWorker) {
       navigator.serviceWorker.ready.then(function () {
+        /* Phones clear caches on their own — iOS does it for an app left
+           unopened for a week. Check on every visit that everything is
+           still stored, and quietly put back whatever went missing. */
+        ask({ type: "ENSURE_SHELL" });
+
         ask({ type: "STATUS" }).then(function (installed) {
           if (!installed) return;
           APPS.forEach(function (app) {
@@ -353,6 +539,7 @@
      ------------------------------------------------------------------ */
 
   window.addEventListener("load", function () {
+    homeScreen = initHomeScreen();
     initSettings();
 
     if (!("serviceWorker" in navigator)) return;

@@ -44,14 +44,28 @@ const MODULE_PREFIXES = { dot: at("dot/"), ot: at("ot/") };
 
 /* ---------------------------------------------------------------- */
 
+/* Phones throw caches away. iOS in particular clears them for an app that
+   has not been opened in a week or so, and a browser under storage
+   pressure will do the same. The install event only ever runs once per
+   version of this file, so if the container's cache disappears after that
+   it would never come back and the app would simply stop working with no
+   signal. So this is written to be safe to run at any time, and it is
+   re-run on activation and whenever the page asks. */
+async function ensureShellCached() {
+  const cache = await caches.open(SHELL_CACHE);
+  const have = await cache.keys();
+  if (have.length >= SHELL_ASSETS.length) return false;
+  await cache.addAll(SHELL_ASSETS);
+  return true;
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ASSETS))
-  );
+  event.waitUntil(ensureShellCached());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
+    await ensureShellCached();
     /* Clear out old copies of the container only. A sub-app's cache is
        never swept here — it belongs to that sub-app's own version, and
        only an Update for that sub-app may replace it. */
@@ -178,6 +192,17 @@ self.addEventListener("message", (event) => {
 
   if (msg.type === "STATUS") {
     event.waitUntil(status().then(reply, (e) => reply({ error: String(e) })));
+    return;
+  }
+
+  /* asked on every page load, so a cache the phone threw away is rebuilt
+     the next time the app is opened with a connection */
+  if (msg.type === "ENSURE_SHELL") {
+    event.waitUntil(
+      ensureShellCached()
+        .then((repaired) => reply({ ok: true, repaired: repaired }))
+        .catch((e) => reply({ ok: false, error: String(e.message || e) }))
+    );
     return;
   }
 
