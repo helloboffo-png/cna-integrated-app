@@ -1,0 +1,15 @@
+{
+  "id": "dot",
+  "name": "DOT.log",
+  "version": "2.6.0",
+  "date": "2026-08-21",
+  "notes": "Vehicle and overtime log, monthly claims.",
+  "files": [
+    "index.html",
+    "icon-192.png",
+    "icon-512.png",
+    "icon-512-maskable.png",
+    "apple-touch-icon.png",
+    "favicon-32.png"
+  ]
+}

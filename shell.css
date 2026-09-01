@@ -239,11 +239,180 @@ body:has(> .cna-topbar) {
   color: var(--cna-ink-soft);
 }
 
-.cna-foot-note {
-  margin: 22px 0 10px;
-  padding: 12px 14px;
+/* ---------------------------------------------------------------
+   Settings
+   --------------------------------------------------------------- */
+
+.cna-header { position: relative; }
+
+.cna-gear {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+
   border: 1px solid var(--cna-line);
-  border-radius: 12px;
+  border-radius: 50%;
+  background: var(--cna-card);
+  color: var(--cna-ink);
+  box-shadow: var(--cna-shadow);
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-gear svg { width: 19px; height: 19px; }
+.cna-gear:active { transform: scale(.94); }
+.cna-gear:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
+
+.cna-card {
+  padding: 14px;
+  margin-bottom: 22px;
+  border: 1px solid var(--cna-line);
+  border-radius: 14px;
+  background: var(--cna-card);
+  box-shadow: var(--cna-shadow);
+}
+
+.cna-hint {
+  margin: 12px 0 0;
   font-size: 13px;
+  line-height: 1.45;
   color: var(--cna-ink-soft);
+}
+
+/* segmented day / night / follow control */
+.cna-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.cna-seg button {
+  padding: 10px 4px;
+  border: 1px solid var(--cna-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cna-ink-soft);
+
+  font: 600 13px/1.2 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-seg button.is-on {
+  background: var(--cna-accent);
+  border-color: var(--cna-accent);
+  color: var(--cna-accent-ink);
+}
+
+.cna-seg button:focus-visible,
+.cna-btn:focus-visible,
+.cna-update-btn:focus-visible {
+  outline: 2px solid var(--cna-accent);
+  outline-offset: 2px;
+}
+
+/* one line per app */
+.cna-update-list {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.cna-update-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cna-line);
+}
+
+.cna-update-row:last-child { border-bottom: none; }
+
+.cna-update-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cna-update-state {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--cna-ink-soft);
+}
+
+.cna-update-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+  font: 700 13px/1 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-btn {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--cna-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cna-ink);
+  font: 600 14px/1 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-btn[disabled] { opacity: .55; cursor: default; }
+
+/* ---------------------------------------------------------------
+   "Update ready" prompt — same manners as DOT.log's own: it waits,
+   it never swaps versions under someone mid-entry.
+   --------------------------------------------------------------- */
+
+.cna-update-bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  max-width: 448px;
+  margin: 0 auto;
+  z-index: 2147483000;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 11px 12px 11px 16px;
+  border-radius: 12px;
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+  box-shadow: var(--cna-shadow);
+
+  font: 700 14px/1.35 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+}
+
+.cna-update-bar span { flex: 1; }
+
+.cna-update-bar button {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--cna-accent-ink);
+  color: var(--cna-accent);
+  font: 700 13px/1 inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }

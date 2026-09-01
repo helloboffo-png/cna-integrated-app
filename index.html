@@ -9,16 +9,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CNA Apps">
-<link rel="icon" href="dot/favicon-32.png" type="image/png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="shell.css">
 </head>
 <body class="cna-hub">
 
 <div class="cna-wrap">
 
+<div id="cna-home">
+
   <header class="cna-header">
     <h1>CNA Apps</h1>
     <p>Everything stays on your own phone.</p>
+    <button id="cna-settings-open" class="cna-gear" type="button" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 8h9M19 8h1M4 16h3M13 16h7"/>
+        <circle cx="16" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/>
+      </svg>
+    </button>
   </header>
 
   <nav class="cna-apps" aria-label="Apps">
@@ -47,14 +58,49 @@
 
   </nav>
 
-  <p class="cna-foot-note">
-    Appearance and app updates are coming to this page next. For now, both
-    settings live inside each app.
-  </p>
+  <p class="cna-foot">Works with no internet &middot; nothing is sent anywhere</p>
 
-  <p class="cna-foot">CNA Apps &middot; work in progress</p>
+</div><!-- /cna-home -->
+
+
+<section id="cna-settings" hidden aria-label="Settings">
+
+  <header class="cna-header">
+    <h1>Settings</h1>
+    <p>Shared by every app here.</p>
+    <button id="cna-settings-close" class="cna-gear" type="button" aria-label="Back to apps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </header>
+
+  <h2 class="cna-section-title">Appearance</h2>
+  <div class="cna-card">
+    <div class="cna-seg" id="cna-theme-picker" role="group" aria-label="Appearance">
+      <button type="button" data-theme="light" aria-pressed="false">Day mode</button>
+      <button type="button" data-theme="dark" aria-pressed="false">Night mode</button>
+      <button type="button" data-theme="auto" aria-pressed="false">Follow phone</button>
+    </div>
+    <p class="cna-hint">Applies to every app on this page.</p>
+  </div>
+
+  <h2 class="cna-section-title">App updates</h2>
+  <div class="cna-card">
+    <div id="cna-update-list" class="cna-update-list"></div>
+    <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>
+    <p class="cna-hint">
+      Each app updates on its own. Updating one never changes the others.
+    </p>
+  </div>
+
+  <p class="cna-foot">CNA Apps</p>
+
+</section>
 
 </div>
 
+<script src="shell.js"></script>
 </body>
 </html>

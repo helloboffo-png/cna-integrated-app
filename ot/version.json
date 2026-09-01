@@ -1,0 +1,17 @@
+{
+  "id": "ot",
+  "name": "OT Builder",
+  "version": "1.4.0",
+  "date": "2026-08-31",
+  "notes": "Overseas assignment OT forms, signatures and PDFs.",
+  "files": [
+    "index.html",
+    "app.js",
+    "styles.css",
+    "templates/Blank OT form.pdf",
+    "icons/icon.svg",
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons/maskable.svg"
+  ]
+}

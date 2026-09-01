@@ -17,8 +17,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Log which company vehicle you drove and your overtime hours, then export monthly claims — works fully offline, no account needed.">
 
-<!-- PWA: installable, works offline -->
-<link rel="manifest" href="manifest.json">
+<!-- PWA: installable, works offline. The container owns the one install
+     identity for every app here, so this points at its manifest. -->
+<link rel="manifest" href="../manifest.json">
 <link rel="icon" href="favicon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="../shell.css">
@@ -691,14 +692,9 @@
       </div>
     </details>
 
-    <div class="card">
-      <h2>Appearance</h2>
-      <div class="seg" id="theme-picker" role="group" aria-label="Appearance">
-        <button type="button" data-v="light">Day mode</button>
-        <button type="button" data-v="dark">Night mode</button>
-        <button type="button" data-v="auto" class="on">Follow device</button>
-      </div>
-    </div>
+    <!-- Appearance moved to the container's Settings page, where one
+         switch covers every app. The JS that used to paint this control
+         queries for it and finds nothing, which is harmless. -->
 
     <details class="card sec">
       <summary>
@@ -750,13 +746,8 @@
       </div>
     </details>
 
-    <!-- hidden by default and revealed only by the service-worker code, so
-         the artifact build never shows a button that can't do anything -->
-    <div class="card" id="update-section" style="display:none;">
-      <h2>App version</h2>
-      <p class="hint" id="update-status">You're on v2.6.</p>
-      <button class="secondary" id="check-update" style="width:100%;">Check for update</button>
-    </div>
+    <!-- App version moved to the container's Settings page, which checks
+         and updates each app separately. -->
 
     <p class="hint" style="text-align:center; margin: 4px 0 0;">DOT.log · v2.6 (21 Aug 2026)<br>Gimme the moolah</p>
   </section>
@@ -2693,213 +2684,9 @@
 })();
 </script>
 
-<script>
-/* GITHUB-ONLY — service worker registration and the update prompt.
-   (The artifact build is served without a service worker, so none of this
-   applies there; the fragment-derivation script cuts the file at the
-   GITHUB-ONLY marker above.)
-
-   The app launches from cache on purpose so it opens with no signal, which
-   means a fresh deploy can't show up until a later launch. That left people
-   closing and reopening twice, guessing whether it had worked. Instead the
-   incoming worker waits, and the page offers a one-tap reload the moment
-   the new version is genuinely downloaded and ready. */
-(function () {
-  if (!("serviceWorker" in navigator)) return;
-
-  var CHECK_GAP_MS = 10 * 60 * 1000;
-  var lastCheck = 0;
-  var reg = null;
-
-  function showBar(worker) {
-    if (document.getElementById("update-bar")) return;
-
-    var style = document.createElement("style");
-    style.textContent =
-      ".update-bar{position:fixed;left:16px;right:16px;" +
-      "bottom:calc(72px + env(safe-area-inset-bottom));max-width:448px;margin:0 auto;" +
-      "display:flex;align-items:center;gap:12px;background:var(--accent);" +
-      "color:var(--accent-ink);border-radius:12px;padding:11px 12px 11px 16px;" +
-      "box-shadow:var(--shadow);z-index:15;font-size:14px;font-weight:700}" +
-      ".update-bar span{flex:1}" +
-      ".update-bar button{font:inherit;font-size:13px;font-weight:700;" +
-      "background:var(--accent-ink);color:var(--accent);border:none;border-radius:8px;" +
-      "padding:7px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}";
-    document.head.appendChild(style);
-
-    var bar = document.createElement("div");
-    bar.className = "update-bar";
-    bar.id = "update-bar";
-    var label = document.createElement("span");
-    label.textContent = "Update ready";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "Reload";
-
-    /* reloading throws away anything typed but not saved, so when there IS
-       unsaved work the first tap explains rather than acts — no dialog, just
-       an honest label and a second deliberate tap */
-    var armed = false;
-    btn.addEventListener("click", function () {
-      var dirty = false;
-      try { dirty = typeof window.dotlogHasUnsaved === "function" && window.dotlogHasUnsaved(); }
-      catch (e) {}
-      if (dirty && !armed) {
-        armed = true;
-        label.textContent = "You have an unsaved entry — reloading loses it";
-        btn.textContent = "Reload anyway";
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = "Updating…";
-      worker.postMessage({ type: "SKIP_WAITING" });
-    });
-
-    bar.appendChild(label);
-    bar.appendChild(btn);
-    document.body.appendChild(bar);
-  }
-
-  /* If the Update ready bar is ignored for long enough, take the update
-     anyway on the next launch. Removing skipWaiting() gave people a choice,
-     but a phone whose owner never fully closes the app and never taps the
-     bar would otherwise sit on one version forever — which is how
-     colleagues end up months behind with no way to tell anyone. */
-  var STALL_KEY = "driveotlog.updateSeen";
-  var STALL_MS = 7 * 24 * 60 * 60 * 1000;
-  function noteWaiting(worker) {
-    var since = 0;
-    try { since = parseInt(localStorage.getItem(STALL_KEY), 10) || 0; } catch (e) {}
-    if (!since) {
-      try { localStorage.setItem(STALL_KEY, String(Date.now())); } catch (e) {}
-      return;
-    }
-    if (Date.now() - since > STALL_MS) {
-      try { localStorage.removeItem(STALL_KEY); } catch (e) {}
-      worker.postMessage({ type: "SKIP_WAITING" });
-    }
-  }
-  try {
-    /* cleared once the running page is the new version */
-    navigator.serviceWorker.getRegistration().then(function (r) {
-      if (r && !r.waiting) localStorage.removeItem(STALL_KEY);
-    }, function () {});
-  } catch (e) {}
-
-  function watch(r) {
-    /* a worker left waiting from an earlier visit */
-    if (r.waiting && navigator.serviceWorker.controller) { noteWaiting(r.waiting); showBar(r.waiting); }
-    r.addEventListener("updatefound", function () {
-      var incoming = r.installing;
-      if (!incoming) return;
-      incoming.addEventListener("statechange", function () {
-        /* "installed" while a controller already exists means this is an
-           update; without a controller it's just the first install on a
-           new device, which has nothing to announce */
-        if (incoming.state === "installed" && navigator.serviceWorker.controller) showBar(incoming);
-      });
-    });
-  }
-
-  var reloading = false;
-  navigator.serviceWorker.addEventListener("controllerchange", function () {
-    if (reloading) return; /* some browsers fire this twice */
-    reloading = true;
-    window.location.reload();
-  });
-
-  /* Manual "Check for update" in Settings. The bar only appears once the
-     browser happens to notice a new version; this is the way to ask on
-     demand instead of closing and reopening and hoping. */
-  function wireCheckButton() {
-    var section = document.getElementById("update-section");
-    var btn = document.getElementById("check-update");
-    var status = document.getElementById("update-status");
-    if (!section || !btn || !status) return;
-    section.style.display = "";
-
-    var armed = false;
-    function takeIt(worker) {
-      status.textContent = "Update ready — reloading…";
-      worker.postMessage({ type: "SKIP_WAITING" });
-    }
-    btn.addEventListener("click", function () {
-      if (!reg) { status.textContent = "Updates aren't available in this browser."; return; }
-
-      /* reloading discards a half-typed entry, same guard as the bar */
-      var dirty = false;
-      try { dirty = typeof window.dotlogHasUnsaved === "function" && window.dotlogHasUnsaved(); }
-      catch (e) {}
-      if (dirty && !armed) {
-        armed = true;
-        status.textContent = "You have an unsaved entry — updating would lose it.";
-        btn.textContent = "Check anyway";
-        return;
-      }
-
-      btn.disabled = true;
-      status.textContent = "Checking…";
-
-      /* one already sitting there from earlier */
-      if (reg.waiting) { takeIt(reg.waiting); return; }
-
-      var settled = false;
-      var giveUp = setTimeout(function () {
-        if (settled) return;
-        settled = true;
-        status.textContent = "You're on the latest version (v2.6).";
-        btn.disabled = false;
-        btn.textContent = "Check for update";
-        armed = false;
-      }, 6000);
-
-      function onFound() {
-        var incoming = reg.installing || reg.waiting;
-        if (!incoming || settled) return;
-        status.textContent = "Downloading update…";
-        if (incoming.state === "installed") { settled = true; clearTimeout(giveUp); takeIt(incoming); return; }
-        incoming.addEventListener("statechange", function () {
-          if (settled) return;
-          if (incoming.state === "installed") { settled = true; clearTimeout(giveUp); takeIt(incoming); }
-        });
-      }
-      reg.addEventListener("updatefound", onFound);
-
-      reg.update().then(function () {
-        lastCheck = Date.now();
-        if (reg.waiting && !settled) { settled = true; clearTimeout(giveUp); takeIt(reg.waiting); return; }
-        if (reg.installing) onFound();
-      }, function () {
-        if (settled) return;
-        settled = true;
-        clearTimeout(giveUp);
-        status.textContent = "Couldn't check — no internet connection.";
-        btn.disabled = false;
-        btn.textContent = "Check for update";
-        armed = false;
-      });
-    });
-  }
-
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").then(function (r) {
-      reg = r;
-      lastCheck = Date.now();
-      watch(r);
-      wireCheckButton();
-    }).catch(function () {});
-  });
-
-  /* a home-screen app can stay open for days without ever reloading, so
-     checking when it returns to the foreground is the only thing that will
-     ever notice a deploy on a phone that's never fully closed */
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden || !reg) return;
-    if (Date.now() - lastCheck < CHECK_GAP_MS) return;
-    lastCheck = Date.now();
-    reg.update().catch(function () {});
-  });
-})();
-</script>
+<!-- Service worker registration, the update prompt and the Appearance
+     setting now live in the container's shared shell.js, so every app
+     here is updated separately from one place. -->
+<script src="../shell.js"></script>
 </body>
 </html>
