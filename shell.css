@@ -29,15 +29,25 @@
 }
 
 /* An explicit choice always wins over the device setting, in both
-   directions — same three-state model DOT.log already uses. */
-:root[data-cna-theme="light"] {
+   directions — the same three-state model DOT.log already uses.
+
+   Three ways a choice can arrive: the container's own switch
+   (data-cna-theme), DOT.log stamping the document root (data-theme),
+   and OT Builder stamping its own root element, which is matched
+   through :has(). Whichever is present, the shell's top bar ends up
+   on the same side as the app it is sitting on. */
+:root[data-cna-theme="light"],
+:root[data-theme="light"],
+:root:has(#ot-form-builder[data-theme="light"]) {
   --cna-paper: #F4F5F2; --cna-card: #FFFFFF; --cna-ink: #22282E;
   --cna-ink-soft: #5B646D; --cna-line: #DDE1DC; --cna-accent: #E8A020;
   --cna-accent-ink: #2A2008;
   --cna-shadow: 0 1px 3px rgba(30, 36, 42, .08), 0 4px 14px rgba(30, 36, 42, .06);
 }
 
-:root[data-cna-theme="dark"] {
+:root[data-cna-theme="dark"],
+:root[data-theme="dark"],
+:root:has(#ot-form-builder[data-theme="dark"]) {
   --cna-paper: #171B20; --cna-card: #21262D; --cna-ink: #E9ECEE;
   --cna-ink-soft: #9AA4AD; --cna-line: #333B44; --cna-accent: #EFAF35;
   --cna-accent-ink: #241C06;
@@ -96,6 +106,15 @@ body:has(> .cna-topbar) {
 .cna-back:active { transform: scale(.96); }
 .cna-back-arrow { font-size: 15px; line-height: 1; }
 
+/* Keyboard users need to see where they are. */
+.cna-back:focus-visible,
+.cna-app:focus-visible .cna-app-icon {
+  outline: 2px solid var(--cna-accent);
+  outline-offset: 3px;
+}
+
+.cna-app:focus-visible { outline: none; }
+
 /* ---------------------------------------------------------------
    The front door itself.
    --------------------------------------------------------------- */
@@ -141,64 +160,76 @@ body:has(> .cna-topbar) {
   color: var(--cna-ink-soft);
 }
 
+/* Home screen: a grid of app icons, the way a phone lays them out.
+   Four to a row, filling from the top left, so adding a third or
+   fourth app later just fills the next slot. */
+
 .cna-apps {
   display: grid;
-  gap: 12px;
-  margin-bottom: 26px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px 12px;
+  margin-bottom: 30px;
 }
 
 .cna-app {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 7px;
 
-  padding: 16px;
-  border: 1px solid var(--cna-line);
-  border-radius: 14px;
-
-  background: var(--cna-card);
-  box-shadow: var(--cna-shadow);
   color: inherit;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.cna-app:active { transform: scale(.99); }
-
 .cna-app-icon {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 68px;
   display: grid;
   place-items: center;
 
-  border-radius: 12px;
-  background: var(--cna-accent);
-  color: var(--cna-accent-ink);
+  /* the squircle corner a phone icon uses */
+  border-radius: 23%;
+  box-shadow: var(--cna-shadow);
+
+  transition: transform .12s ease;
 }
 
-.cna-app-icon svg { width: 24px; height: 24px; }
+.cna-app:active .cna-app-icon { transform: scale(.92); }
 
-.cna-app-text { flex: 1 1 auto; min-width: 0; }
-
-.cna-app-text strong {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -.01em;
+.cna-app-icon svg {
+  width: 56%;
+  height: 56%;
 }
 
-.cna-app-text span {
-  display: block;
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--cna-ink-soft);
+.cna-app-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  letter-spacing: -.005em;
+
+  /* a long name wraps to a second line rather than shoving its
+     neighbour out of the grid */
+  overflow-wrap: anywhere;
 }
 
-.cna-app-go {
-  flex: 0 0 auto;
-  font-size: 20px;
-  color: var(--cna-ink-soft);
+/* Each app keeps its own identity, exactly as it does standing alone. */
+
+.cna-icon-dot {
+  background: linear-gradient(160deg, #2B333B 0%, #1B2026 100%);
+  color: #EFAF35;
+}
+
+.cna-icon-ot {
+  background: linear-gradient(160deg, #F07655 0%, #D9482C 100%);
+  color: #FFF3EF;
+}
+
+/* Very narrow phones get three across so the icons stay tappable. */
+@media (max-width: 340px) {
+  .cna-apps { grid-template-columns: repeat(3, 1fr); }
 }
 
 .cna-foot {
