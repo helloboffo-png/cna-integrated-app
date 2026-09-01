@@ -1,0 +1,464 @@
+<title>Five Typefaces for CNA Apps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;800&family=Public+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --paper:   #F3F4F1;
+    --card:    #FFFFFF;
+    --ink:     #1E242A;
+    --muted:   #626C76;
+    --line:    #DCE0DA;
+    --hair:    #EAEDE7;
+    --amber:   #C98213;
+    --amber-bg:#FBF1DE;
+    --plate:   #232A31;
+    --plate-ink:#F2F3EF;
+
+    --ui: "Inter Tight", -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:   #14181C;
+      --card:    #1C2126;
+      --ink:     #E8EBEC;
+      --muted:   #97A1AA;
+      --line:    #2C343B;
+      --hair:    #232A30;
+      --amber:   #EFAF35;
+      --amber-bg:#2A2415;
+      --plate:   #F0F1ED;
+      --plate-ink:#1B2026;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:   #14181C;
+    --card:    #1C2126;
+    --ink:     #E8EBEC;
+    --muted:   #97A1AA;
+    --line:    #2C343B;
+    --hair:    #232A30;
+    --amber:   #EFAF35;
+    --amber-bg:#2A2415;
+    --plate:   #F0F1ED;
+    --plate-ink:#1B2026;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2rem) 4rem;
+  }
+
+  header.top { border-bottom: 2px solid var(--ink); padding-bottom: 1rem; }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 5.5vw, 2.7rem);
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  .sub {
+    margin: .7rem 0 0;
+    max-width: 34rem;
+    color: var(--muted);
+    font-size: 1.02rem;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 .55rem;
+  }
+
+  /* ---- one block per typeface ---- */
+
+  .face {
+    margin-top: 2.5rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    overflow: hidden;
+  }
+
+  .face-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    padding: 1.1rem 1.3rem;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .rank {
+    font-family: var(--mono);
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--amber);
+  }
+
+  .face-name { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+
+  .verdict {
+    margin-left: auto;
+    padding: .22rem .6rem;
+    border-radius: 999px;
+    background: var(--amber-bg);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: .64rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .face-body { padding: 1.3rem; }
+
+  .why { margin: 0 0 1.3rem; color: var(--muted); font-size: .97rem; max-width: 44rem; }
+  .why b { color: var(--ink); font-weight: 600; }
+
+  /* the sample: a real screen from the app, not lorem */
+  .samples {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+  }
+
+  .sample {
+    border: 1px solid var(--hair);
+    border-radius: 11px;
+    padding: 1rem;
+    background: var(--paper);
+  }
+
+  .sample-tag {
+    font-family: var(--mono);
+    font-size: .6rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 .7rem;
+  }
+
+  .row-label { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 .15rem; }
+  .big-num { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .big-num small { font-size: .95rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+
+  .money-rows { margin-top: .9rem; display: grid; gap: .4rem; }
+  .money-row {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding-bottom: .4rem; border-bottom: 1px solid var(--hair);
+    font-size: .92rem;
+  }
+  .money-row:last-child { border-bottom: none; }
+  .money-row span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .plate {
+    display: inline-block;
+    padding: .1rem .42rem;
+    border-radius: 4px;
+    background: var(--plate);
+    color: var(--plate-ink);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+
+  .form-line { margin-bottom: .75rem; }
+  .form-line:last-child { margin-bottom: 0; }
+  .form-line label { display: block; font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: .2rem; }
+  .form-line .val {
+    padding: .5rem .6rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    font-size: .92rem;
+  }
+
+  .times { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+
+  .alphabet {
+    margin-top: 1.1rem;
+    padding-top: .9rem;
+    border-top: 1px solid var(--hair);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    word-spacing: .06em;
+  }
+  .alphabet .digits { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+  /* per-face type assignment */
+  .f-inter   { font-family: "Inter Tight", var(--ui); }
+  .f-plex    { font-family: "IBM Plex Sans", var(--ui); }
+  .f-manrope { font-family: "Manrope", var(--ui); }
+  .f-public  { font-family: "Public Sans", var(--ui); }
+  .f-source  { font-family: "Source Sans 3", var(--ui); }
+
+  .closing {
+    margin-top: 3rem;
+    padding: 1.3rem 1.4rem;
+    border-left: 3px solid var(--amber);
+    background: var(--card);
+    border-radius: 0 11px 11px 0;
+  }
+  .closing h2 { margin: 0 0 .5rem; font-size: 1.05rem; font-weight: 700; }
+  .closing p { margin: 0 0 .7rem; font-size: .97rem; }
+  .closing p:last-child { margin-bottom: 0; }
+
+  footer {
+    margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--ink);
+    font-family: var(--mono); font-size: .66rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <p class="eyebrow">CNA Apps · typeface shortlist</p>
+    <h1>Five fonts, shown doing the actual job</h1>
+    <p class="sub">
+      Every sample below is a real screen from your apps — the month total, a
+      claims list with plates, an OT row with clock times. Judge them on the
+      numbers, because that is what your drivers stare at.
+    </p>
+  </header>
+
+  <!-- 1 -->
+  <section class="face">
+    <div class="face-head">
+      <span class="rank">01</span>
+      <h2 class="face-name f-inter">Inter Tight</h2>
+      <span class="verdict">My pick</span>
+    </div>
+    <div class="face-body f-inter">
+      <p class="why">
+        <b>Why:</b> built for screens, and the tight version saves a surprising
+        amount of width — useful when a plate, a date and a dollar figure share
+        one phone row. Numbers are even and unfussy. It is the closest to what
+        your apps already look like, so nothing will feel wrong on day one.
+        <b>Watch:</b> it is a common choice, so it reads as clean rather than
+        characterful.
+      </p>
+      <div class="samples">
+        <div class="sample">
+          <p class="sample-tag">Month summary</p>
+          <p class="row-label">Expected OT pay</p>
+          <p class="big-num">$293.75</p>
+          <div class="money-rows">
+            <div class="money-row"><span>01/09 <span class="plate">PC5758J</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>02/09 <span class="plate">PC5767H</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>03/09 <span class="plate">PC5787J</span></span><span>$14.00</span></div>
+          </div>
+        </div>
+        <div class="sample">
+          <p class="sample-tag">OT Builder row</p>
+          <div class="form-line"><label>Program title</label><div class="val">Insight — Japan's Work Culture</div></div>
+          <div class="form-line"><label>OT from / to</label><div class="val times">1730 → 2000 · 2.5 hrs</div></div>
+          <div class="form-line"><label>WBS number</label><div class="val times">WBS-4471-0092</div></div>
+        </div>
+      </div>
+      <p class="alphabet">
+        Soundman / Cameraman · Overseas Assignment Hours<br>
+        <span class="digits">0123456789 · 0800 1730 2145 · $1,284.50 · 9.5 hrs</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="face">
+    <div class="face-head">
+      <span class="rank">02</span>
+      <h2 class="face-name f-plex">IBM Plex Sans</h2>
+      <span class="verdict">Most characterful</span>
+    </div>
+    <div class="face-body f-plex">
+      <p class="why">
+        <b>Why:</b> has an engineer's personality without being hard to read —
+        slightly squared shapes that suit timesheets and dockets. Its matching
+        monospace is excellent, so clock times and reference numbers can share a
+        family. <b>Watch:</b> a little wider than Inter Tight, so crowded rows
+        get tighter on a small phone.
+      </p>
+      <div class="samples">
+        <div class="sample">
+          <p class="sample-tag">Month summary</p>
+          <p class="row-label">Expected OT pay</p>
+          <p class="big-num">$293.75</p>
+          <div class="money-rows">
+            <div class="money-row"><span>01/09 <span class="plate">PC5758J</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>02/09 <span class="plate">PC5767H</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>03/09 <span class="plate">PC5787J</span></span><span>$14.00</span></div>
+          </div>
+        </div>
+        <div class="sample">
+          <p class="sample-tag">OT Builder row</p>
+          <div class="form-line"><label>Program title</label><div class="val">Insight — Japan's Work Culture</div></div>
+          <div class="form-line"><label>OT from / to</label><div class="val times">1730 → 2000 · 2.5 hrs</div></div>
+          <div class="form-line"><label>WBS number</label><div class="val times">WBS-4471-0092</div></div>
+        </div>
+      </div>
+      <p class="alphabet">
+        Soundman / Cameraman · Overseas Assignment Hours<br>
+        <span class="digits">0123456789 · 0800 1730 2145 · $1,284.50 · 9.5 hrs</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="face">
+    <div class="face-head">
+      <span class="rank">03</span>
+      <h2 class="face-name f-manrope">Manrope</h2>
+      <span class="verdict">Friendliest</span>
+    </div>
+    <div class="face-body f-manrope">
+      <p class="why">
+        <b>Why:</b> rounder and warmer, and its heavy weight makes big totals look
+        confident. Good if you want the apps to feel like a product rather than a
+        form. <b>Watch:</b> the digits are a touch quirky at small sizes, and a
+        dense claims table is where that shows most.
+      </p>
+      <div class="samples">
+        <div class="sample">
+          <p class="sample-tag">Month summary</p>
+          <p class="row-label">Expected OT pay</p>
+          <p class="big-num">$293.75</p>
+          <div class="money-rows">
+            <div class="money-row"><span>01/09 <span class="plate">PC5758J</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>02/09 <span class="plate">PC5767H</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>03/09 <span class="plate">PC5787J</span></span><span>$14.00</span></div>
+          </div>
+        </div>
+        <div class="sample">
+          <p class="sample-tag">OT Builder row</p>
+          <div class="form-line"><label>Program title</label><div class="val">Insight — Japan's Work Culture</div></div>
+          <div class="form-line"><label>OT from / to</label><div class="val times">1730 → 2000 · 2.5 hrs</div></div>
+          <div class="form-line"><label>WBS number</label><div class="val times">WBS-4471-0092</div></div>
+        </div>
+      </div>
+      <p class="alphabet">
+        Soundman / Cameraman · Overseas Assignment Hours<br>
+        <span class="digits">0123456789 · 0800 1730 2145 · $1,284.50 · 9.5 hrs</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="face">
+    <div class="face-head">
+      <span class="rank">04</span>
+      <h2 class="face-name f-public">Public Sans</h2>
+      <span class="verdict">Plainest</span>
+    </div>
+    <div class="face-body f-public">
+      <p class="why">
+        <b>Why:</b> drawn for government forms, which is almost exactly your
+        problem — dense, official, must not be misread. Nothing decorative gets in
+        the way of a number. <b>Watch:</b> deliberately neutral, so it will never
+        make the app look designed.
+      </p>
+      <div class="samples">
+        <div class="sample">
+          <p class="sample-tag">Month summary</p>
+          <p class="row-label">Expected OT pay</p>
+          <p class="big-num">$293.75</p>
+          <div class="money-rows">
+            <div class="money-row"><span>01/09 <span class="plate">PC5758J</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>02/09 <span class="plate">PC5767H</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>03/09 <span class="plate">PC5787J</span></span><span>$14.00</span></div>
+          </div>
+        </div>
+        <div class="sample">
+          <p class="sample-tag">OT Builder row</p>
+          <div class="form-line"><label>Program title</label><div class="val">Insight — Japan's Work Culture</div></div>
+          <div class="form-line"><label>OT from / to</label><div class="val times">1730 → 2000 · 2.5 hrs</div></div>
+          <div class="form-line"><label>WBS number</label><div class="val times">WBS-4471-0092</div></div>
+        </div>
+      </div>
+      <p class="alphabet">
+        Soundman / Cameraman · Overseas Assignment Hours<br>
+        <span class="digits">0123456789 · 0800 1730 2145 · $1,284.50 · 9.5 hrs</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="face">
+    <div class="face-head">
+      <span class="rank">05</span>
+      <h2 class="face-name f-source">Source Sans 3</h2>
+      <span class="verdict">Most readable small</span>
+    </div>
+    <div class="face-body f-source">
+      <p class="why">
+        <b>Why:</b> holds up better than anything else here at tiny sizes, which
+        matters for the fine print under a claims table. Narrow, so long program
+        titles fit on one line. <b>Watch:</b> that narrowness makes big totals
+        look less commanding than the others.
+      </p>
+      <div class="samples">
+        <div class="sample">
+          <p class="sample-tag">Month summary</p>
+          <p class="row-label">Expected OT pay</p>
+          <p class="big-num">$293.75</p>
+          <div class="money-rows">
+            <div class="money-row"><span>01/09 <span class="plate">PC5758J</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>02/09 <span class="plate">PC5767H</span></span><span>$14.00</span></div>
+            <div class="money-row"><span>03/09 <span class="plate">PC5787J</span></span><span>$14.00</span></div>
+          </div>
+        </div>
+        <div class="sample">
+          <p class="sample-tag">OT Builder row</p>
+          <div class="form-line"><label>Program title</label><div class="val">Insight — Japan's Work Culture</div></div>
+          <div class="form-line"><label>OT from / to</label><div class="val times">1730 → 2000 · 2.5 hrs</div></div>
+          <div class="form-line"><label>WBS number</label><div class="val times">WBS-4471-0092</div></div>
+        </div>
+      </div>
+      <p class="alphabet">
+        Soundman / Cameraman · Overseas Assignment Hours<br>
+        <span class="digits">0123456789 · 0800 1730 2145 · $1,284.50 · 9.5 hrs</span>
+      </p>
+    </div>
+  </section>
+
+  <div class="closing">
+    <h2>One thing before you choose</h2>
+    <p>
+      Your apps currently use whatever font the phone already has — Apple's on an
+      iPhone, Google's on an Android. That costs nothing to load and never fails.
+      Picking one of these means every phone downloads it, which is a small delay
+      the first time and a fallback to the phone's own font if the download fails.
+    </p>
+    <p>
+      Worth it if you want the apps to look like one family. Not worth it if you
+      would rather they stay instant and never wobble.
+    </p>
+  </div>
+
+  <footer>CNA Apps · typeface shortlist · 1 Sept 2026</footer>
+
+</div>
