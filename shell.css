@@ -317,14 +317,13 @@ body:has(> .cna-topbar) {
    read as a pair. farmerswife keeps its own blue, because it is somebody
    else's product and should look like itself. */
 
-.cna-icon-dot {
-  background: linear-gradient(160deg, #14181C 0%, #000000 100%);
-  color: #F9FB93;
-}
-
+/* The two in-house apps are deliberately identical in treatment — black
+   ground, crimson line art, same weight — so they read as one family and
+   are told apart by their drawing alone. */
+.cna-icon-dot,
 .cna-icon-ot {
-  background: linear-gradient(160deg, #F0343A 0%, #C4171C 100%);
-  color: #F9FB93;
+  background: #000000;
+  color: #ED2227;
 }
 
 .cna-icon-fw {

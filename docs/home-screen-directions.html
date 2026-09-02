@@ -1,0 +1,254 @@
+<title>Ten Home Screen Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --paper:#F3F3F0; --card:#FFFFFF; --ink:#15181B; --muted:#666D74;
+    --line:#DEE0DB; --hair:#ECEEE9; --red:#ED2227;
+    --ui:"Inter Tight",-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0F1214; --card:#181C1F; --ink:#E9EBEC; --muted:#99A0A7;
+      --line:#282D32; --hair:#20252A; --red:#F4474C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0F1214; --card:#181C1F; --ink:#E9EBEC; --muted:#99A0A7;
+    --line:#282D32; --hair:#20252A; --red:#F4474C;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:64rem;margin:0 auto;padding:clamp(1.75rem,5vw,3.5rem) clamp(1rem,4vw,2rem) 4rem}
+
+  header.top{border-bottom:3px solid var(--red);padding-bottom:1rem}
+  .eyebrow{margin:0 0 .5rem;font-family:var(--mono);font-size:.68rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--red)}
+  h1{margin:0;font-size:clamp(1.9rem,5.5vw,2.7rem);font-weight:800;letter-spacing:-.03em;line-height:1.04;text-wrap:balance}
+  .sub{margin:.8rem 0 0;max-width:36rem;color:var(--muted);font-size:1.03rem}
+
+  h2{margin:2.8rem 0 1rem;font-size:1.15rem;font-weight:700;letter-spacing:-.015em}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1.4rem}
+
+  .opt{border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden}
+  .opt.pick{border-color:var(--red);border-width:2px}
+
+  .screen{height:19rem;padding:.9rem;font-size:9px;line-height:1.35;overflow:hidden;position:relative}
+  .meta{padding:.85rem .95rem 1rem;border-top:1px solid var(--hair)}
+  .num{font-family:var(--mono);font-size:.68rem;font-weight:600;letter-spacing:.1em;color:var(--red)}
+  .opt.pick .num::after{content:" · my pick";color:var(--muted)}
+  .name{margin:.3rem 0 .35rem;font-size:.95rem;font-weight:700;letter-spacing:-.01em}
+  .why{margin:0;font-size:.8rem;color:var(--muted);line-height:1.45}
+  .law{margin:.55rem 0 0;font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
+  .mix{margin:.55rem 0 0;display:flex;height:7px;border-radius:4px;overflow:hidden;
+        box-shadow:0 0 0 1px var(--line)}
+  .mix i{display:block;height:100%}
+
+  /* ---- shared mock parts ---- */
+  .m-title{font-weight:800;letter-spacing:-.02em}
+  .m-day{font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+  .m-date{font-weight:700;letter-spacing:-.02em}
+  .m-apps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 7px}
+  .m-app{text-align:center}
+  .m-ico{width:100%;aspect-ratio:1;max-width:34px;margin:0 auto;border-radius:23%;display:grid;place-items:center}
+  .m-ico svg{width:58%;height:58%}
+  .m-lbl{margin-top:3px;font-size:7.5px}
+  .m-gear{position:absolute;top:.9rem;right:.95rem;width:17px;height:17px;border-radius:50%;display:grid;place-items:center}
+  .m-gear svg{width:9px;height:9px}
+
+  .closing{margin-top:2.8rem;padding:1.2rem 1.35rem;border-left:3px solid var(--red);background:var(--card);border-radius:0 12px 12px 0}
+  .closing p{margin:0 0 .65rem;font-size:.97rem}
+  .closing p:last-child{margin-bottom:0}
+  .closing strong{font-weight:700}
+
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+</style>
+
+<div class="page">
+  <header class="top">
+    <p class="eyebrow">60 · 30 · 10 &nbsp;/&nbsp; WCAG 4.5:1 &nbsp;/&nbsp; Laws of UX</p>
+    <h1>Ten ways the home screen could look</h1>
+    <p class="sub">
+      Each one is a real layout, not a sketch, and each is built on something
+      from the two sheets you sent. The bar under every card shows its colour
+      split — dominant, supporting, accent — and the line beneath names the
+      rule it leans on.
+    </p>
+  </header>
+
+  <h2>The ten</h2>
+  <div class="grid" id="grid"></div>
+
+  <div class="closing">
+    <p>
+      <strong>My pick is 4.</strong> It keeps the sparse icon screen you asked
+      for, but earns its space by answering the one question a driver actually
+      opens the app to settle — whether today is logged yet. That is the
+      Goal-Gradient Effect doing real work rather than decoration.
+    </p>
+    <p>
+      <strong>One thing worth knowing.</strong> You asked for pure black icon
+      grounds. On the dark home screen the tiles then sit on a near-black
+      background and their edges disappear — you can see it in 1. Every option
+      below keeps your black tiles and fixes it a different way: a slightly
+      lighter page, a hairline edge, or a lighter ground behind the row.
+    </p>
+  </div>
+
+  <footer>CNA Apps · home screen directions · 2 Sept 2026</footer>
+</div>
+
+<script>
+const RED="#ED2227", YEL="#F9FB93";
+
+const WHEEL=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.7"/><path d="M3.3 10.6h6M15 10.6h5.7M12 14.7V21"/></svg>`;
+const PLANE=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.8 0 1.3.8 1.3 1.8v3.9l7.7 4.3v1.9l-7.7-2.2v3.8l2.5 1.8v1.5L12 19l-3.8.8v-1.5l2.5-1.8v-3.8L3 14.9V13l7.7-4.3V4.8C10.7 3.8 11.2 3 12 3z"/></svg>`;
+const GEAR=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 3.6a5 5 0 0 0-6.1 6.4L3.9 15.6a2 2 0 0 0 2.8 2.8l5.6-5.6a5 5 0 0 0 6.4-6.1l-2.9 2.9-2.4-.7-.7-2.4z"/></svg>`;
+
+/* one app tile */
+const app = (glyph, label, ground, ink, edge) => `
+  <div class="m-app">
+    <div class="m-ico" style="background:${ground};color:${ink};${edge ? "box-shadow:0 0 0 1px " + edge : ""}">${glyph}</div>
+    <div class="m-lbl" style="color:${label.c}">${label.t}</div>
+  </div>`;
+
+/* the standard three, with a configurable tile ground */
+const trio = (tileBg, tileInk, labelColour, edge) => `
+  <div class="m-apps">
+    ${app(WHEEL, {t:"DOT.log",c:labelColour}, tileBg, tileInk, edge)}
+    ${app(PLANE, {t:"OT Builder",c:labelColour}, tileBg, tileInk, edge)}
+    ${app(`<svg viewBox="0 0 100 100"><text x="50" y="54" text-anchor="middle" dominant-baseline="central" font-family="Helvetica,Arial" font-weight="600" font-size="46" fill="#fff">fw</text></svg>`,
+         {t:"farmerswife",c:labelColour}, "linear-gradient(180deg,#5FC6DC,#3FA8C6)", "#fff", null)}
+  </div>`;
+
+const OPTIONS = [
+
+ { n:"Today, as it stands", law:"Law of Proximity",
+   why:"What is live now. Soft dark ground, date above a rule, icons beneath. Note how the black tiles nearly vanish into the page.",
+   mix:[["#171B20",60],["#9AA4AD",30],[YEL,10]],
+   html:`<div style="background:#171B20;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE">
+     <div class="m-gear" style="background:#21262D;color:#E9ECEE;border:1px solid #333B44">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:${YEL};margin-top:9px">WEDNESDAY</div>
+     <div class="m-date" style="font-size:15px;margin-top:1px">2 September 2026</div>
+     <div style="height:1px;background:#333B44;margin:9px 0 12px"></div>
+     ${trio("#000","#ED2227","#E9ECEE",null)}</div>` },
+
+ { n:"Hairline edge", law:"Law of Uniform Connectedness",
+   why:"Identical to 1 but every tile gets a one-pixel edge, so a black tile still has a shape on a dark page. Smallest possible change.",
+   mix:[["#171B20",60],["#9AA4AD",30],[RED,10]],
+   html:`<div style="background:#171B20;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE">
+     <div class="m-gear" style="background:#21262D;color:#E9ECEE;border:1px solid #333B44">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:${RED};margin-top:9px">WEDNESDAY</div>
+     <div class="m-date" style="font-size:15px;margin-top:1px">2 September 2026</div>
+     <div style="height:1px;background:#333B44;margin:9px 0 12px"></div>
+     ${trio("#000","#ED2227","#E9ECEE","#3A424A")}</div>` },
+
+ { n:"Daylight", law:"Contrast & Accessibility",
+   why:"A pale ground instead of dark. Black tiles have maximum contrast, and the screen stays readable in direct sun — which is where these apps get used.",
+   mix:[["#F4F5F2",60],["#5B646D",30],[RED,10]],
+   html:`<div style="background:#F4F5F2;height:100%;margin:-.9rem;padding:.9rem;color:#22282E">
+     <div class="m-gear" style="background:#fff;color:#22282E;border:1px solid #DDE1DC">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:${RED};margin-top:9px">WEDNESDAY</div>
+     <div class="m-date" style="font-size:15px;margin-top:1px">2 September 2026</div>
+     <div style="height:1px;background:#DDE1DC;margin:9px 0 12px"></div>
+     ${trio("#000","#ED2227","#22282E",null)}</div>` },
+
+ { n:"Answer first", law:"Goal-Gradient Effect", pick:true,
+   why:"A single line above the icons says whether today is logged. The app answers the question you opened it to ask before you tap anything.",
+   mix:[["#14181C",60],["#99A1A8",30],[RED,10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE">
+     <div class="m-gear" style="background:#1D2227;color:#E9ECEE;border:1px solid #2C333A">${GEAR}</div>
+     <div class="m-day" style="font-size:7.5px;color:#99A1A8">WEDNESDAY 2 SEPTEMBER</div>
+     <div class="m-date" style="font-size:17px;margin-top:3px">Not logged yet</div>
+     <div style="margin-top:9px;padding:7px 9px;border-radius:9px;background:${RED};color:#fff;font-weight:700;font-size:9px">Log today &rsaquo;</div>
+     <div style="height:1px;background:#2C333A;margin:12px 0"></div>
+     ${trio("#000","#ED2227","#E9ECEE","#343B43")}</div>` },
+
+ { n:"Cards", law:"Law of Common Region",
+   why:"Each app sits in its own bounded card. Slower to scan than bare icons, but the boundary makes each one unmistakably its own thing.",
+   mix:[["#14181C",60],["#1D2227",30],[RED,10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE">
+     <div class="m-gear" style="background:#1D2227;color:#E9ECEE;border:1px solid #2C333A">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:#99A1A8;margin-top:7px">WED 2 SEPTEMBER 2026</div>
+     <div style="display:grid;gap:6px;margin-top:11px">
+       ${[["DOT.log",WHEEL],["OT Builder",PLANE]].map(([t,g])=>`
+         <div style="display:flex;align-items:center;gap:8px;padding:7px;border:1px solid #2C333A;border-radius:10px;background:#1A1F23">
+           <div class="m-ico" style="max-width:24px;background:#000;color:${RED}">${g}</div>
+           <div style="font-weight:600;font-size:9px">${t}</div></div>`).join("")}
+       <div style="display:flex;align-items:center;gap:8px;padding:7px;border:1px solid #2C333A;border-radius:10px;background:#1A1F23">
+         <div class="m-ico" style="max-width:24px;background:linear-gradient(180deg,#5FC6DC,#3FA8C6);color:#fff;font-weight:700;font-size:11px">fw</div>
+         <div style="font-weight:600;font-size:9px">farmerswife</div></div>
+     </div></div>` },
+
+ { n:"Thumb reach", law:"Fitts's Law",
+   why:"Icons pushed to the lower half where a thumb actually lands one-handed. The date takes the top, which nothing needs to touch.",
+   mix:[["#14181C",60],["#99A1A8",30],[RED,10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE;display:flex;flex-direction:column">
+     <div class="m-gear" style="background:#1D2227;color:#E9ECEE;border:1px solid #2C333A">${GEAR}</div>
+     <div class="m-day" style="font-size:7.5px;color:${RED}">WEDNESDAY</div>
+     <div class="m-date" style="font-size:20px;margin-top:2px;line-height:1.05">2 September<br>2026</div>
+     <div style="flex:1"></div>
+     ${trio("#000","#ED2227","#E9ECEE","#343B43")}</div>` },
+
+ { n:"Masthead", law:"Von Restorff Effect",
+   why:"A crimson band across the top, the way a broadcaster brands a screen. Strong identity, and the one coloured area draws the eye first.",
+   mix:[["#14181C",60],[RED,30],["#F2F3EF",10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;color:#E9ECEE">
+     <div style="background:${RED};padding:.75rem .9rem;color:#fff;position:relative">
+       <div class="m-gear" style="top:.7rem;background:rgba(255,255,255,.16);color:#fff">${GEAR}</div>
+       <div class="m-title" style="font-size:13px">CNA Apps</div>
+       <div style="font-size:8px;opacity:.9;margin-top:2px">Wednesday 2 September 2026</div>
+     </div>
+     <div style="padding:.95rem .9rem">${trio("#000","#ED2227","#E9ECEE","#343B43")}</div></div>` },
+
+ { n:"One accent only", law:"60-30-10",
+   why:"Greys carry the whole screen and crimson appears exactly once — on the day name. The most disciplined reading of the colour rule.",
+   mix:[["#131619",60],["#8A9299",30],[RED,10]],
+   html:`<div style="background:#131619;height:100%;margin:-.9rem;padding:.9rem;color:#E4E7E9">
+     <div class="m-gear" style="background:#1B1F23;color:#E4E7E9;border:1px solid #272C31">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:${RED};margin-top:9px">WEDNESDAY</div>
+     <div class="m-date" style="font-size:15px;margin-top:1px;color:#8A9299">2 September 2026</div>
+     <div style="height:1px;background:#272C31;margin:9px 0 12px"></div>
+     ${trio("#0A0C0E","#C9CFD4","#8A9299","#2A2F34")}</div>` },
+
+ { n:"Big targets", law:"Fitts's Law · Miller's Law",
+   why:"Two apps to a row instead of four, so every tile is roughly double the area. Easiest to hit with gloves on or in a moving vehicle.",
+   mix:[["#14181C",60],["#99A1A8",30],[RED,10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE">
+     <div class="m-gear" style="background:#1D2227;color:#E9ECEE;border:1px solid #2C333A">${GEAR}</div>
+     <div class="m-title" style="font-size:13px">CNA Apps</div>
+     <div class="m-day" style="font-size:7.5px;color:${RED};margin-top:8px">WEDNESDAY 2 SEPTEMBER</div>
+     <div class="m-apps" style="grid-template-columns:repeat(2,1fr);gap:14px 12px;margin-top:12px">
+       ${app(WHEEL,{t:"DOT.log",c:"#E9ECEE"},"#000",RED,"#343B43").replace("max-width:34px","max-width:56px")}
+       ${app(PLANE,{t:"OT Builder",c:"#E9ECEE"},"#000",RED,"#343B43").replace("max-width:34px","max-width:56px")}
+     </div></div>` },
+
+ { n:"Bare", law:"Occam's Razor",
+   why:"No title, no date, no rule — icons on a ground and nothing else. The least to read, but it gives up the date you asked for.",
+   mix:[["#14181C",60],["#99A1A8",30],[RED,10]],
+   html:`<div style="background:#14181C;height:100%;margin:-.9rem;padding:.9rem;color:#E9ECEE;display:flex;flex-direction:column;justify-content:center">
+     <div class="m-gear" style="background:#1D2227;color:#E9ECEE;border:1px solid #2C333A">${GEAR}</div>
+     ${trio("#000","#ED2227","#E9ECEE","#343B43")}</div>` }
+];
+
+document.getElementById("grid").innerHTML = OPTIONS.map((o, i) => `
+  <div class="opt${o.pick ? " pick" : ""}">
+    <div class="screen">${o.html}</div>
+    <div class="meta">
+      <span class="num">${String(i + 1).padStart(2, "0")}</span>
+      <p class="name">${o.n}</p>
+      <p class="why">${o.why}</p>
+      <div class="mix">${o.mix.map(([c, w]) => `<i style="background:${c};width:${w}%"></i>`).join("")}</div>
+      <p class="law">${o.law}</p>
+    </div>
+  </div>`).join("");
+</script>
