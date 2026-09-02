@@ -400,7 +400,9 @@
         setEditing(true);
         try { tile.setPointerCapture(e.pointerId); } catch (err) {}
         beginDrag(tile, e);
-        if (navigator.vibrate) navigator.vibrate(8);
+        /* a small tick so the hold is felt, not just seen. Some browsers
+           refuse it outright, which must not interrupt the drag. */
+        try { if (navigator.vibrate) navigator.vibrate(8); } catch (err) {}
       }, 450);
     });
 
