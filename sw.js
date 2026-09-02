@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.3.0";
+const SHELL_VERSION = "1.3.1";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
@@ -60,7 +60,23 @@ async function ensureShellCached(force) {
     const have = await cache.keys();
     if (have.length >= SHELL_ASSETS.length) return false;
   }
-  await cache.addAll(SHELL_ASSETS);
+
+  /* Fetched one by one with the browser's own cache bypassed, rather than
+     through cache.addAll. addAll is happy to take a copy the browser is
+     still holding — and this site is served with a ten minute freshness
+     window — so a release could be stored under its new version number
+     while actually containing the previous file. That is precisely what
+     happened once: the container reported the new version and served the
+     old script. The sub-app installer below always did it this way; this
+     now matches it. */
+  const fetched = await Promise.all(
+    SHELL_ASSETS.map(async (url) => {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res || !res.ok) throw new Error("Could not download " + url);
+      return [url, res];
+    })
+  );
+  await Promise.all(fetched.map(([url, res]) => cache.put(url, res)));
   return true;
 }
 
