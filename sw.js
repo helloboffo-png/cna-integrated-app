@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.7.0";
+const SHELL_VERSION = "1.8.0";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
@@ -38,6 +38,7 @@ const SHELL_ASSETS = [
   "icon-192.png",
   "icon-512.png",
   "icon-512-maskable.png",
+  "fw-icon.png",
   /* stored too, so the apps keep their own lettering with no signal */
   "fonts/inter-tight-latin.woff2",
   "fonts/inter-tight-latin-ext.woff2"

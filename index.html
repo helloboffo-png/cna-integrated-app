@@ -20,8 +20,7 @@
 
 <div id="cna-home">
 
-  <header class="cna-header">
-    <h1>CNA Apps</h1>
+  <header class="cna-header cna-header-bare">
     <button id="cna-settings-open" class="cna-gear" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -67,14 +66,9 @@
     <a class="cna-app" href="https://mediacorp.cloud.farmerswife.com/mobile/index.html"
        data-app-id="fw" data-external="1" target="_blank" rel="noopener noreferrer">
       <span class="cna-app-icon cna-icon-fw" aria-hidden="true">
-        <!-- farmerswife's own mark, so the tile is recognisable to anyone
-             who already uses it. Colours sampled from the supplied logo. -->
-        <svg viewBox="0 0 100 100">
-          <path d="M0 64c26 15 74 15 100 0v40H0z" fill="#ffffff" opacity=".09"/>
-          <text x="50" y="52" text-anchor="middle" dominant-baseline="central"
-                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
-                font-weight="600" font-size="46" fill="#ffffff">fw</text>
-        </svg>
+        <!-- farmerswife's current App Store icon, used as-is so the tile is
+             the mark their own users already recognise -->
+        <img src="fw-icon.png" alt="" width="512" height="512">
       </span>
       <span class="cna-app-label">farmerswife</span>
     </a>

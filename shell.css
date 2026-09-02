@@ -50,8 +50,8 @@
   --cna-ink: #22282E;
   --cna-ink-soft: #5B646D;
   --cna-line: #DDE1DC;
-  --cna-accent: #E8A020;
-  --cna-accent-ink: #2A2008;
+  --cna-accent: #ED2227;
+  --cna-accent-ink: #FFFFFF;
   --cna-shadow: 0 1px 3px rgba(30, 36, 42, .08), 0 4px 14px rgba(30, 36, 42, .06);
 }
 
@@ -62,8 +62,8 @@
     --cna-ink: #E9ECEE;
     --cna-ink-soft: #9AA4AD;
     --cna-line: #333B44;
-    --cna-accent: #EFAF35;
-    --cna-accent-ink: #241C06;
+    --cna-accent: #F04A4E;
+    --cna-accent-ink: #FFFFFF;
     --cna-shadow: 0 1px 3px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .25);
   }
 }
@@ -80,8 +80,8 @@
 :root[data-theme="light"],
 :root:has(#ot-form-builder[data-theme="light"]) {
   --cna-paper: #F4F5F2; --cna-card: #FFFFFF; --cna-ink: #22282E;
-  --cna-ink-soft: #5B646D; --cna-line: #DDE1DC; --cna-accent: #E8A020;
-  --cna-accent-ink: #2A2008;
+  --cna-ink-soft: #5B646D; --cna-line: #DDE1DC; --cna-accent: #ED2227;
+  --cna-accent-ink: #FFFFFF;
   --cna-shadow: 0 1px 3px rgba(30, 36, 42, .08), 0 4px 14px rgba(30, 36, 42, .06);
 }
 
@@ -89,8 +89,8 @@
 :root[data-theme="dark"],
 :root:has(#ot-form-builder[data-theme="dark"]) {
   --cna-paper: #171B20; --cna-card: #21262D; --cna-ink: #E9ECEE;
-  --cna-ink-soft: #9AA4AD; --cna-line: #333B44; --cna-accent: #EFAF35;
-  --cna-accent-ink: #241C06;
+  --cna-ink-soft: #9AA4AD; --cna-line: #333B44; --cna-accent: #F04A4E;
+  --cna-accent-ink: #FFFFFF;
   --cna-shadow: 0 1px 3px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .25);
 }
 
@@ -114,7 +114,7 @@
   display: flex;
   align-items: center;
 
-  height: calc(44px + env(safe-area-inset-top));
+  height: calc(52px + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) 10px 0 calc(10px + env(safe-area-inset-left));
 
   background: var(--cna-paper);
@@ -123,7 +123,7 @@
 
 /* Reserve the bar's strip so the app below is never covered. */
 body:has(> .cna-topbar) {
-  padding-top: calc(44px + env(safe-area-inset-top));
+  padding-top: calc(52px + env(safe-area-inset-top));
 }
 
 .cna-back {
@@ -131,20 +131,20 @@ body:has(> .cna-topbar) {
   align-items: center;
   gap: 5px;
 
-  padding: 6px 12px 6px 8px;
+  padding: 9px 16px 9px 12px;
   border: 1px solid var(--cna-line);
   border-radius: 999px;
 
   background: var(--cna-card);
   color: var(--cna-ink);
 
-  font: 600 13px/1 var(--cna-font);
+  font: 600 15px/1 var(--cna-font);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .cna-back:active { transform: scale(.96); }
-.cna-back-arrow { font-size: 15px; line-height: 1; }
+.cna-back-arrow { font-size: 18px; line-height: 1; }
 
 /* Keyboard users need to see where they are. */
 .cna-back:focus-visible,
@@ -192,6 +192,10 @@ body:has(> .cna-topbar) {
 }
 
 .cna-header { margin-bottom: 22px; }
+
+/* With the title gone the header holds only the wrench, so it needs
+   just enough height to sit in rather than a heading's worth. */
+.cna-header-bare { height: 30px; margin-bottom: 10px; }
 
 .cna-header h1 {
   margin: 0;
@@ -357,7 +361,7 @@ body:has(> .cna-topbar) {
 
 /* Each app keeps its own identity, exactly as it does standing alone. */
 
-/* CNA's own colours: Alizarin Crimson #D6685C, Texas #F9FB93, black.
+/* CNA's own colours: Alizarin Crimson #ED2227, Texas #F9FB93, black.
    The two in-house apps share the brand and differ by ground, so they
    read as a pair. farmerswife keeps its own blue, because it is somebody
    else's product and should look like itself. */
@@ -370,16 +374,14 @@ body:has(> .cna-topbar) {
 .cna-icon-dot,
 .cna-icon-ot {
   background: #14181C;
-  color: #D6685C;
+  color: #ED2227;
 }
 
-.cna-icon-fw {
-  background: linear-gradient(180deg, #5FC6DC 0%, #3FA8C6 100%);
-  color: #FFFFFF;
-}
 
-/* the farmerswife tile draws its own artwork rather than a line glyph */
-.cna-icon-fw svg { width: 100%; height: 100%; }
+/* farmerswife supplies its own finished icon, so the tile just shows it
+   edge to edge rather than drawing anything of ours behind it */
+.cna-icon-fw { background: #FFFFFF; }
+.cna-icon-fw img { width: 100%; height: 100%; display: block; object-fit: cover; }
 
 /* ---------------------------------------------------------------
    Moving apps around: hold one down, drag it, tap away to finish.
