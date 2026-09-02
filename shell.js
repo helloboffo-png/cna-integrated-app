@@ -254,20 +254,72 @@
 
     var shown = "";
 
+    var statusEl = document.getElementById("cna-today-status");
+    var actionEl = document.getElementById("cna-today-action");
+
+    /* Reads DOT.log's own saved data to say whether today is already
+       logged, so the app answers the question it is usually opened to
+       ask before anything is tapped. Read only — nothing is written, and
+       if the shape of that data ever changes this quietly says nothing
+       rather than guessing. */
+    function todayStatus() {
+      try {
+        var raw = localStorage.getItem("driveotlog.v1");
+        /* nothing saved yet means DOT.log has never been opened on this
+           phone, which is still an unlogged day — and the nudge is more
+           use to a new person than to anyone */
+        if (!raw) return { logged: false };
+        var db = JSON.parse(raw);
+        if (!db || !db.entries) return { logged: false };
+
+        var d = new Date();
+        var iso = d.getFullYear() + "-" +
+          String(d.getMonth() + 1).padStart(2, "0") + "-" +
+          String(d.getDate()).padStart(2, "0");
+
+        var entry = db.entries[iso];
+        if (!entry) return { logged: false };
+
+        var bits = [];
+        if (entry.plate) bits.push(entry.plate);
+        else bits.push("No vehicle");
+        if (entry.ot) bits.push(entry.ot + "h OT");
+        return { logged: true, detail: bits.join(" · ") };
+      } catch (e) { return null; }
+    }
+
+    function paintStatus() {
+      var s = todayStatus();
+      if (!s) { statusEl.hidden = true; actionEl.hidden = true; return; }
+      if (s.logged) {
+        statusEl.textContent = "Logged today — " + s.detail;
+        statusEl.className = "cna-today-status is-done";
+        statusEl.hidden = false;
+        actionEl.hidden = true;
+      } else {
+        statusEl.textContent = "Not logged yet";
+        statusEl.className = "cna-today-status";
+        statusEl.hidden = false;
+        actionEl.hidden = false;
+      }
+    }
+
     function paint() {
       var now = new Date();
       var stamp = now.toDateString();
-      if (stamp === shown) return;
-      shown = stamp;
-      try {
-        dayEl.textContent = now.toLocaleDateString(undefined, { weekday: "long" });
-        dateEl.textContent = now.toLocaleDateString(undefined, {
-          day: "numeric", month: "long", year: "numeric"
-        });
-      } catch (e) {
-        dayEl.textContent = "";
-        dateEl.textContent = now.toDateString();
+      if (stamp !== shown) {
+        shown = stamp;
+        try {
+          dayEl.textContent = now.toLocaleDateString(undefined, { weekday: "long" });
+          dateEl.textContent = now.toLocaleDateString(undefined, {
+            day: "numeric", month: "long", year: "numeric"
+          });
+        } catch (e) {
+          dayEl.textContent = "";
+          dateEl.textContent = now.toDateString();
+        }
       }
+      paintStatus();
     }
 
     paint();

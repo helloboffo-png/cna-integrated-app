@@ -235,7 +235,7 @@ body:has(> .cna-topbar) {
 }
 
 .cna-today-day {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: .16em;
   text-transform: uppercase;
@@ -247,12 +247,42 @@ body:has(> .cna-topbar) {
 }
 
 .cna-today-date {
-  font-size: 27px;
+  font-size: 29px;
   font-weight: 700;
   letter-spacing: -.02em;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
+
+/* Whether today is logged. Deliberately set below the date rather than
+   above it: the date is the heading, this is the answer under it. */
+.cna-today-status {
+  flex: 0 0 100%;
+  margin-top: 7px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--cna-ink-soft);
+}
+
+.cna-today-status.is-done { color: var(--cna-accent); }
+
+.cna-today-action {
+  flex: 0 0 auto;
+  margin-top: 11px;
+
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-today-action:active { transform: scale(.97); }
+.cna-today-action:focus-visible { outline: 2px solid var(--cna-ink); outline-offset: 2px; }
 
 /* Home screen: a grid of app icons, the way a phone lays them out.
    Four to a row, filling from the top left, so adding a third or
@@ -327,18 +357,20 @@ body:has(> .cna-topbar) {
 
 /* Each app keeps its own identity, exactly as it does standing alone. */
 
-/* CNA's own colours: Alizarin Crimson #ED2227, Texas #F9FB93, black.
+/* CNA's own colours: Alizarin Crimson #D6685C, Texas #F9FB93, black.
    The two in-house apps share the brand and differ by ground, so they
    read as a pair. farmerswife keeps its own blue, because it is somebody
    else's product and should look like itself. */
 
 /* The two in-house apps are deliberately identical in treatment — black
    ground, crimson line art, same weight — so they read as one family and
-   are told apart by their drawing alone. */
+   are told apart by their drawing alone. The ground is a soft dark rather
+   than pure black — black against the page was a harder edge than the
+   screen wanted. */
 .cna-icon-dot,
 .cna-icon-ot {
-  background: #000000;
-  color: #ED2227;
+  background: #14181C;
+  color: #D6685C;
 }
 
 .cna-icon-fw {
