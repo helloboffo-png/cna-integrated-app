@@ -159,14 +159,29 @@ body:has(> .cna-topbar) {
    The front door itself.
    --------------------------------------------------------------- */
 
+/* The home screen sits a shade lighter than the rest of the container.
+   The app tiles are pure black, and on the standard dark ground their
+   edges disappeared into the page — a soft neutral behind them gives
+   each tile its shape back without touching the tiles themselves.
+
+   This is deliberately its own value rather than a change to --cna-paper,
+   because that token also paints the bar inside each sub-app, where it
+   has to keep matching the app it is sitting on. */
 .cna-hub {
   margin: 0;
   padding: 0;
-  background: var(--cna-paper);
+  background: #F4F5F2;
   color: var(--cna-ink);
   font: 16px/1.5 var(--cna-font);
   min-height: 100vh;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-cna-theme="light"]) .cna-hub { background: #212830; }
+}
+
+:root[data-cna-theme="dark"] .cna-hub { background: #212830; }
+:root[data-cna-theme="light"] .cna-hub { background: #F4F5F2; }
 
 .cna-hub * { box-sizing: border-box; }
 
