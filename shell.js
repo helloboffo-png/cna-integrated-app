@@ -85,6 +85,41 @@
   applyThemeLocally(readTheme());
 
   /* ------------------------------------------------------------------
+     Text size
+
+     Both apps set their text in fixed pixels, so there is no root size to
+     turn up — changing one would do nothing. Zoom is the honest tool
+     here: it scales the whole CSS pixel space, so every size in both
+     apps grows together, including ones written years ago.
+
+     It also shrinks the usable width in the same breath, which is what
+     saves it: the layout simply reflows narrower instead of running off
+     the side of the screen. Applied the moment this script runs rather
+     than on load, so the page is not painted small and then jumped. */
+
+  var SIZE_KEY = "cna.textScale";
+  var SIZES = ["0.9", "1", "1.15", "1.3"];
+
+  function readScale() {
+    var v;
+    try { v = localStorage.getItem(SIZE_KEY); } catch (e) {}
+    return SIZES.indexOf(v) === -1 ? "1" : v;
+  }
+
+  function applyScale(value) {
+    var el = document.documentElement;
+    if (value === "1") el.style.removeProperty("zoom");
+    else el.style.zoom = value;
+  }
+
+  function setScale(value) {
+    try { localStorage.setItem(SIZE_KEY, value); } catch (e) {}
+    applyScale(value);
+  }
+
+  applyScale(readScale());
+
+  /* ------------------------------------------------------------------
      Talking to the offline worker
      ------------------------------------------------------------------ */
 
@@ -415,6 +450,24 @@
     });
     paintSeg();
 
+    /* text size */
+    var sizeSeg = document.getElementById("cna-size-picker");
+    function paintSize() {
+      var current = readScale();
+      [].forEach.call(sizeSeg.querySelectorAll("button"), function (b) {
+        var on = b.dataset.scale === current;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", String(on));
+      });
+    }
+    [].forEach.call(sizeSeg.querySelectorAll("button"), function (b) {
+      b.addEventListener("click", function () {
+        setScale(b.dataset.scale);
+        paintSize();
+      });
+    });
+    paintSize();
+
     /* updates */
     var list = document.getElementById("cna-update-list");
     var checkBtn = document.getElementById("cna-check-updates");
@@ -491,14 +544,6 @@
     }
 
     checkBtn.addEventListener("click", function () { refreshUpdates(); });
-
-    var rearrangeBtn = document.getElementById("cna-rearrange");
-    if (rearrangeBtn) {
-      rearrangeBtn.addEventListener("click", function () {
-        show(false);
-        if (homeScreen) homeScreen.start();
-      });
-    }
 
     list.addEventListener("click", function (e) {
       var btn = e.target.closest(".cna-update-btn");

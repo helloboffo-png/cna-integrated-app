@@ -380,6 +380,15 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   gap: 6px;
 }
 
+/* the text-size row shows each option at roughly its own size, so the
+   choice is visible rather than described */
+.cna-seg-4 {
+  grid-template-columns: repeat(4, 1fr);
+  align-items: stretch;
+}
+
+.cna-seg-4 button { padding: 10px 2px; }
+
 .cna-seg button {
   padding: 10px 4px;
   border: 1px solid var(--cna-line);
