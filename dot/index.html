@@ -83,7 +83,10 @@
   body {
     background: var(--paper);
     color: var(--ink);
-    font: 16px/1.5 -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    /* Inter Tight comes from the container's stylesheet, which is served
+       from this site rather than fetched from Google. The phone's own font
+       stays behind it, so nothing is blank if the file has not arrived. */
+    font: 16px/1.5 "Inter Tight", -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
     min-height: 100vh;
   }
   .app {
