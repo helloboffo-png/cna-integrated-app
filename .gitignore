@@ -3,7 +3,8 @@
 
 # PDFs and project backups that the apps generate land in whatever folder
 # the browser downloads to, which during local testing is this one. Only
-# ignore the repo root — ot/templates/ holds the real blank OT form and
+# ignore the repo root - ot/templates/ holds the real blank OT form and
 # must stay tracked.
 /*.pdf
-/*-backup-*.json
+/*.json
+!/manifest.json
