@@ -243,6 +243,40 @@
 
   var ORDER_KEY = "cna.appOrder";
 
+  /* Today's date, shown at the top of the home screen. Both apps are about
+     which day you worked, so it is worth reading before anything is tapped.
+     Redrawn when the app comes back to the foreground and once a minute, so
+     a phone left open overnight is not still showing yesterday. */
+  function initToday() {
+    var dayEl = document.getElementById("cna-today-day");
+    var dateEl = document.getElementById("cna-today-date");
+    if (!dayEl || !dateEl) return;
+
+    var shown = "";
+
+    function paint() {
+      var now = new Date();
+      var stamp = now.toDateString();
+      if (stamp === shown) return;
+      shown = stamp;
+      try {
+        dayEl.textContent = now.toLocaleDateString(undefined, { weekday: "long" });
+        dateEl.textContent = now.toLocaleDateString(undefined, {
+          day: "numeric", month: "long", year: "numeric"
+        });
+      } catch (e) {
+        dayEl.textContent = "";
+        dateEl.textContent = now.toDateString();
+      }
+    }
+
+    paint();
+    setInterval(paint, 60000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) paint();
+    });
+  }
+
   function initHomeScreen() {
     var grid = document.getElementById("cna-app-grid");
     if (!grid) return null;
@@ -325,6 +359,23 @@
       dragTile = null;
       saveOrder();
     }
+
+    /* A held link makes a phone offer its own menu — Open, Open in new tab.
+       That menu appears over the app and cancels the hold, so the icons
+       could never be rearranged on a phone. Refusing it here, together
+       with the callout rules in the stylesheet, gives the gesture back.
+       Right-click on a computer lands in the same place and is left alone
+       unless the icons are actually being moved. */
+    grid.addEventListener("contextmenu", function (e) {
+      if (e.pointerType === "mouse" && !editing) return;
+      e.preventDefault();
+    });
+
+    /* the browser's own picture-dragging would fight the reorder */
+    [].forEach.call(grid.querySelectorAll(".cna-app"), function (t) {
+      t.setAttribute("draggable", "false");
+    });
+    grid.addEventListener("dragstart", function (e) { e.preventDefault(); });
 
     grid.addEventListener("pointerdown", function (e) {
       var tile = e.target.closest(".cna-app");
@@ -584,6 +635,7 @@
      ------------------------------------------------------------------ */
 
   window.addEventListener("load", function () {
+    initToday();
     homeScreen = initHomeScreen();
     initSettings();
 
