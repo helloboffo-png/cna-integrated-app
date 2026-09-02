@@ -491,7 +491,7 @@
 
   var APPS = [
     { id: "dot", name: "DOT.log" },
-    { id: "ot", name: "OT Builder" }
+    { id: "ot", name: "Overseas Tracker" }
   ];
 
   function initSettings() {
