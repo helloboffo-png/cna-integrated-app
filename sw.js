@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.1.0";
+const SHELL_VERSION = "1.2.0";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
@@ -54,21 +54,28 @@ const MODULE_PREFIXES = { dot: at("dot/"), ot: at("ot/") };
    it would never come back and the app would simply stop working with no
    signal. So this is written to be safe to run at any time, and it is
    re-run on activation and whenever the page asks. */
-async function ensureShellCached() {
+async function ensureShellCached(force) {
   const cache = await caches.open(SHELL_CACHE);
-  const have = await cache.keys();
-  if (have.length >= SHELL_ASSETS.length) return false;
+  if (!force) {
+    const have = await cache.keys();
+    if (have.length >= SHELL_ASSETS.length) return false;
+  }
   await cache.addAll(SHELL_ASSETS);
   return true;
 }
 
+/* Installing and activating both take a fresh copy of every container
+   file rather than keeping whatever is already stored. Without that, a
+   release that changed only the home screen or the stylesheet would sit
+   behind the old stored copy, and people would still be looking at the
+   previous version. Bumping SHELL_VERSION below is what triggers it. */
 self.addEventListener("install", (event) => {
-  event.waitUntil(ensureShellCached());
+  event.waitUntil(ensureShellCached(true));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
-    await ensureShellCached();
+    await ensureShellCached(true);
     /* Clear out old copies of the container only. A sub-app's cache is
        never swept here — it belongs to that sub-app's own version, and
        only an Update for that sub-app may replace it. */

@@ -52,6 +52,15 @@ button. Pressing it refreshes only that app.
 Keep the handful of container lines in the app's `index.html` — the top bar,
 the shared stylesheet and `shell.js`. They are marked with comments.
 
+## Changing the container itself
+
+The home screen, settings, stylesheet and `shell.js` are cached on people's
+phones like everything else. After changing any of them, **bump
+`SHELL_VERSION` at the top of `sw.js`**. That is what tells a phone to throw
+away its stored copy and take the new one; without it, people keep seeing the
+previous version. Sub-apps are unaffected either way — their stores are
+separate and are never swept by a container release.
+
 ## Adding a new app later
 
 1. Put it in its own folder, e.g. `payslips/`.
