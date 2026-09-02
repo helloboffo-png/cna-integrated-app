@@ -638,10 +638,13 @@
           APPS.forEach(function (app, i) {
             var latest = results[i + 1];
             var have = installed[app.id];
+            /* stored as version-bN; people are only shown the version */
+            var haveShown = have ? String(have).split("-b")[0] : null;
+            var wantTag = latest ? latest.version + "-b" + (latest.build || 0) : null;
 
             if (!latest) {
               offline = true;
-              setRow(app.id, have ? "Installed v" + have + " · can't check right now" : "Can't check right now", null);
+              setRow(app.id, haveShown ? "Installed v" + haveShown + " · can't check right now" : "Can't check right now", null);
               return;
             }
             if (!have) {
@@ -649,10 +652,13 @@
               installApp(app, latest, true);
               return;
             }
-            if (have !== latest.version) {
-              setRow(app.id, "v" + have + " · update ready to v" + latest.version, "Update");
+            if (have !== wantTag) {
+              var toShown = latest.version;
+              setRow(app.id, haveShown === toShown
+                ? "v" + haveShown + " · a fix is ready"
+                : "v" + haveShown + " · update ready to v" + toShown, "Update");
             } else {
-              setRow(app.id, "v" + have + " · up to date", null);
+              setRow(app.id, "v" + haveShown + " · up to date", null);
             }
           });
 
@@ -664,10 +670,10 @@
 
     function installApp(app, info, quiet) {
       setRow(app.id, quiet ? "Getting ready…" : "Updating…", null);
-      return ask({ type: "INSTALL", id: app.id, version: info.version, files: info.files })
+      return ask({ type: "INSTALL", id: app.id, version: info.version, build: info.build, files: info.files })
         .then(function (res) {
           if (res && res.ok) {
-            setRow(app.id, "v" + res.version + " · up to date", null);
+            setRow(app.id, "v" + String(res.version).split("-b")[0] + " · up to date", null);
           } else {
             setRow(app.id, (res && res.error) ? "Update failed — " + res.error : "Update failed — check your connection", "Try again");
           }
@@ -702,7 +708,7 @@
           APPS.forEach(function (app) {
             if (installed[app.id]) return;
             fetchVersionFile(app.id).then(function (info) {
-              if (info) ask({ type: "INSTALL", id: app.id, version: info.version, files: info.files });
+              if (info) ask({ type: "INSTALL", id: app.id, version: info.version, build: info.build, files: info.files });
             });
           });
         });

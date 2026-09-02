@@ -46,6 +46,12 @@ ship. There is nothing to coordinate.
 2. Bump `version` in that folder's `version.json`.
 3. Push.
 
+**Any** change to a file inside a sub-app's folder needs that folder's
+`version.json` touched, or phones keep serving their stored copy and the
+change never arrives. If the app's own version has not changed — say the
+container edited the top bar on that page — bump `build` instead. People
+still see the app's real version; the stored copy refreshes all the same.
+
 People then see **update ready** next to that app in Settings, with its own
 button. Pressing it refreshes only that app.
 

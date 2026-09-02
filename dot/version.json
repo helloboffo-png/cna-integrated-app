@@ -2,6 +2,7 @@
   "id": "dot",
   "name": "DOT.log",
   "version": "2.6.0",
+  "build": 2,
   "date": "2026-08-21",
   "notes": "Vehicle and overtime log, monthly claims.",
   "files": [

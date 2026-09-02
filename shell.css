@@ -372,16 +372,15 @@ body:has(> .cna-topbar) {
    than pure black — black against the page was a harder edge than the
    screen wanted. */
 .cna-icon-dot,
-.cna-icon-ot {
+.cna-icon-ot,
+.cna-icon-fw {
   background: #14181C;
   color: #ED2227;
 }
 
 
-/* farmerswife supplies its own finished icon, so the tile just shows it
-   edge to edge rather than drawing anything of ours behind it */
-.cna-icon-fw { background: #FFFFFF; }
-.cna-icon-fw img { width: 100%; height: 100%; display: block; object-fit: cover; }
+/* farmerswife joins the other two: same ground, same crimson, same
+   line weight. Its own blue is gone on purpose — the row is one set. */
 
 /* ---------------------------------------------------------------
    Moving apps around: hold one down, drag it, tap away to finish.

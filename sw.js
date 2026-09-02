@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.8.0";
+const SHELL_VERSION = "1.9.0";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
@@ -38,7 +38,6 @@ const SHELL_ASSETS = [
   "icon-192.png",
   "icon-512.png",
   "icon-512-maskable.png",
-  "fw-icon.png",
   /* stored too, so the apps keep their own lettering with no signal */
   "fonts/inter-tight-latin.woff2",
   "fonts/inter-tight-latin-ext.woff2"
@@ -167,12 +166,22 @@ self.addEventListener("fetch", (event) => {
 
 /* ---------------------------------------------------------------- */
 
-async function installModule({ id, version, files }) {
+/* A sub-app's stored copy is keyed on its version AND a build number.
+   The version is the app author's own and is what people are shown; the
+   build is bumped whenever the container edits anything inside that
+   folder — the top bar, the shared stylesheet — so such a change still
+   reaches phones. Without it the file changes on the server and nobody
+   ever receives it, which is exactly what happened once. */
+function moduleTag(version, build) {
+  return version + "-b" + (build || 0);
+}
+
+async function installModule({ id, version, build, files }) {
   if (!MODULE_PREFIXES[id]) throw new Error("Unknown app: " + id);
 
   const prefix = MODULE_PREFIXES[id];
   const urls = ["./", ...files].map((f) => new URL(f, prefix).href);
-  const target = "cna-" + id + "-v" + version;
+  const target = "cna-" + id + "-v" + moduleTag(version, build);
 
   /* Fetch everything first and only keep it if the whole set arrives.
      A half-downloaded app is worse than the old one still working. */
@@ -194,7 +203,7 @@ async function installModule({ id, version, files }) {
       .map((n) => caches.delete(n))
   );
 
-  return version;
+  return moduleTag(version, build);
 }
 
 async function status() {
