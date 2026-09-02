@@ -11,3 +11,6 @@
 
 # scratch previews, never shipped
 .preview/
+
+# brand source material - kept locally, not published
+logo/
