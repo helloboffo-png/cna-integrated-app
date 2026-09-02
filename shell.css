@@ -312,20 +312,28 @@ body:has(> .cna-topbar) {
 
 /* Each app keeps its own identity, exactly as it does standing alone. */
 
+/* CNA's own colours: Alizarin Crimson #ED2227, Texas #F9FB93, black.
+   The two in-house apps share the brand and differ by ground, so they
+   read as a pair. farmerswife keeps its own blue, because it is somebody
+   else's product and should look like itself. */
+
 .cna-icon-dot {
-  background: linear-gradient(160deg, #2B333B 0%, #1B2026 100%);
-  color: #EFAF35;
+  background: linear-gradient(160deg, #14181C 0%, #000000 100%);
+  color: #F9FB93;
 }
 
 .cna-icon-ot {
-  background: linear-gradient(160deg, #F07655 0%, #D9482C 100%);
-  color: #FFF3EF;
+  background: linear-gradient(160deg, #F0343A 0%, #C4171C 100%);
+  color: #F9FB93;
 }
 
 .cna-icon-fw {
-  background: linear-gradient(160deg, #2E9182 0%, #175C51 100%);
-  color: #EAF7F4;
+  background: linear-gradient(180deg, #5FC6DC 0%, #3FA8C6 100%);
+  color: #FFFFFF;
 }
+
+/* the farmerswife tile draws its own artwork rather than a line glyph */
+.cna-icon-fw svg { width: 100%; height: 100%; }
 
 /* ---------------------------------------------------------------
    Moving apps around: hold one down, drag it, tap away to finish.
@@ -333,8 +341,12 @@ body:has(> .cna-topbar) {
 
 .cna-apps.is-editing { touch-action: none; }
 
+/* The first attempt turned by 1.6 degrees, which was running perfectly
+   and was still too small to notice on an icon this size. A phone's own
+   jiggle is nearer three degrees and shifts the icon slightly as it
+   turns, which is what makes it read as restless rather than still. */
 .cna-apps.is-editing .cna-app-icon {
-  animation: cna-wiggle .45s ease-in-out infinite alternate;
+  animation: cna-wiggle .32s ease-in-out infinite alternate;
 }
 
 /* every other tile leans the opposite way, so the grid reads as
@@ -344,14 +356,17 @@ body:has(> .cna-topbar) {
 }
 
 @keyframes cna-wiggle {
-  from { transform: rotate(-1.6deg); }
-  to   { transform: rotate(1.6deg); }
+  from { transform: rotate(-3deg) translate(-0.6px, 0.4px); }
+  to   { transform: rotate(3deg) translate(0.6px, -0.4px); }
 }
 
 @keyframes cna-wiggle-alt {
-  from { transform: rotate(1.6deg); }
-  to   { transform: rotate(-1.6deg); }
+  from { transform: rotate(3deg) translate(0.6px, -0.4px); }
+  to   { transform: rotate(-3deg) translate(-0.6px, 0.4px); }
 }
+
+/* the scale-on-press would otherwise cancel the wiggle mid-hold */
+.cna-apps.is-editing .cna-app:active .cna-app-icon { transform: none; }
 
 .cna-app.is-dragging {
   position: relative;

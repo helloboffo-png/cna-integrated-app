@@ -1,0 +1,257 @@
+<title>CNA Apps Icon Shortlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --paper:  #F2F2EF;
+    --card:   #FFFFFF;
+    --ink:    #14171A;
+    --muted:  #666E75;
+    --line:   #DDDFDA;
+    --hair:   #EBEDE8;
+    --red:    #ED2227;
+    --yellow: #F9FB93;
+
+    --ui: "Inter Tight", -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101315; --card: #191D20; --ink: #E9EBEC;
+      --muted: #99A1A8; --line: #2A2F34; --hair: #21262A;
+      --red: #F4474C;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #101315; --card: #191D20; --ink: #E9EBEC;
+    --muted: #99A1A8; --line: #2A2F34; --hair: #21262A;
+    --red: #F4474C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(1.75rem,5vw,3.5rem) clamp(1rem,4vw,2rem) 4rem; }
+
+  header.top { border-bottom: 3px solid var(--red); padding-bottom: 1rem; }
+
+  .eyebrow {
+    margin: 0 0 .5rem;
+    font-family: var(--mono);
+    font-size: .68rem; font-weight: 600;
+    letter-spacing: .15em; text-transform: uppercase;
+    color: var(--red);
+  }
+
+  h1 { margin: 0; font-size: clamp(1.9rem,5.5vw,2.7rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.04; text-wrap: balance; }
+  .sub { margin: .8rem 0 0; max-width: 34rem; color: var(--muted); font-size: 1.03rem; }
+
+  h2 {
+    margin: 3rem 0 .35rem;
+    font-size: 1.2rem; font-weight: 700; letter-spacing: -.015em;
+  }
+  .note { margin: 0 0 1.2rem; color: var(--muted); font-size: .95rem; max-width: 40rem; }
+
+  /* ---- settled sub-app icons ---- */
+  .settled { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+  .settled figure { margin: 0; width: 5.5rem; text-align: center; }
+  .settled .sq { width: 5.5rem; height: 5.5rem; border-radius: 23%; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.16); }
+  .settled figcaption { margin-top: .5rem; font-size: .78rem; color: var(--muted); line-height: 1.35; }
+
+  /* ---- the ten options ---- */
+  .options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 1rem;
+  }
+
+  .opt {
+    padding: 1rem .9rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    text-align: center;
+  }
+
+  .opt .num {
+    display: block;
+    font-family: var(--mono); font-size: .72rem; font-weight: 600;
+    letter-spacing: .1em; color: var(--red);
+    margin-bottom: .7rem;
+  }
+
+  /* each option shown on both grounds, because the home screen has both */
+  .pair { display: flex; gap: .55rem; justify-content: center; }
+  .pair .ground { padding: .55rem; border-radius: 11px; }
+  .ground.dark { background: #14181C; }
+  .ground.light { background: #F4F5F2; border: 1px solid var(--hair); }
+  .pair .sq { width: 3.5rem; height: 3.5rem; border-radius: 23%; overflow: hidden; display: block; }
+
+  .opt .name { margin: .75rem 0 0; font-size: .84rem; font-weight: 600; line-height: 1.3; }
+  .opt .why { margin: .2rem 0 0; font-size: .76rem; color: var(--muted); line-height: 1.4; }
+
+  .opt.pick { border-color: var(--red); border-width: 2px; }
+  .opt.pick .num::after { content: " · my pick"; color: var(--muted); }
+
+  /* ---- in context ---- */
+  .context {
+    margin-top: 1.2rem;
+    padding: 1.3rem;
+    border-radius: 16px;
+    background: #14181C;
+  }
+  .context .row { display: flex; gap: 1.1rem; align-items: flex-start; }
+  .context .app { width: 4.2rem; text-align: center; }
+  .context .sq { width: 4.2rem; height: 4.2rem; border-radius: 23%; overflow: hidden; display: block; }
+  .context .cap { margin-top: .4rem; font-size: .7rem; color: #C9CFD4; }
+  .context .head { color: #F2F3EF; font-weight: 700; font-size: .95rem; margin: 0 0 .9rem; }
+
+  .closing {
+    margin-top: 2.6rem; padding: 1.2rem 1.3rem;
+    border-left: 3px solid var(--red);
+    background: var(--card); border-radius: 0 12px 12px 0;
+  }
+  .closing p { margin: 0 0 .6rem; font-size: .97rem; }
+  .closing p:last-child { margin-bottom: 0; }
+
+  footer {
+    margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: .66rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <p class="eyebrow">ED2227 · F9FB93 · 000000</p>
+    <h1>Ten icons for the app itself</h1>
+    <p class="sub">
+      All built from CNA's own mark and its three brand colours. Each is shown
+      on a dark and a light home screen, because the app follows whichever the
+      phone is set to. Tell me a number.
+    </p>
+  </header>
+
+  <h2>Already settled</h2>
+  <p class="note">
+    The three app icons are done. DOT.log keeps its steering wheel, OT Builder
+    gets an aeroplane lifting off drawn at the same line weight so the two read
+    as a pair, and farmerswife keeps its own blue because it belongs to someone
+    else.
+  </p>
+
+  <div class="settled" id="settled"></div>
+
+  <h2>The ten options</h2>
+  <p class="note">
+    Numbers 1 to 6 use the mark on a plain ground. 7 and 8 invert it. 9 adds a
+    rule beneath. 10 gives the ground some depth.
+  </p>
+
+  <div class="options" id="options"></div>
+
+  <h2>Your pick, on the home screen</h2>
+  <p class="note">This is roughly what it will look like next to the others.</p>
+  <div class="context" id="context"></div>
+
+  <div class="closing">
+    <p>
+      <strong>My pick is 2.</strong> The mark in crimson with the fold picked out
+      in Texas yellow: it is unmistakably CNA at a glance, it holds up small,
+      and the black ground sits quietly behind three colourful app icons rather
+      than competing with them.
+    </p>
+    <p>
+      If you would rather it stood out on a crowded phone home screen, 3 is the
+      loudest of the ten and still correct to the brand.
+    </p>
+  </div>
+
+  <footer>CNA Apps · icon shortlist · 2 Sept 2026</footer>
+</div>
+
+<script>
+const RED = "#ED2227", YEL = "#F9FB93", BLK = "#000000";
+
+/* CNA's mark, taken from the brand artwork and fitted to a 100 box */
+const MARK = (left, right, fold) => `
+<g transform="translate(16.4,24.5) scale(1.293)">
+  <path d="M20.6137 0H31.3864L14.3549 39.4623H3.58105L20.6137 0Z" fill="${left}"/>
+  <path d="M48.4191 39.4623H37.6453L20.6138 0H31.3864L48.4191 39.4623Z" fill="${right}"/>
+  <path d="M43.8526 28.877L48.3734 39.4692H19.0771L43.8526 28.877Z" fill="${fold}"/>
+</g>`;
+
+const svg = (art, id) => `<svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block">${art.replace(/__ID__/g, id || "x")}</svg>`;
+
+/* line glyphs at the same weight as the steering wheel */
+const glyph = (inner, ground, colour) => `
+  <rect width="100" height="100" fill="${ground}"/>
+  <g fill="none" stroke="${colour}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+     transform="translate(50,50) scale(2.55) translate(-12,-12)">${inner}</g>`;
+
+const WHEEL = `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.7"/>
+  <path d="M3.3 10.6h6M15 10.6h5.7M12 14.7V21"/>`;
+const PLANE = `<path d="M3 20.6h18"/>
+  <path d="M6.1 16.7c-.9-.4-1.2-1.5-.6-2.3l.9-1.2 3.3 1 3.6-4.6-2.1-3.3 1.7-1 3.5 3.3 2.6-1a1.7 1.7 0 0 1 1.2 3.2z"/>`;
+
+const FW = `
+  <defs><linearGradient id="fw__ID__" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5FC6DC"/><stop offset="1" stop-color="#3FA8C6"/></linearGradient></defs>
+  <rect width="100" height="100" fill="url(#fw__ID__)"/>
+  <path d="M0 64c26 15 74 15 100 0v40H0z" fill="#fff" opacity=".09"/>
+  <text x="50" y="52" text-anchor="middle" dominant-baseline="central"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="600" font-size="46" fill="#fff">fw</text>`;
+
+document.getElementById("settled").innerHTML = [
+  [glyph(WHEEL, "#0A0C0E", YEL), "DOT.log", "s1"],
+  [glyph(PLANE, "#D9282D", YEL), "OT Builder", "s2"],
+  [FW, "farmerswife", "s3"]
+].map(([art, cap, id]) => `<figure><div class="sq">${svg(art, id)}</div><figcaption>${cap}</figcaption></figure>`).join("");
+
+const OPTIONS = [
+  ["Mark on black", "The plain brand mark.", `<rect width="100" height="100" fill="${BLK}"/>${MARK(RED,RED,RED)}`],
+  ["Fold in yellow", "The mark's fold picked out.", `<rect width="100" height="100" fill="${BLK}"/>${MARK(RED,RED,YEL)}`],
+  ["Yellow on crimson", "The loudest of the ten.", `<rect width="100" height="100" fill="${RED}"/>${MARK(YEL,YEL,YEL)}`],
+  ["Black on crimson", "Strong, very newsroom.", `<rect width="100" height="100" fill="${RED}"/>${MARK(BLK,BLK,BLK)}`],
+  ["Yellow on black", "Warmer, reads softer.", `<rect width="100" height="100" fill="${BLK}"/>${MARK(YEL,YEL,RED)}`],
+  ["Two-tone crimson", "A little depth in the mark.", `<rect width="100" height="100" fill="${BLK}"/>${MARK(RED,"#B4141A",YEL)}`],
+  ["Mark on white", "Bright; stands out in a dark row.", `<rect width="100" height="100" fill="#FFFFFF"/>${MARK(RED,RED,RED)}`],
+  ["Crimson on yellow", "Unusual, hard to miss.", `<rect width="100" height="100" fill="${YEL}"/>${MARK(RED,RED,BLK)}`],
+  ["Mark with a rule", "A nod to a masthead.", `<rect width="100" height="100" fill="${BLK}"/>${MARK(RED,RED,YEL)}<rect x="24" y="84" width="52" height="4.5" rx="2.25" fill="${YEL}"/>`],
+  ["Deep crimson field", "Richer ground, yellow mark.", `<defs><linearGradient id="g__ID__" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0343A"/><stop offset="1" stop-color="#A81016"/></linearGradient></defs><rect width="100" height="100" fill="url(#g__ID__)"/>${MARK(YEL,YEL,"#ffffff")}`]
+];
+
+document.getElementById("options").innerHTML = OPTIONS.map(([name, why, art], i) => `
+  <div class="opt${i === 1 ? " pick" : ""}">
+    <span class="num">${String(i + 1).padStart(2, "0")}</span>
+    <div class="pair">
+      <span class="ground dark"><span class="sq">${svg(art, "d" + i)}</span></span>
+      <span class="ground light"><span class="sq">${svg(art, "l" + i)}</span></span>
+    </div>
+    <p class="name">${name}</p>
+    <p class="why">${why}</p>
+  </div>`).join("");
+
+document.getElementById("context").innerHTML = `
+  <p class="head">CNA Apps</p>
+  <div class="row">
+    <div class="app"><span class="sq">${svg(OPTIONS[1][2], "cx")}</span><div class="cap">the app itself</div></div>
+    <div class="app"><span class="sq">${svg(glyph(WHEEL, "#0A0C0E", YEL), "c1")}</span><div class="cap">DOT.log</div></div>
+    <div class="app"><span class="sq">${svg(glyph(PLANE, "#D9282D", YEL), "c2")}</span><div class="cap">OT Builder</div></div>
+    <div class="app"><span class="sq">${svg(FW, "c3")}</span><div class="cap">farmerswife</div></div>
+  </div>`;
+</script>

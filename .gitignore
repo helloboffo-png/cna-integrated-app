@@ -8,3 +8,6 @@
 /*.pdf
 /*.json
 !/manifest.json
+
+# scratch previews, never shipped
+.preview/
