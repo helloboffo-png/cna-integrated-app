@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.9.0";
+const SHELL_VERSION = "1.10.0";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
