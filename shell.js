@@ -311,11 +311,34 @@
     var offsetX = 0, offsetY = 0;
     var moved = false;
 
+    /* Once the icons are moving, every tap on one is deliberately ignored
+       so a drag cannot open an app by accident. That leaves someone stuck
+       unless there is an obvious way out, so moving mode always shows a
+       Done button. Tapping anywhere off the icons works too. */
+    var doneBtn = null;
+
+    function showDone() {
+      if (doneBtn) return;
+      doneBtn = document.createElement("button");
+      doneBtn.type = "button";
+      doneBtn.className = "cna-done";
+      doneBtn.textContent = "Done";
+      doneBtn.addEventListener("click", function () { setEditing(false); });
+      document.body.appendChild(doneBtn);
+    }
+
+    function hideDone() {
+      if (!doneBtn) return;
+      doneBtn.remove();
+      doneBtn = null;
+    }
+
     function setEditing(on) {
       editing = on;
       grid.classList.toggle("is-editing", on);
       document.body.classList.toggle("cna-editing", on);
-      if (!on) saveOrder();
+      if (on) showDone();
+      else { hideDone(); saveOrder(); }
     }
 
     function tileUnder(x, y) {
@@ -394,7 +417,10 @@
         return;
       }
 
-      /* a long hold starts moving mode without blocking a normal tap */
+      /* A long hold starts moving mode without blocking a normal tap. The
+         wait has to be longer than an unhurried tap, or someone whose
+         finger rests a moment ends up moving icons when they meant to
+         open an app — which is exactly what happened at 450ms. */
       pressTimer = setTimeout(function () {
         pressTimer = null;
         setEditing(true);
@@ -403,7 +429,7 @@
         /* a small tick so the hold is felt, not just seen. Some browsers
            refuse it outright, which must not interrupt the drag. */
         try { if (navigator.vibrate) navigator.vibrate(8); } catch (err) {}
-      }, 450);
+      }, 650);
     });
 
     grid.addEventListener("pointermove", function (e) {

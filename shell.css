@@ -366,6 +366,32 @@ body:has(> .cna-topbar) {
 
 body.cna-editing { -webkit-user-select: none; user-select: none; }
 
+/* While the icons are moving, tapping one is ignored on purpose so a drag
+   cannot open an app by mistake. That needs an obvious way out, or the
+   home screen just stops responding. */
+.cna-done {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 2147483002;
+
+  padding: 12px 30px;
+  border: none;
+  border-radius: 999px;
+
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+  box-shadow: var(--cna-shadow);
+
+  font: 700 15px/1 var(--cna-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-done:active { transform: translateX(-50%) scale(.96); }
+.cna-done:focus-visible { outline: 2px solid var(--cna-ink); outline-offset: 3px; }
+
 @media (prefers-reduced-motion: reduce) {
   .cna-apps.is-editing .cna-app-icon { animation: none; outline: 2px dashed var(--cna-accent); outline-offset: 3px; }
 }
