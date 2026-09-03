@@ -15,7 +15,7 @@
 </script>
 <title>DOT.log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Log which company vehicle you drove and your overtime hours, then export monthly claims — works fully offline, no account needed.">
+<meta name="description" content="Log which company vehicle you drove, plus taxi and parking receipts, then export monthly claims — works fully offline, no account needed.">
 
 <!-- PWA: installable, works offline. The container owns the one install
      identity for every app here, so this points at its manifest. -->
@@ -497,12 +497,13 @@
 
   <!-- ============ TODAY ============ -->
   <section class="screen active" id="screen-log">
+    <div id="ot-moved-note"></div>
     <div id="claim-reminder"></div>
     <div id="today-status"></div>
 
     <div class="card">
       <h2>Log a day</h2>
-      <p class="hint">Pick the date, tap the plate you drove, add OT if any.</p>
+      <p class="hint">Pick the date, tap the plate you drove.</p>
 
       <label class="field" for="log-date">Date</label>
       <div class="field-clip"><input type="date" id="log-date" max="2100-12-31"></div>
@@ -510,21 +511,11 @@
       <label class="field" for="plate-select">Vehicle driven</label>
       <select id="plate-select"></select>
 
-      <label class="field" for="ot-hours">Overtime hours <span style="font-weight:400">(leave 0 if none)</span></label>
-      <input type="number" id="ot-hours" min="0" max="24" step="0.5" value="0" inputmode="decimal">
-
-      <label class="field">Day type <span style="font-weight:400">(sets the OT rate)</span></label>
-      <div class="seg" id="day-type" role="group" aria-label="Day type">
-        <button type="button" data-v="normal" class="on">Normal day<small>OT at 1.5&times;</small></button>
-        <button type="button" data-v="off">Off day callback<small>1.5&times;</small></button>
-        <button type="button" data-v="rest">Rest day callback<small>2&times; first 8h, then 1.5&times;</small></button>
-      </div>
-
       <button class="primary" id="save-entry">Save this day</button>
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">DOT.log · v2.6</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">DOT.log · v2.7</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -596,10 +587,6 @@
         <div class="stat"><div class="n" id="stat-days">0</div><div class="l">Days driven</div></div>
         <div class="stat"><div class="n" id="stat-allow">$0</div><div class="l">Driving allowance</div></div>
       </div>
-      <div class="stat-row">
-        <div class="stat"><div class="n" id="stat-ot">0</div><div class="l">OT hours</div></div>
-        <div class="stat"><div class="n" id="stat-pay">–</div><div class="l">Expected OT pay</div></div>
-      </div>
     </div>
 
     <div class="card">
@@ -626,13 +613,6 @@
       <div class="tbl-wrap"><table id="taxi-table"></table></div>
       <div class="totals-line" id="taxi-month-total"></div>
       <div class="btn-row"><button class="secondary" id="copy-taxi">Copy list</button></div>
-    </div>
-
-    <div class="card">
-      <h2>Overtime breakdown</h2>
-      <p class="hint">Check this against your payslip.</p>
-      <div class="tbl-wrap"><table id="ot-table"></table></div>
-      <div class="totals-line" id="ot-totals"></div>
     </div>
   </section>
 
@@ -663,34 +643,6 @@
       <div class="sec-body">
       <label class="field" for="allowance">Driving allowance per day ($)</label>
       <input type="number" id="allowance" min="0" step="0.5" value="14" inputmode="decimal">
-      <label class="field" for="base-rate">Base hourly rate ($/hour)</label>
-      <input type="number" id="base-rate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 12.50">
-
-      <div class="formula-box">
-        <p class="hint" style="margin:0 0 6px;">Not sure of your rate? Singapore's standard formula (Employment Act, 44-hour work week):</p>
-        <p class="formula-text">hourly rate = monthly basic pay &times; 12 &divide; (52 &times; 44)</p>
-        <div class="row2" style="margin-top:10px; align-items:flex-end;">
-          <div>
-            <label class="field" for="monthly-pay" style="margin-top:0;">Monthly basic pay ($)</label>
-            <input type="number" id="monthly-pay" min="0" step="1" inputmode="decimal" placeholder="e.g. 3000">
-          </div>
-          <div>
-            <button class="secondary" id="use-computed-rate" type="button" style="width:100%;">Use <span id="computed-rate">$0.00</span>/hr</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="row2">
-        <div>
-          <label class="field" for="mult-low">Standard OT rate</label>
-          <input type="number" id="mult-low" min="1" step="0.1" value="1.5" inputmode="decimal">
-        </div>
-        <div>
-          <label class="field" for="mult-high">Rest day rate (first 8h)</label>
-          <input type="number" id="mult-high" min="1" step="0.1" value="2" inputmode="decimal">
-        </div>
-      </div>
-      <p class="hint" style="margin-top:10px;">Normal day and off day callback OT pay the standard rate. Rest day callback pays the rest day rate for the first 8 hours, then drops back to the standard rate. Public holidays have no special rate on shift work.</p>
       <button class="primary" id="save-settings">Save pay rules</button>
       </div>
     </details>
@@ -752,7 +704,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">DOT.log · v2.6 (21 Aug 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">DOT.log · v2.7 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -948,7 +900,6 @@
   var $ = function (id) { return document.getElementById(id); };
   var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var DAY_TYPE_LABEL = { normal: "Normal", off: "Off day CB", rest: "Rest day CB" };
 
   function todayISO() {
     var d = new Date();
@@ -974,7 +925,6 @@
   function money(n) {
     return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
-  function hoursStr(n) { return (n % 1 ? n.toFixed(1) : String(n)); }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -1114,29 +1064,10 @@
     liveUrls = [];
   }
 
-  /* ---------- OT pay rules (shift work) ----------
-     normal day OT / off day callback: all hours at multLow (1.5x)
-     rest day callback: first 8h at multHigh (2x), hours beyond 8 at multLow (1.5x)
-     public holidays: no special rate                                            */
-  function otBreakdown(e) { // -> [{hours, mult}]
-    if (e.ot <= 0) return [];
-    if (e.dayType === "rest") {
-      var first = Math.min(e.ot, 8), extra = Math.max(e.ot - 8, 0);
-      var parts = [{ hours: first, mult: db.settings.multHigh }];
-      if (extra > 0) parts.push({ hours: extra, mult: db.settings.multLow });
-      return parts;
-    }
-    return [{ hours: e.ot, mult: db.settings.multLow }];
-  }
-  function otWeightedHours(e) {
-    return otBreakdown(e).reduce(function (s, p) { return s + p.hours * p.mult; }, 0);
-  }
-  function otPay(e) {
-    return db.settings.baseRate ? otWeightedHours(e) * db.settings.baseRate : null;
-  }
-  function rateLabel(e) {
-    return otBreakdown(e).map(function (p) { return p.mult + "×"; }).join(" / ");
-  }
+  /* The OT pay rules that used to live here moved to OT Tracker in v2.7,
+     along with the hourly rate and the two multipliers. The hours already
+     logged stay in these records untouched, which is what OT Tracker reads
+     on its first open; nothing here calculates on them any more. */
 
   /* ---------- tabs ---------- */
   var tabButtons = document.querySelectorAll("nav.tabs button");
@@ -1156,25 +1087,6 @@
 
   /* ---------- log screen ---------- */
   var selectedPlate = null;
-  var selectedDayType = "normal";
-
-  var segButtons = document.querySelectorAll("#day-type button");
-  function setDayType(v) {
-    selectedDayType = v;
-    segButtons.forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); });
-  }
-  segButtons.forEach(function (b) {
-    b.addEventListener("click", function () {
-      setDayType(b.dataset.v);
-      /* rest day callback is almost always an 8h shift — prefill it, but
-         never clobber hours the user already typed in past 8 */
-      if (b.dataset.v === "rest") {
-        var otField = $("ot-hours");
-        var current = parseFloat(otField.value) || 0;
-        if (current <= 8) otField.value = 8;
-      }
-    });
-  });
 
   function lastUsedMap() {
     var lastUsed = {};
@@ -1239,7 +1151,6 @@
     banner.appendChild(el("span", "dot"));
     var bits = [];
     if (e && e.plate) bits.push("Drove " + e.plate);
-    if (e && e.ot > 0) bits.push(hoursStr(e.ot) + "h OT (" + DAY_TYPE_LABEL[e.dayType] + ")");
     ["taxi", "parking"].forEach(function (k) {
       var of = rides.filter(function (r) { return r.kind === k; });
       if (!of.length) return;
@@ -1259,16 +1170,13 @@
     $("log-date").value = iso;
     var e = db.entries[iso];
     selectedPlate = e ? e.plate : null;
-    $("ot-hours").value = e ? e.ot : 0;
-    setDayType(e ? e.dayType : "normal");
     renderPlates();
   }
 
   function formIsDirty() {
     var existing = db.entries[formDate];
-    var curOt = parseFloat($("ot-hours").value) || 0;
-    if (!existing) return !!selectedPlate || curOt > 0;
-    return selectedPlate !== existing.plate || curOt !== existing.ot || selectedDayType !== existing.dayType;
+    if (!existing) return !!selectedPlate;
+    return selectedPlate !== existing.plate;
   }
 
   /* single gate for every place that wants to load a different date into
@@ -1300,23 +1208,17 @@
   $("save-entry").addEventListener("click", function () {
     var iso = $("log-date").value;
     if (!iso) { toast("Pick a date first"); return; }
-    var otRaw = $("ot-hours").value.trim();
-    var ot = otRaw === "" ? 0 : parseFloat(otRaw);
-    if (isNaN(ot) || ot < 0 || ot > 24) { toast("OT hours must be a number between 0 and 24"); return; }
-    if (!selectedPlate && ot === 0) {
+    if (!selectedPlate) {
       if (db.entries[iso]) {
         /* Saving a blank form over a day that already has an entry deletes
            it. That used to happen on a single tap with only a toast, which
            is a real way to lose a logged day — so it now has to be asked
            for, with the entry being destroyed spelled out. */
         var old = db.entries[iso];
-        var had = [];
-        if (old.plate) had.push(old.plate);
-        if (old.ot > 0) had.push(hoursStr(old.ot) + "h OT (" + DAY_TYPE_LABEL[old.dayType] + ")");
         confirmDialog({
           title: "Delete this day?",
-          message: fmt(iso) + " currently has " + (had.join(" · ") || "an entry") +
-            ". Saving with no plate and no OT deletes it. This can't be undone.",
+          message: fmt(iso) + " currently has " + (old.plate || "an entry") +
+            ". Saving with no plate deletes it. This can't be undone.",
           confirmLabel: "Delete it",
           onConfirm: function () {
             delete db.entries[iso];
@@ -1327,16 +1229,29 @@
           }
         });
       } else {
-        toast("Nothing to save — pick a plate or add OT hours");
+        toast("Nothing to save — pick a plate");
       }
       return;
     }
-    db.entries[iso] = { date: iso, plate: selectedPlate, ot: ot, dayType: selectedDayType };
+    /* Overtime moved to OT Tracker in v2.7, but the hours logged here
+       before that are still sitting in these records and are what OT
+       Tracker reads when it first opens. Saving must therefore carry the
+       old ot/dayType through untouched — writing a fresh object without
+       them would silently wipe someone's overtime the moment they edited
+       an old day's plate, and on a phone that had not opened OT Tracker
+       yet those hours would be gone for good. */
+    var prev = db.entries[iso];
+    db.entries[iso] = {
+      date: iso,
+      plate: selectedPlate,
+      ot: prev && typeof prev.ot === "number" ? prev.ot : 0,
+      dayType: prev && prev.dayType ? prev.dayType : "normal"
+    };
     save();
     wantHistoryMonth = iso.slice(0, 7); /* so History opens on the month just saved into */
     renderTodayStatus();
     renderPlates(); /* re-sort the dropdown now that this plate is the most recently driven */
-    toast("Saved " + fmt(iso) + (selectedPlate ? " · " + selectedPlate : "") + (ot ? " · " + hoursStr(ot) + "h OT" : ""));
+    toast("Saved " + fmt(iso) + " · " + selectedPlate);
   });
 
   /* ---------- month-end claim reminder ---------- */
@@ -1352,6 +1267,28 @@
 
   /* one-off note when an update changed the company vehicle list, so a
      plate appearing or vanishing from the dropdown isn't a mystery */
+  /* Overtime used to be logged on this screen. Taking a box away with no
+     word at all reads as a bug to the person who used it every day, so
+     this says where it went — once, then never again. */
+  function renderOtMovedNote() {
+    var box = $("ot-moved-note");
+    if (!box || db.otMovedNoticeSeen) return;
+    var b = el("div", "claim-banner");
+    b.appendChild(el("strong", null, "Overtime has moved"));
+    b.appendChild(el("span", null,
+      "Log your OT hours in OT Tracker on the main page. Everything you already logged here went with it."));
+    var row = el("div", "btn-row");
+    var ok = el("button", "secondary", "Got it");
+    ok.addEventListener("click", function () {
+      db.otMovedNoticeSeen = true;
+      save();
+      box.textContent = "";
+    });
+    row.appendChild(ok);
+    b.appendChild(row);
+    box.appendChild(b);
+  }
+
   function renderFleetChange() {
     if (!fleetChange) return;
     var box = $("claim-reminder");
@@ -1380,12 +1317,10 @@
     var ym = pending[pending.length - 1]; // most recent finished month
     var entries = monthEntries(ym);
     var driven = entries.filter(function (e) { return e.plate; }).length;
-    var otH = entries.reduce(function (s, e) { return s + e.ot; }, 0);
 
     var banner = el("div", "claim-banner");
     banner.appendChild(el("strong", null, "📤 " + monthLabel(ym) + " claim is ready"));
     var line = driven + " day" + (driven === 1 ? "" : "s") + " driven (" + money(driven * db.settings.allowance) + " allowance)";
-    if (otH > 0) line += " · " + hoursStr(otH) + "h OT";
     if (pending.length > 1) line += " — plus " + (pending.length - 1) + " earlier month" + (pending.length > 2 ? "s" : "") + " not yet exported";
     banner.appendChild(el("span", null, line + "."));
 
@@ -1463,10 +1398,8 @@
       .sort().reverse();
 
     var driven = dates.filter(function (iso) { return db.entries[iso].plate; }).length;
-    var otH = dates.reduce(function (s, iso) { return s + db.entries[iso].ot; }, 0);
     var bits = [dates.length + " day" + (dates.length === 1 ? "" : "s") + " logged"];
     if (driven) bits.push(driven + " driven · " + money(driven * db.settings.allowance));
-    if (otH > 0) bits.push(hoursStr(otH) + "h OT");
     $("history-summary").textContent = dates.length ? bits.join(" · ") + "." : "";
 
     if (!dates.length) {
@@ -1482,8 +1415,6 @@
       var top = el("div", "dayrow-top");
       var when = el("div", "when", fmt(iso));
       var sub = dayName(iso);
-      if (e.dayType !== "normal") sub += " · " + DAY_TYPE_LABEL[e.dayType];
-      if (e.ot > 0) sub += " · " + hoursStr(e.ot) + "h OT @ " + rateLabel(e);
       var what = el("div", "what");
       if (e.plate) what.appendChild(el("span", "plate-static", e.plate));
       var edit = el("button", "danger-link", "Edit");
@@ -1975,18 +1906,9 @@
     if (!ym) { ym = todayISO().slice(0, 7); $("month-pick").value = ym; }
     var entries = monthEntries(ym);
     var driven = entries.filter(function (e) { return e.plate; });
-    var otEntries = entries.filter(function (e) { return e.ot > 0; });
-
-    var totalOT = otEntries.reduce(function (s, e) { return s + e.ot; }, 0);
-    var pay = db.settings.baseRate
-      ? otEntries.reduce(function (s, e) { return s + otPay(e); }, 0)
-      : null;
 
     $("stat-days").textContent = driven.length;
     $("stat-allow").textContent = money(driven.length * db.settings.allowance);
-    $("stat-ot").textContent = hoursStr(totalOT);
-    $("stat-pay").textContent = pay === null ? "–" : money(pay);
-    $("stat-pay").parentNode.title = pay === null ? "Set your hourly rate in Settings to see this" : "";
 
     /* claims table */
     var ct = $("claims-table");
@@ -2054,37 +1976,6 @@
       tTotal.textContent = tLine;
     }
 
-    /* OT table */
-    var ot = $("ot-table");
-    ot.textContent = "";
-    var totals = $("ot-totals");
-    totals.textContent = "";
-    if (!otEntries.length) {
-      ot.appendChild(el("caption", "empty", "No overtime logged this month."));
-    } else {
-      var thead2 = el("thead"); var hr2 = el("tr");
-      ["Date", "Type", "Hours", "Rate", "Pay"].forEach(function (h, i) { hr2.appendChild(el("th", i > 1 ? "num" : null, h)); });
-      thead2.appendChild(hr2); ot.appendChild(thead2);
-      var tb2 = el("tbody");
-      var hAt = {};
-      otEntries.forEach(function (e) {
-        otBreakdown(e).forEach(function (p) { hAt[p.mult] = (hAt[p.mult] || 0) + p.hours; });
-        var p2 = otPay(e);
-        var tr = el("tr");
-        tr.appendChild(el("td", null, fmt(e.date) + " (" + dayName(e.date) + ")"));
-        tr.appendChild(el("td", null, DAY_TYPE_LABEL[e.dayType]));
-        tr.appendChild(el("td", "num", hoursStr(e.ot)));
-        tr.appendChild(el("td", "num", rateLabel(e)));
-        tr.appendChild(el("td", "num", p2 === null ? "–" : money(p2)));
-        tb2.appendChild(tr);
-      });
-      ot.appendChild(tb2);
-      var parts = Object.keys(hAt).sort().map(function (r) { return hoursStr(hAt[r]) + "h at " + r + "×"; });
-      var line = parts.join(" + ") + " = " + hoursStr(totalOT) + "h total.";
-      if (pay !== null) line += " Expected OT pay: " + money(pay) + ".";
-      else line += " Set your hourly rate in Settings to see expected pay.";
-      totals.textContent = line;
-    }
   }
   $("month-pick").addEventListener("change", renderMonth);
 
@@ -2421,12 +2312,8 @@
     /* each collapsed section shows its own headline value, so Settings can
        be read at a glance without opening anything */
     $("veh-count").textContent = db.vehicles.length + (db.vehicles.length === 1 ? " plate" : " plates");
-    $("pay-meta").textContent = money(db.settings.allowance) + "/day" +
-      (db.settings.baseRate ? " · " + money(db.settings.baseRate) + "/hr" : " · no hourly rate set");
+    $("pay-meta").textContent = money(db.settings.allowance) + "/day";
     $("allowance").value = db.settings.allowance;
-    $("base-rate").value = db.settings.baseRate || "";
-    $("mult-low").value = db.settings.multLow;
-    $("mult-high").value = db.settings.multHigh;
     document.querySelectorAll("#theme-picker button").forEach(function (b) {
       b.classList.toggle("on", b.dataset.v === db.settings.theme);
     });
@@ -2443,19 +2330,6 @@
         btn.classList.toggle("on", btn === b);
       });
     });
-  });
-
-  $("monthly-pay").addEventListener("input", function () {
-    var monthly = parseFloat(this.value) || 0;
-    var hourly = (monthly * 12) / (52 * 44);
-    $("computed-rate").textContent = money(hourly);
-  });
-  $("use-computed-rate").addEventListener("click", function () {
-    var monthly = parseFloat($("monthly-pay").value) || 0;
-    if (monthly <= 0) { toast("Enter your monthly basic pay first"); return; }
-    var hourly = (monthly * 12) / (52 * 44);
-    $("base-rate").value = hourly.toFixed(2);
-    toast("Filled in " + money(hourly) + "/hr — tap Save pay rules to apply it");
   });
 
   $("add-plate").addEventListener("click", function () {
@@ -2476,19 +2350,16 @@
   });
 
   $("save-settings").addEventListener("click", function () {
-    var rate = parseFloat($("base-rate").value);
-    db.settings.baseRate = isNaN(rate) || rate <= 0 ? null : rate; /* clearing this is a real, intentional "off" state */
-
     /* an invalid entry here keeps the PREVIOUS value instead of silently
        snapping to a hard-coded default — the user should never be surprised
-       that their allowance/rate quietly changed */
+       that their allowance quietly changed.
+       The hourly rate and the OT multipliers are no longer read or written
+       here; they belong to OT Tracker now. They are deliberately left in
+       storage untouched, because that is where OT Tracker reads them from
+       when it first opens on a phone. */
     var allow = parseFloat($("allowance").value);
-    var mLow = parseFloat($("mult-low").value);
-    var mHigh = parseFloat($("mult-high").value);
     var kept = [];
     if (isNaN(allow) || allow < 0) kept.push("allowance"); else db.settings.allowance = allow;
-    if (isNaN(mLow) || mLow < 1) kept.push("standard OT rate"); else db.settings.multLow = mLow;
-    if (isNaN(mHigh) || mHigh < 1) kept.push("rest day OT rate"); else db.settings.multHigh = mHigh;
 
     save();
     renderSettings(); /* re-show the actual stored values, including any kept-as-is fields */
@@ -2683,6 +2554,7 @@
   resetTaxiForm();
   renderTodayStatus();
   renderClaimReminder(); /* puts the roster note up too */
+  renderOtMovedNote();
   requestPersist();
 })();
 </script>

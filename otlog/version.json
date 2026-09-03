@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "build": 1,
   "date": "2026-09-03",
-  "notes": "Brings in overtime already logged in DOT.log, once, automatically.",
+  "notes": "Pay rate calculator, moved across from DOT.log.",
   "files": [
     "index.html"
   ]

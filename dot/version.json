@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "DOT.log",
-  "version": "2.6.0",
-  "build": 2,
-  "date": "2026-08-21",
-  "notes": "Vehicle and overtime log, monthly claims.",
+  "version": "2.7.0",
+  "build": 1,
+  "date": "2026-09-04",
+  "notes": "Driving and receipts only — overtime now lives in OT Tracker.",
   "files": [
     "index.html",
     "icon-192.png",
