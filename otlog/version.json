@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "build": 1,
   "date": "2026-09-03",
-  "notes": "Overtime hours by day type, monthly totals at your own rates.",
+  "notes": "Brings in overtime already logged in DOT.log, once, automatically.",
   "files": [
     "index.html"
   ]

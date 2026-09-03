@@ -205,6 +205,17 @@
   }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
 
+  .carry-banner {
+    background: color-mix(in srgb, var(--accent) 16%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .carry-banner p { margin: 0 0 10px; }
+  .carry-banner button { padding: 8px 14px; }
+
   /* ---- history list ---- */
   .dayrow { padding: 11px 2px; border-bottom: 1px solid var(--line); }
   .dayrow:last-child { border-bottom: none; }
@@ -361,6 +372,7 @@
 
   <!-- ============ LOG ============ -->
   <section class="screen active" id="screen-log">
+    <div id="carry-banner"></div>
     <div id="today-status"></div>
 
     <div class="card">
@@ -585,12 +597,58 @@
     db.schema = 1;
     return db;
   }
+
+  /* ---------- one-time carry-over from DOT.log ----------
+     DOT.log kept overtime inside its own day record for years before this
+     app existed. Rather than ask anyone to retype it, this reads DOT.log's
+     own storage once — the same origin, so no import step, no file — and
+     copies just the overtime out of it.
+
+     This never writes back to DOT.log. Its store is read only, and every
+     day already logged there is left exactly as it is: still visible in
+     DOT.log today, still there if this copy is ever wrong and needs to be
+     taken again by clearing db.migratedFromDotLog by hand.
+
+     Runs once ever, guarded by db.migratedFromDotLog, so a day someone
+     deletes in OT Tracker afterwards does not reappear on the next boot. */
+  function carryOverFromDotLog() {
+    if (db.migratedFromDotLog) return { ranAlready: true, copied: 0 };
+    var copied = 0;
+    try {
+      var raw = localStorage.getItem("driveotlog.v1");
+      var src = raw && JSON.parse(raw);
+      if (src && typeof src === "object" && src.entries && typeof src.entries === "object") {
+        Object.keys(src.entries).forEach(function (iso) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || db.entries[iso]) return;
+          var e = src.entries[iso];
+          if (!e || typeof e !== "object") return;
+          var ot = typeof e.ot === "number" ? e.ot : NaN;
+          if (isNaN(ot) || ot <= 0) return;
+          db.entries[iso] = { date: iso, ot: ot, dayType: DAY_TYPE_LABEL[e.dayType] ? e.dayType : "normal" };
+          copied++;
+        });
+        /* the pay rate is only carried onto a rate nobody has set here yet,
+           so a value already put into OT Tracker is never overwritten */
+        var s = src.settings;
+        if (db.settings.baseRate === null && s && typeof s === "object") {
+          if (typeof s.baseRate === "number" && s.baseRate > 0) db.settings.baseRate = s.baseRate;
+          if (typeof s.multLow === "number" && s.multLow > 0) db.settings.multLow = s.multLow;
+          if (typeof s.multHigh === "number" && s.multHigh > 0) db.settings.multHigh = s.multHigh;
+        }
+      }
+    } catch (e) { /* DOT.log has never been used on this phone, or its store
+                      is unreadable — nothing to carry, not a failure */ }
+    db.migratedFromDotLog = true;
+    return { ranAlready: false, copied: copied };
+  }
+
   var db = load();
+  var carryResult = carryOverFromDotLog();
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(db)); }
     catch (e) { toast("Phone storage is full — not saved"); }
   }
-  save(); /* write back whatever the checks above tidied up */
+  save(); /* write back whatever load() tidied up, and any carry-over above */
 
   function applyTheme() {
     var t = db.settings.theme;
@@ -1024,8 +1082,31 @@
     overlay.hidden = false;
   }
 
+  /* shown once, only in the very load where the carry-over actually ran
+     and found something — every load after that, carryResult.ranAlready
+     is true and this renders nothing */
+  var carryBannerDismissed = false;
+  function renderCarryBanner() {
+    var box = $("carry-banner");
+    box.textContent = "";
+    if (carryBannerDismissed || !carryResult || carryResult.ranAlready || carryResult.copied <= 0) return;
+    var n = carryResult.copied;
+    var banner = el("div", "carry-banner");
+    banner.appendChild(el("p", null,
+      "Brought in " + n + " day" + (n === 1 ? "" : "s") + " of overtime already logged in DOT.log. " +
+      "Nothing there was changed or removed."));
+    var btn = el("button", "secondary", "Got it");
+    /* a plain re-render (the storage listener above fires on any change to
+       this app's own store, including a theme flip from the home screen)
+       must not bring a dismissed banner back */
+    btn.addEventListener("click", function () { carryBannerDismissed = true; box.textContent = ""; });
+    banner.appendChild(btn);
+    box.appendChild(banner);
+  }
+
   /* ---------- boot ---------- */
   function renderAll() {
+    renderCarryBanner();
     renderTodayStatus();
     renderLiveCalc();
     renderHistory();
