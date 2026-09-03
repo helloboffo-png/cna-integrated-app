@@ -299,12 +299,19 @@
       var saved;
       try { saved = JSON.parse(localStorage.getItem(ORDER_KEY) || "null"); } catch (e) { saved = null; }
       if (!saved || !saved.length) return;
+      var placed = {};
       saved.forEach(function (id) {
         var tile = grid.querySelector('[data-app-id="' + id + '"]');
-        if (tile) grid.appendChild(tile);
+        if (tile) { grid.appendChild(tile); placed[id] = true; }
       });
-      /* anything added since the order was saved falls in at the end,
-         which is what a new app should do */
+      /* An app added since the order was saved is not in that list, so
+         moving every saved tile to the end above left the new one stranded
+         at the front — in front of an arrangement someone had chosen by
+         hand. Send anything unplaced to the end, where a newly installed
+         app belongs, keeping the order they appear in the page. */
+      tiles().forEach(function (tile) {
+        if (!placed[tile.dataset.appId]) grid.appendChild(tile);
+      });
     }
     applySavedOrder();
 
