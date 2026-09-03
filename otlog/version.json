@@ -1,0 +1,11 @@
+{
+  "id": "otlog",
+  "name": "OT Tracker",
+  "version": "1.0.0",
+  "build": 1,
+  "date": "2026-09-03",
+  "notes": "Overtime hours by day type, monthly totals at your own rates.",
+  "files": [
+    "index.html"
+  ]
+}

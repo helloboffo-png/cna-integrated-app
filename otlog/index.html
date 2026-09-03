@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>
+/* applied before first paint so switching Appearance never flashes the
+   wrong theme for a frame on the next load */
+(function () {
+  try {
+    var raw = localStorage.getItem("otlog.v1");
+    var t = raw && JSON.parse(raw).settings && JSON.parse(raw).settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<title>OT Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Log overtime hours by day type, see the month's total at the rates you are paid, and check it against your payslip — works fully offline.">
+
+<!-- The container owns the one install identity for every app here, so
+     this points at its manifest rather than declaring another. -->
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../shell.css">
+<meta name="theme-color" content="#171B20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OT Tracker">
+
+<style>
+  /* This app carries its own copy of the look rather than sharing a
+     stylesheet with DOT.log. They are meant to be separately upgradable,
+     and a shared file would mean a change to one could break the other —
+     the one thing this whole app family is built to prevent. The tokens
+     match DOT.log deliberately: this used to be part of it, and the people
+     using it should not have to learn a second set of habits. */
+  :root {
+    --paper: #F4F5F2;
+    --card: #FFFFFF;
+    --ink: #22282E;
+    --ink-soft: #5B646D;
+    --line: #DDE1DC;
+    --accent: #E8A020;      /* road-sign amber, as DOT.log */
+    --accent-ink: #2A2008;
+    --good: #3E9B6B;
+    --good-soft: #E3F1E9;
+    --danger: #C9553D;
+    --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
+      --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+      --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+      --tab-bg: #21262D;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
+    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
+    --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
+    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+    --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+    --tab-bg: #21262D;
+    --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    /* Inter Tight is served from this site by the container's stylesheet,
+       not fetched from Google. The phone's own font stays behind it, so
+       nothing is blank if the file has not arrived. */
+    font: 16px/1.5 "Inter Tight", -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    /* installed as a standalone app the page draws under the notch, so the
+       top safe area is cleared here. In a browser tab that inset is 0. */
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));
+  }
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  header.top h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+  header.top .date-line { font-size: 13px; color: var(--ink-soft); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink-soft);
+  }
+  .card .hint { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
+
+  /* ---- day-type segmented control ---- */
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button {
+    flex: 1 1 30%;
+    font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg button.on {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  }
+  .seg button small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
+
+  /* ---- inputs ---- */
+  label.field { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin: 12px 0 4px; }
+  input[type="date"], input[type="month"], input[type="number"], textarea {
+    width: 100%; max-width: 100%; box-sizing: border-box;
+    font: inherit; color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  input:focus-visible, button:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  /* iOS renders its native date/month control wider than the box it is
+     given and lets it protrude past the card. This wrapper clips it back
+     to the card's width — the same fix DOT.log carries. */
+  .field-clip { overflow: hidden; border-radius: 10px; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  #history-month, #month-pick { margin: 8px 0 10px; font-weight: 600; }
+
+  .formula-box {
+    background: var(--paper);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+  .formula-text {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    margin: 0;
+  }
+
+  button.primary {
+    width: 100%;
+    margin-top: 16px;
+    font: inherit; font-weight: 700; font-size: 16px;
+    background: var(--accent); color: var(--accent-ink);
+    border: none; border-radius: 12px;
+    padding: 13px;
+    cursor: pointer;
+  }
+  button.primary:active { filter: brightness(0.95); }
+  button.secondary {
+    font: inherit; font-weight: 600; font-size: 14px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 14px; cursor: pointer;
+  }
+  button.secondary.danger { color: var(--danger); border-color: var(--danger); }
+  button.danger-link {
+    font: inherit; font-size: 13px; font-weight: 600;
+    background: none; border: none; color: var(--danger);
+    cursor: pointer; padding: 8px 4px; min-height: 32px;
+  }
+  button.edit-link {
+    font: inherit; font-size: 13px; font-weight: 600;
+    background: none; border: none; color: var(--ink);
+    cursor: pointer; padding: 8px 4px; min-height: 32px;
+  }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row button { flex: 1; }
+
+  .status-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--good-soft); color: var(--good);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
+
+  /* ---- history list ---- */
+  .dayrow { padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .dayrow:last-child { border-bottom: none; }
+  .dayrow-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .dayrow .when { font-size: 14px; font-weight: 600; }
+  .dayrow .what { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  /* Edit and Delete travel together with more air between them than the
+     rest of the row, so a safe tap and a destructive one are not neighbours */
+  .dayrow .actions { display: flex; gap: 18px; white-space: nowrap; }
+  .dayrow-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+
+  .ot-pill {
+    font-size: 12px; font-weight: 700;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--ink);
+    border-radius: 999px; padding: 3px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- month summary ---- */
+  .stat-row { display: flex; gap: 10px; margin: 12px 0 0; }
+  .stat {
+    flex: 1; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .stat .n { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  .totals-line { margin-top: 10px; font-size: 14px; }
+  .empty { color: var(--ink-soft); font-size: 14px; text-align: center; padding: 18px 0; }
+
+  /* ---- collapsible settings sections ---- */
+  details.sec { padding: 0; }
+  details.sec > summary {
+    list-style: none;
+    display: flex; align-items: center; gap: 10px;
+    padding: 15px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  details.sec > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+  .sec-title {
+    flex: 1;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink);
+  }
+  .sec-meta { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .chev {
+    flex: none; width: 8px; height: 8px; margin: -3px 2px 0 0;
+    border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
+    transform: rotate(45deg);
+    transition: transform .15s ease;
+  }
+  details.sec[open] > summary .chev { transform: rotate(-135deg); margin-top: 3px; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  .sec-body { padding: 0 16px 16px; }
+  .sec-body > .field:first-child { margin-top: 0; }
+
+  /* ---- tabs ---- */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--tab-bg);
+    border-top: 1px solid var(--line);
+    display: flex;
+    max-width: 480px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabs button {
+    flex: 1;
+    font: inherit; font-size: 11px; font-weight: 600;
+    background: none; border: none;
+    color: var(--ink-soft);
+    padding: 9px 0 10px;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.tabs button.active { color: var(--ink); }
+  /* line icons rather than emoji: emoji render at a different weight,
+     colour and baseline on every platform, so a bar of them never looks
+     like one set */
+  nav.tabs button svg { width: 22px; height: 22px; display: block; }
+  nav.tabs button.active .ico-bar { background: var(--accent); }
+  .ico-bar { width: 22px; height: 3px; border-radius: 2px; background: transparent; margin-top: 2px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    background: var(--ink); color: var(--paper);
+    font-size: 14px; font-weight: 600;
+    border-radius: 999px; padding: 9px 18px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    max-width: 90vw; text-align: center;
+    z-index: 10;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  /* ---- dialog ---- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 20;
+  }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%; max-width: 420px;
+    max-height: 85vh; overflow-y: auto;
+    padding: 18px;
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 16px; }
+  .modal .hint { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+  .modal textarea {
+    width: 100%;
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    resize: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="cna-topbar"><a class="cna-back" href="../"><span class="cna-back-arrow" aria-hidden="true">‹</span>Main Page</a></div>
+
+<div class="app">
+  <header class="top">
+    <h1>OT Tracker</h1>
+    <span class="date-line" id="today-line"></span>
+  </header>
+
+  <!-- ============ LOG ============ -->
+  <section class="screen active" id="screen-log">
+    <div id="today-status"></div>
+
+    <div class="card">
+      <h2>Log overtime</h2>
+      <p class="hint">Pick the date, put in the hours, choose the kind of day.</p>
+
+      <label class="field" for="log-date">Date</label>
+      <div class="field-clip"><input type="date" id="log-date" max="2100-12-31"></div>
+
+      <label class="field" for="ot-hours">Overtime hours</label>
+      <input type="number" id="ot-hours" min="0" max="24" step="0.5" value="0" inputmode="decimal">
+
+      <label class="field">Day type <span style="font-weight:400">(sets the rate)</span></label>
+      <div class="seg" id="day-type" role="group" aria-label="Day type">
+        <button type="button" data-v="normal" class="on">Normal day<small>1.5&times;</small></button>
+        <button type="button" data-v="off">Off day callback<small>1.5&times;</small></button>
+        <button type="button" data-v="rest">Rest day callback<small>2&times; first 8h</small></button>
+      </div>
+
+      <div class="formula-box"><p class="formula-text" id="live-calc">&nbsp;</p></div>
+
+      <button class="primary" id="save-entry">Save this day</button>
+    </div>
+
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.0</p>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen" id="screen-history">
+    <div class="card">
+      <h2>Days logged</h2>
+      <div class="field-clip"><input type="month" id="history-month"></div>
+      <div id="history-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ MONTH ============ -->
+  <section class="screen" id="screen-month">
+    <div class="card">
+      <h2>Month summary</h2>
+      <div class="field-clip"><input type="month" id="month-pick"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stat-days">0</div><div class="l">Days</div></div>
+        <div class="stat"><div class="n" id="stat-hours">0</div><div class="l">Hours</div></div>
+        <div class="stat"><div class="n" id="stat-pay">–</div><div class="l">OT pay</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Overtime breakdown</h2>
+      <p class="hint">Check this against your payslip.</p>
+      <div class="tbl-wrap"><table id="ot-table"></table></div>
+      <div class="totals-line" id="ot-totals"></div>
+      <div class="btn-row"><button class="secondary" id="copy-ot">Copy list</button></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen" id="screen-settings">
+    <details class="card sec" id="sec-pay">
+      <summary>
+        <span class="sec-title">Pay rules</span>
+        <span class="sec-meta" id="pay-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Your hourly rate stays on this phone. Leave it blank and the app still counts hours, it just will not work out the money.</p>
+
+        <label class="field" for="base-rate">Hourly base rate ($)</label>
+        <input type="number" id="base-rate" min="0" step="0.01" inputmode="decimal" placeholder="leave blank to skip pay">
+
+        <div class="row2">
+          <div>
+            <label class="field" for="mult-low">Normal / off day</label>
+            <input type="number" id="mult-low" min="1" step="0.1" inputmode="decimal">
+          </div>
+          <div>
+            <label class="field" for="mult-high">Rest day, first 8h</label>
+            <input type="number" id="mult-high" min="1" step="0.1" inputmode="decimal">
+          </div>
+        </div>
+
+        <button class="primary" id="save-pay">Save pay rules</button>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Start again</span>
+        <span class="sec-meta" id="wipe-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Wipes every day logged in this app and puts the pay rules back to standard. Nothing in DOT.log or any other app is touched.</p>
+        <button class="secondary danger" id="wipe-all" style="width:100%">Erase everything in OT Tracker</button>
+      </div>
+    </details>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <button data-screen="screen-log" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.6 2.1"/>
+    </svg>Log<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>
+    </svg>History<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-month">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
+    </svg>Month<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 8h9M19 8h1M4 16h3M13 16h7"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/>
+    </svg>Settings<span class="ico-bar"></span>
+  </button>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p class="hint" id="modal-message" style="display:none; font-size:14px; margin:0 0 12px;"></p>
+    <textarea id="modal-text" readonly rows="9" style="display:none"></textarea>
+    <div class="btn-row" id="modal-actions"></div>
+    <p class="hint" id="modal-hint"></p>
+    <button class="primary" id="modal-close">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "otlog.v1";
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- small helpers ---------- */
+  var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var MONTHS = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+  var DAY_TYPE_LABEL = { normal: "Normal day", off: "Off day callback", rest: "Rest day callback" };
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function isoOf(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function todayISO() { return isoOf(new Date()); }
+  function fmt(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
+  function dayName(iso) {
+    var p = iso.split("-");
+    return DAYS[new Date(+p[0], p[1] - 1, +p[2]).getDay()];
+  }
+  function monthLabel(ym) {
+    var p = ym.split("-");
+    return MONTHS[+p[1] - 1] + " " + p[0];
+  }
+  function money(n) {
+    return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  /* Two decimals, not one. Hours are entered in half hours, but a rest day
+     split across two rates lands on a quarter — 10.5h becomes 19.75h paid,
+     and rounding that to 19.8 puts this screen 0.05h out of step with the
+     payslip it exists to be checked against. */
+  function hoursStr(n) {
+    var r = Math.round(n * 100) / 100;
+    return r % 1 === 0 ? String(r) : String(parseFloat(r.toFixed(2)));
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+  }
+
+  /* ---------- storage ---------- */
+  function defaults() {
+    return {
+      schema: 1,
+      entries: {},
+      settings: { baseRate: null, multLow: 1.5, multHigh: 2, theme: "auto" }
+    };
+  }
+  function load() {
+    var db;
+    try { db = JSON.parse(localStorage.getItem(KEY)) || defaults(); }
+    catch (e) { db = defaults(); }
+    /* defend against a valid-but-partial saved blob so the app never fails
+       to boot on a hand-edited or half-written store */
+    if (!db || typeof db !== "object") db = defaults();
+    if (!db.entries || typeof db.entries !== "object") db.entries = {};
+    if (!db.settings || typeof db.settings !== "object") db.settings = defaults().settings;
+
+    var s = db.settings;
+    if (typeof s.baseRate !== "number" || isNaN(s.baseRate) || s.baseRate <= 0) s.baseRate = null;
+    if (typeof s.multLow !== "number" || isNaN(s.multLow) || s.multLow <= 0) s.multLow = 1.5;
+    if (typeof s.multHigh !== "number" || isNaN(s.multHigh) || s.multHigh <= 0) s.multHigh = 2;
+    if (["light", "dark", "auto"].indexOf(s.theme) === -1) s.theme = "auto";
+
+    /* drop anything malformed rather than let it blow up rendering later */
+    Object.keys(db.entries).forEach(function (k) {
+      var e = db.entries[k];
+      if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(k)) { delete db.entries[k]; return; }
+      e.date = k;
+      if (typeof e.ot !== "number" || isNaN(e.ot) || e.ot <= 0) { delete db.entries[k]; return; }
+      if (!DAY_TYPE_LABEL[e.dayType]) e.dayType = "normal";
+    });
+
+    db.schema = 1;
+    return db;
+  }
+  var db = load();
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch (e) { toast("Phone storage is full — not saved"); }
+  }
+  save(); /* write back whatever the checks above tidied up */
+
+  function applyTheme() {
+    var t = db.settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme"); /* auto: follow the device */
+  }
+  applyTheme();
+  /* the container writes this app's theme into the same store, so pick up
+     a change made on the home screen while this page was already open */
+  window.addEventListener("storage", function (ev) {
+    if (ev.key !== KEY) return;
+    db = load();
+    applyTheme();
+    renderAll();
+  });
+
+  /* ---------- OT pay rules (shift work) ----------
+     normal day / off day callback : all hours at multLow (1.5x)
+     rest day callback             : first 8h at multHigh (2x), rest at multLow
+     These are the same rules DOT.log applied, kept identical on purpose so
+     a month worked out here matches a month worked out there.            */
+  function otBreakdown(e) { // -> [{hours, mult}]
+    if (!e || e.ot <= 0) return [];
+    if (e.dayType === "rest") {
+      var first = Math.min(e.ot, 8), extra = Math.max(e.ot - 8, 0);
+      var parts = [{ hours: first, mult: db.settings.multHigh }];
+      if (extra > 0) parts.push({ hours: extra, mult: db.settings.multLow });
+      return parts;
+    }
+    return [{ hours: e.ot, mult: db.settings.multLow }];
+  }
+  function otWeightedHours(e) {
+    return otBreakdown(e).reduce(function (s, p) { return s + p.hours * p.mult; }, 0);
+  }
+  function otPay(e) {
+    return db.settings.baseRate ? otWeightedHours(e) * db.settings.baseRate : null;
+  }
+  function rateLabel(e) {
+    return otBreakdown(e).map(function (p) { return p.mult + "×"; }).join(" / ");
+  }
+
+  /* ---------- tabs ---------- */
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  function switchTab(screenId) {
+    tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
+    document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+    $(screenId).classList.add("active");
+    if (screenId === "screen-history") renderHistory();
+    if (screenId === "screen-month") renderMonth();
+    if (screenId === "screen-settings") renderSettings();
+    window.scrollTo(0, 0);
+  }
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () { switchTab(btn.dataset.screen); });
+  });
+
+  /* ---------- log screen ---------- */
+  var selectedDayType = "normal";
+  var formDate = todayISO();
+
+  function setDayType(v) {
+    selectedDayType = DAY_TYPE_LABEL[v] ? v : "normal";
+    document.querySelectorAll("#day-type button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === selectedDayType);
+    });
+    renderLiveCalc();
+  }
+  document.querySelectorAll("#day-type button").forEach(function (b) {
+    b.addEventListener("click", function () { setDayType(b.dataset.v); });
+  });
+
+  function currentHours() {
+    var v = parseFloat($("ot-hours").value);
+    return isNaN(v) || v < 0 ? 0 : Math.min(v, 24);
+  }
+
+  /* the live line under the form, so the rate being applied is visible
+     before the day is saved rather than only afterwards in the table */
+  function renderLiveCalc() {
+    var box = $("live-calc");
+    var hrs = currentHours();
+    if (hrs <= 0) { box.textContent = "No overtime on this day."; return; }
+    var e = { ot: hrs, dayType: selectedDayType };
+    var parts = otBreakdown(e).map(function (p) { return hoursStr(p.hours) + "h × " + p.mult; });
+    var line = parts.join("  +  ") + "  =  " + hoursStr(otWeightedHours(e)) + "h paid";
+    var pay = otPay(e);
+    if (pay !== null) line += "  (" + money(pay) + ")";
+    box.textContent = line;
+  }
+  $("ot-hours").addEventListener("input", renderLiveCalc);
+
+  function loadEntryIntoForm(iso) {
+    formDate = iso;
+    $("log-date").value = iso;
+    var e = db.entries[iso];
+    $("ot-hours").value = e ? e.ot : 0;
+    setDayType(e ? e.dayType : "normal");
+  }
+
+  /* true when the form holds something different from what is saved, so a
+     container update can warn before it reloads the page under you */
+  function formIsDirty() {
+    var e = db.entries[formDate];
+    var hrs = currentHours();
+    if (!e) return hrs > 0;
+    return hrs !== e.ot || selectedDayType !== e.dayType;
+  }
+  window.cnaHasUnsaved = formIsDirty;
+
+  $("log-date").addEventListener("change", function () {
+    var v = $("log-date").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { $("log-date").value = formDate; return; }
+    loadEntryIntoForm(v);
+  });
+
+  $("save-entry").addEventListener("click", function () {
+    var iso = $("log-date").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) { toast("Pick a date first"); return; }
+    var hrs = currentHours();
+    var existing = db.entries[iso];
+
+    if (hrs <= 0) {
+      if (!existing) { toast("Put in some hours first"); return; }
+      /* zero on a day that already has hours means "remove it", but that
+         deletes a record, so it is asked rather than assumed */
+      confirmDialog({
+        title: "Remove this day?",
+        message: "Setting " + fmt(iso) + " to 0 hours removes it from your log.",
+        confirmLabel: "Remove",
+        onConfirm: function () {
+          delete db.entries[iso];
+          save();
+          loadEntryIntoForm(iso);
+          renderTodayStatus();
+          toast("Removed " + fmt(iso));
+        }
+      });
+      return;
+    }
+
+    function write() {
+      db.entries[iso] = { date: iso, ot: hrs, dayType: selectedDayType };
+      save();
+      formDate = iso;
+      renderTodayStatus();
+      renderLiveCalc();
+      toast("Saved " + hoursStr(hrs) + "h for " + fmt(iso));
+    }
+
+    if (existing && (existing.ot !== hrs || existing.dayType !== selectedDayType)) {
+      confirmDialog({
+        title: "Replace this day?",
+        message: fmt(iso) + " already has " + hoursStr(existing.ot) + "h (" +
+                 DAY_TYPE_LABEL[existing.dayType] + "). Save over it with " +
+                 hoursStr(hrs) + "h (" + DAY_TYPE_LABEL[selectedDayType] + ")?",
+        confirmLabel: "Replace",
+        onConfirm: write
+      });
+      return;
+    }
+    write();
+  });
+
+  function renderTodayStatus() {
+    var box = $("today-status");
+    box.textContent = "";
+    var e = db.entries[todayISO()];
+    if (!e) return;
+    var banner = el("div", "status-banner");
+    banner.appendChild(el("span", "dot"));
+    banner.appendChild(el("span", null,
+      hoursStr(e.ot) + "h logged today · " + DAY_TYPE_LABEL[e.dayType]));
+    box.appendChild(banner);
+  }
+
+  /* ---------- history ---------- */
+  function monthKeys(ym) {
+    return Object.keys(db.entries)
+      .filter(function (k) { return k.slice(0, 7) === ym; })
+      .sort()
+      .reverse();
+  }
+
+  function renderHistory() {
+    var pick = $("history-month");
+    if (!pick.value) pick.value = todayISO().slice(0, 7);
+    var list = $("history-list");
+    list.textContent = "";
+
+    var keys = monthKeys(pick.value);
+    if (!keys.length) {
+      list.appendChild(el("div", "empty", "Nothing logged in " + monthLabel(pick.value) + "."));
+      return;
+    }
+
+    keys.forEach(function (iso) {
+      var e = db.entries[iso];
+      var row = el("div", "dayrow");
+      var top = el("div", "dayrow-top");
+
+      var when = el("div", "when", fmt(iso));
+      var what = el("div", "what");
+      what.appendChild(el("span", "ot-pill", hoursStr(e.ot) + "h"));
+
+      var edit = el("button", "edit-link", "Edit");
+      edit.addEventListener("click", function () {
+        loadEntryIntoForm(iso);
+        switchTab("screen-log");
+        toast("Editing " + fmt(iso));
+      });
+
+      var del = el("button", "danger-link", "Delete");
+      del.addEventListener("click", function () {
+        confirmDialog({
+          title: "Delete entry?",
+          message: "Delete the " + hoursStr(e.ot) + "h logged on " + fmt(iso) + "? This can't be undone.",
+          confirmLabel: "Delete",
+          onConfirm: function () {
+            delete db.entries[iso];
+            save();
+            /* if the day just deleted is the one sitting in the form, clear
+               the form too — otherwise it looks like an unsaved edit */
+            if (iso === formDate) loadEntryIntoForm(formDate);
+            renderHistory();
+            renderTodayStatus();
+          }
+        });
+      });
+
+      var actions = el("div", "actions");
+      actions.appendChild(edit);
+      actions.appendChild(del);
+      what.appendChild(actions);
+
+      top.appendChild(when);
+      top.appendChild(what);
+      row.appendChild(top);
+      row.appendChild(el("div", "dayrow-sub",
+        dayName(iso) + " · " + DAY_TYPE_LABEL[e.dayType] + " · " + rateLabel(e)));
+      list.appendChild(row);
+    });
+  }
+  $("history-month").addEventListener("change", renderHistory);
+
+  /* ---------- month summary ---------- */
+  function renderMonth() {
+    var pick = $("month-pick");
+    if (!pick.value) pick.value = todayISO().slice(0, 7);
+    var keys = monthKeys(pick.value).slice().reverse(); /* oldest first in a table */
+    var rows = keys.map(function (k) { return db.entries[k]; });
+
+    var hours = rows.reduce(function (s, e) { return s + e.ot; }, 0);
+    var weighted = rows.reduce(function (s, e) { return s + otWeightedHours(e); }, 0);
+
+    $("stat-days").textContent = rows.length;
+    $("stat-hours").textContent = hoursStr(hours);
+    $("stat-pay").textContent = db.settings.baseRate
+      ? money(weighted * db.settings.baseRate)
+      : "–";
+
+    var tbl = $("ot-table");
+    tbl.textContent = "";
+    var totals = $("ot-totals");
+
+    if (!rows.length) {
+      totals.textContent = "";
+      tbl.appendChild(el("caption", "empty", "Nothing logged in " + monthLabel(pick.value) + "."));
+      return;
+    }
+
+    var withPay = !!db.settings.baseRate;
+    var head = el("tr");
+    ["Date", "Day type", "Hours", "Rate", "Paid as"].forEach(function (h, i) {
+      head.appendChild(el("th", i >= 2 ? "num" : null, h));
+    });
+    if (withPay) head.appendChild(el("th", "num", "Amount"));
+    var thead = el("thead");
+    thead.appendChild(head);
+    tbl.appendChild(thead);
+
+    var tb = el("tbody");
+    rows.forEach(function (e) {
+      var tr = el("tr");
+      tr.appendChild(el("td", null, fmt(e.date)));
+      tr.appendChild(el("td", null, DAY_TYPE_LABEL[e.dayType]));
+      tr.appendChild(el("td", "num", hoursStr(e.ot)));
+      tr.appendChild(el("td", "num", rateLabel(e)));
+      tr.appendChild(el("td", "num", hoursStr(otWeightedHours(e)) + "h"));
+      if (withPay) tr.appendChild(el("td", "num", money(otPay(e))));
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+
+    var line = rows.length + " day" + (rows.length === 1 ? "" : "s") + " · " +
+               hoursStr(hours) + "h worked, paid as " + hoursStr(weighted) + "h.";
+    if (withPay) line += " That is " + money(weighted * db.settings.baseRate) + " of OT.";
+    else line += " Add your hourly rate in Settings to see the money.";
+    totals.textContent = line;
+  }
+  $("month-pick").addEventListener("change", renderMonth);
+
+  /* Plain text rather than a file: it pastes straight into an email or a
+     chat, and never runs into a phone blocking a download. */
+  $("copy-ot").addEventListener("click", function () {
+    var ym = $("month-pick").value || todayISO().slice(0, 7);
+    var keys = monthKeys(ym).slice().reverse();
+    if (!keys.length) { toast("Nothing to copy for " + monthLabel(ym)); return; }
+
+    var lines = ["OT Tracker — " + monthLabel(ym), ""];
+    var hours = 0, weighted = 0;
+    keys.forEach(function (k) {
+      var e = db.entries[k];
+      hours += e.ot;
+      weighted += otWeightedHours(e);
+      var bit = fmt(k) + "  " + hoursStr(e.ot) + "h  " + DAY_TYPE_LABEL[e.dayType] + "  " + rateLabel(e);
+      var pay = otPay(e);
+      if (pay !== null) bit += "  " + money(pay);
+      lines.push(bit);
+    });
+    lines.push("");
+    lines.push("TOTAL  " + keys.length + " days  " + hoursStr(hours) + "h worked  " +
+               hoursStr(weighted) + "h paid" +
+               (db.settings.baseRate ? "  " + money(weighted * db.settings.baseRate) : ""));
+
+    showText("Copy for " + monthLabel(ym), lines.join("\n"));
+  });
+
+  /* ---------- settings ---------- */
+  function renderSettings() {
+    var s = db.settings;
+    $("base-rate").value = s.baseRate === null ? "" : s.baseRate;
+    $("mult-low").value = s.multLow;
+    $("mult-high").value = s.multHigh;
+    $("pay-meta").textContent = (s.baseRate ? money(s.baseRate) + "/h" : "no rate set") +
+      " · " + s.multLow + "× / " + s.multHigh + "×";
+    var n = Object.keys(db.entries).length;
+    $("wipe-meta").textContent = n + " day" + (n === 1 ? "" : "s");
+  }
+
+  $("save-pay").addEventListener("click", function () {
+    var rateRaw = $("base-rate").value.trim();
+    var rate = rateRaw === "" ? null : parseFloat(rateRaw);
+    var low = parseFloat($("mult-low").value);
+    var high = parseFloat($("mult-high").value);
+
+    if (rateRaw !== "" && (isNaN(rate) || rate <= 0)) { toast("Hourly rate looks wrong"); return; }
+    if (isNaN(low) || low <= 0 || isNaN(high) || high <= 0) { toast("Rate multipliers look wrong"); return; }
+
+    db.settings.baseRate = rate;
+    db.settings.multLow = low;
+    db.settings.multHigh = high;
+    save();
+    renderSettings();
+    renderLiveCalc();
+    toast("Pay rules saved");
+  });
+
+  $("wipe-all").addEventListener("click", function () {
+    confirmDialog({
+      title: "Erase everything?",
+      message: "Every day logged in OT Tracker is deleted and the pay rules go back to standard. " +
+               "DOT.log and the other apps are not touched. This can't be undone.",
+      confirmLabel: "Erase",
+      onConfirm: function () {
+        var theme = db.settings.theme; /* an appearance choice is not data */
+        db = defaults();
+        db.settings.theme = theme;
+        save();
+        loadEntryIntoForm(todayISO());
+        renderAll();
+        toast("OT Tracker is empty");
+      }
+    });
+  });
+
+  /* ---------- dialog ---------- */
+  var overlay = $("overlay");
+  function closeModal() {
+    overlay.hidden = true;
+    $("modal-text").style.display = "none";
+    $("modal-message").style.display = "none";
+    $("modal-actions").textContent = "";
+    $("modal-hint").textContent = "";
+  }
+  $("modal-close").addEventListener("click", closeModal);
+  overlay.addEventListener("click", function (ev) { if (ev.target === overlay) closeModal(); });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !overlay.hidden) closeModal();
+  });
+
+  function confirmDialog(opts) {
+    $("modal-title").textContent = opts.title;
+    var msg = $("modal-message");
+    msg.textContent = opts.message;
+    msg.style.display = "";
+    var acts = $("modal-actions");
+    acts.textContent = "";
+    var go = el("button", "secondary danger", opts.confirmLabel);
+    go.addEventListener("click", function () { closeModal(); opts.onConfirm(); });
+    var no = el("button", "secondary", "Cancel");
+    no.addEventListener("click", closeModal);
+    acts.appendChild(no);
+    acts.appendChild(go);
+    overlay.hidden = false;
+    go.focus();
+  }
+
+  function showText(title, text) {
+    $("modal-title").textContent = title;
+    var area = $("modal-text");
+    area.value = text;
+    area.style.display = "";
+    var acts = $("modal-actions");
+    acts.textContent = "";
+    var copy = el("button", "secondary", "Copy to clipboard");
+    copy.addEventListener("click", function () {
+      /* the clipboard API is refused in some in-app browsers, so the text
+         is on screen and selectable either way */
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { toast("Copied"); },
+          function () { area.select(); toast("Press and hold to copy"); }
+        );
+      } else {
+        area.select();
+        toast("Press and hold to copy");
+      }
+    });
+    acts.appendChild(copy);
+    $("modal-hint").textContent = "Paste it into an email or a chat.";
+    overlay.hidden = false;
+  }
+
+  /* ---------- boot ---------- */
+  function renderAll() {
+    renderTodayStatus();
+    renderLiveCalc();
+    renderHistory();
+    renderMonth();
+    renderSettings();
+  }
+
+  $("today-line").textContent = dayName(todayISO()) + ", " + fmt(todayISO());
+  $("log-date").value = formDate;
+  loadEntryIntoForm(formDate);
+  renderAll();
+})();
+</script>
+<script src="../shell.js"></script>
+</body>
+</html>

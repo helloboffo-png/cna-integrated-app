@@ -51,16 +51,17 @@
     }
   }
 
-  /* DOT.log keeps everything in one bundle and understands "auto". */
-  function writeThemeToDotLog(mode) {
+  /* DOT.log and OT Tracker each keep everything in one bundle and both
+     understand "auto", so the same shape works for either store. */
+  function writeThemeToBundle(key, mode) {
     try {
-      var raw = localStorage.getItem("driveotlog.v1");
+      var raw = localStorage.getItem(key);
       if (!raw) return false;
       var db = JSON.parse(raw);
       if (!db || typeof db !== "object") return false;
       db.settings = db.settings || {};
       db.settings.theme = mode;
-      localStorage.setItem("driveotlog.v1", JSON.stringify(db));
+      localStorage.setItem(key, JSON.stringify(db));
       return true;
     } catch (e) { return false; }
   }
@@ -78,7 +79,8 @@
   function setTheme(mode) {
     try { localStorage.setItem(THEME_KEY, mode); } catch (e) {}
     applyThemeLocally(mode);
-    writeThemeToDotLog(mode);
+    writeThemeToBundle("driveotlog.v1", mode);
+    writeThemeToBundle("otlog.v1", mode);
     writeThemeToOtBuilder(mode);
   }
 
@@ -153,9 +155,13 @@
      by a first tap that explains instead of acting.
      ------------------------------------------------------------------ */
 
+  /* Any sub-app may expose window.cnaHasUnsaved to protect a half-typed
+     entry from a reload. DOT.log named its own hook before there was a
+     second app to share it, so that name is still honoured. */
   function hasUnsavedWork() {
     try {
-      return typeof window.dotlogHasUnsaved === "function" && window.dotlogHasUnsaved();
+      var fn = window.cnaHasUnsaved || window.dotlogHasUnsaved;
+      return typeof fn === "function" && !!fn();
     } catch (e) { return false; }
   }
 
@@ -491,6 +497,7 @@
 
   var APPS = [
     { id: "dot", name: "DOT.log" },
+    { id: "otlog", name: "OT Tracker" },
     { id: "ot", name: "Overseas Tracker" }
   ];
 
@@ -622,6 +629,13 @@
         .then(function (res) {
           if (res && res.ok) {
             setRow(app.id, "v" + String(res.version).split("-b")[0] + " · up to date", null);
+          } else if (res && /^Unknown app: /.test(res.error || "")) {
+            /* This home screen lists an app the offline worker still
+               running has never heard of, because a container update is
+               downloaded but has not been let in yet. Nothing is broken
+               and a retry cannot help — only the reload can, so say that
+               rather than showing a raw error with a dead Try again. */
+            setRow(app.id, "Reload the app first, then update", null);
           } else {
             setRow(app.id, (res && res.error) ? "Update failed — " + res.error : "Update failed — check your connection", "Try again");
           }

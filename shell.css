@@ -343,6 +343,7 @@ body:has(> .cna-topbar) {
    than pure black — black against the page was a harder edge than the
    screen wanted. */
 .cna-icon-dot,
+.cna-icon-otlog,
 .cna-icon-ot,
 .cna-icon-fw {
   background: #14181C;
