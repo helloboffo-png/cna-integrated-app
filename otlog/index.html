@@ -661,6 +661,32 @@
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(db)); }
     catch (e) { toast("Phone storage is full — not saved"); }
+    publishCard();
+  }
+
+  /* ---------- the figure this app puts on the home screen ----------
+     The home screen never reads this app's storage. This app decides its
+     own number and leaves it here in a shape the home screen agrees to
+     read, so OT Tracker can change however it likes without the home
+     screen knowing. Not written yet means the home screen simply shows
+     nothing for OT Tracker rather than failing.
+
+     weight fixes the order on the home screen so figures do not swap
+     places as the numbers change. go is the screen a tap opens.       */
+  function publishCard() {
+    try {
+      var ym = todayISO().slice(0, 7);
+      var hours = monthKeys(ym).reduce(function (s, k) { return s + db.entries[k].ot; }, 0);
+      localStorage.setItem("cna.card.otlog", JSON.stringify({
+        app: "otlog",
+        name: "OT Tracker",
+        at: Date.now(),
+        items: [
+          { key: "hours", value: hoursStr(hours), label: "OT hours",
+            alert: false, weight: 30, go: "#month" }
+        ]
+      }));
+    } catch (e) { /* nothing on the home screen is worth failing over */ }
   }
   save(); /* write back whatever load() tidied up, and any carry-over above */
 
@@ -1146,6 +1172,20 @@
   $("log-date").value = formDate;
   loadEntryIntoForm(formDate);
   renderAll();
+  publishCard(); /* keep the home screen's figure current on every open */
+
+  /* A figure on the home screen links to the screen it came from, as
+     "otlog/#month". Anything unrecognised is ignored. */
+  function openScreenFromHash() {
+    var want = (location.hash || "").replace(/^#/, "");
+    if (!want) return;
+    var id = "screen-" + want.replace(/[^a-z-]/g, "");
+    if (document.getElementById(id)) switchTab(id);
+  }
+  openScreenFromHash();
+  /* a hash arriving without a page load — going back, or a second link
+     tapped while already here — must move the screen too */
+  window.addEventListener("hashchange", openScreenFromHash);
 })();
 </script>
 <script src="../shell.js"></script>

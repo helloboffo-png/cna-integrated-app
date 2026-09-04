@@ -250,6 +250,56 @@ body:has(> .cna-topbar) {
   margin-bottom: 3px;
 }
 
+/* ---------------------------------------------------------------
+   The line of figures under the date.
+
+   Each app leaves its own summary; this only lays out whatever turns
+   up. Three figures sit on the first line at full size and anything
+   after them drops to a smaller second line, so the strip can take
+   more numbers later without ever pushing the icons off the screen.
+   Empty adds no height at all, so a phone with no apps opened yet
+   looks exactly as it did before.
+   --------------------------------------------------------------- */
+
+.cna-strip:not(:empty) { margin: -12px 0 22px; }
+
+.cna-strip-row { display: flex; flex-wrap: wrap; gap: 18px; }
+.cna-strip-row + .cna-strip-row { margin-top: 10px; gap: 14px; }
+
+.cna-fig {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.cna-fig:focus-visible {
+  outline: 2px solid var(--cna-accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cna-fig-n {
+  display: block;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cna-fig-l {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--cna-ink-soft);
+}
+
+/* red is reserved for a figure that wants something done about it */
+.cna-fig-hot .cna-fig-n { color: var(--cna-accent); }
+
+.cna-strip-row + .cna-strip-row .cna-fig-n { font-size: 14px; }
+.cna-strip-row + .cna-strip-row .cna-fig-l { font-size: 9px; }
+
 .cna-today-date {
   font-size: 29px;
   font-weight: 500;

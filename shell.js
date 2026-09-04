@@ -283,6 +283,94 @@
     });
   }
 
+  /* ------------------------------------------------------------------
+     The line of figures under the date
+
+     The home screen never reads a sub-app's storage. Each app leaves its
+     own small summary under "cna.card.<id>" and this only arranges
+     whatever it finds — so an app can be rebuilt, or decide to say
+     something different, without a line of this changing. An app that
+     has never been opened has left nothing, and simply contributes
+     nothing rather than breaking the row.
+
+     Everything read here was written by another app, so it is treated as
+     untrusted: values become text through textContent, and the only link
+     that can be built is a plain #screen inside that app's own folder.
+     ------------------------------------------------------------------ */
+
+  function readCards() {
+    var out = [];
+    APPS.forEach(function (app) {
+      var card;
+      try { card = JSON.parse(localStorage.getItem("cna.card." + app.id) || "null"); }
+      catch (e) { return; }
+      if (!card || !Array.isArray(card.items)) return;
+      card.items.forEach(function (item) {
+        if (!item || item.value === undefined || item.value === null) return;
+        /* only a bare #screen name is accepted, so nothing an app writes
+           can turn into a link off to somewhere else */
+        var go = typeof item.go === "string" && /^#[a-z-]{1,20}$/.test(item.go)
+          ? app.id + "/" + item.go
+          : null;
+        out.push({
+          value: String(item.value).slice(0, 12),
+          label: String(item.label || "").slice(0, 22),
+          alert: !!item.alert,
+          weight: typeof item.weight === "number" && isFinite(item.weight) ? item.weight : 0,
+          go: go
+        });
+      });
+    });
+    /* ordered by the weight each app gave its figure, never by the value,
+       so a figure never moves as its number changes */
+    out.sort(function (a, b) { return b.weight - a.weight; });
+    return out;
+  }
+
+  function initStrip() {
+    var box = document.getElementById("cna-strip");
+    if (!box) return;
+
+    function paint() {
+      var figures = readCards();
+      box.textContent = "";
+      if (!figures.length) return;
+
+      /* three at full size, the rest smaller underneath */
+      [figures.slice(0, 3), figures.slice(3)].forEach(function (group) {
+        if (!group.length) return;
+        var row = document.createElement("div");
+        row.className = "cna-strip-row";
+        group.forEach(function (f) {
+          var cell = document.createElement(f.go ? "a" : "div");
+          cell.className = "cna-fig" + (f.alert ? " cna-fig-hot" : "");
+          if (f.go) cell.setAttribute("href", f.go);
+
+          var n = document.createElement("span");
+          n.className = "cna-fig-n";
+          n.textContent = f.value;
+
+          var l = document.createElement("span");
+          l.className = "cna-fig-l";
+          l.textContent = f.label;
+
+          cell.appendChild(n);
+          cell.appendChild(l);
+          row.appendChild(cell);
+        });
+        box.appendChild(row);
+      });
+    }
+
+    paint();
+    /* coming back from an app is often a back gesture rather than a fresh
+       load, so repaint whenever this page is looked at again */
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) paint();
+    });
+    window.addEventListener("pageshow", paint);
+  }
+
   function initHomeScreen() {
     var grid = document.getElementById("cna-app-grid");
     if (!grid) return null;
@@ -691,6 +779,7 @@
 
   window.addEventListener("load", function () {
     initToday();
+    initStrip();
     homeScreen = initHomeScreen();
     initSettings();
 

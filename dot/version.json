@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "DOT.log",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Driving and receipts only — overtime now lives in OT Tracker.",
+  "notes": "Leaves its claim figures for the home screen.",
   "files": [
     "index.html",
     "icon-192.png",

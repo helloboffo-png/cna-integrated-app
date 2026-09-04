@@ -886,7 +886,45 @@
     return db;
   }
   var db = load();
-  function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+  function save() { localStorage.setItem(KEY, JSON.stringify(db)); publishCard(); }
+
+  /* ---------- the figure this app puts on the home screen ----------
+     The home screen shows a line of figures above the app icons. It does
+     NOT read this app's storage to work them out — this app decides what
+     its own numbers are and leaves them here, in a shape the home screen
+     agrees to read. So DOT.log can be rebuilt, renamed or restructured
+     without the home screen knowing or breaking: change what is written
+     here and the home screen follows. If this is never written, the home
+     screen simply shows nothing for DOT.log rather than failing.
+
+     weight orders the figures on the home screen and does not change as
+     the numbers do, so they never swap places under someone's thumb.
+     go is the screen to open when the figure is tapped.                */
+  function publishCard() {
+    try {
+      var ym = todayISO().slice(0, 7);
+      var drivenThisMonth = monthEntries(ym).filter(function (e) { return e.plate; }).length;
+      var open = db.taxi.filter(function (r) { return !r.claimed; });
+      var openThisMonth = open.filter(function (r) { return r.date.slice(0, 7) === ym; });
+      var owed = drivenThisMonth * db.settings.allowance +
+                 openThisMonth.reduce(function (s, r) { return s + r.amount; }, 0);
+
+      localStorage.setItem("cna.card.dot", JSON.stringify({
+        app: "dot",
+        name: "DOT.log",
+        at: Date.now(),
+        items: [
+          { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "to claim",
+            alert: owed > 0, weight: 20, go: "#month" },
+          /* every unclaimed receipt, not just this month's — an old one
+             left unsent is exactly the thing worth being reminded of */
+          { key: "todo", value: String(open.length), label: "to do",
+            alert: open.length > 0, weight: 10, go: "#taxi" }
+        ]
+      }));
+    } catch (e) { /* storage full or blocked: the home screen just shows
+                     nothing for this app, which is not worth failing over */ }
+  }
   save(); /* persist any migration/fleet merge immediately */
 
   function applyTheme() {
@@ -2556,6 +2594,21 @@
   renderClaimReminder(); /* puts the roster note up too */
   renderOtMovedNote();
   requestPersist();
+  publishCard(); /* keep the home screen's figures current on every open */
+  openScreenFromHash();
+
+  /* A figure on the home screen links to the screen it came from, as
+     "dot/#month". Anything unrecognised is ignored and the app opens
+     where it always does. */
+  function openScreenFromHash() {
+    var want = (location.hash || "").replace(/^#/, "");
+    if (!want) return;
+    var id = "screen-" + want.replace(/[^a-z-]/g, "");
+    if (document.getElementById(id)) switchTab(id);
+  }
+  /* a hash arriving without a page load — going back, or a second link
+     tapped while already here — must move the screen too */
+  window.addEventListener("hashchange", openScreenFromHash);
 })();
 </script>
 
