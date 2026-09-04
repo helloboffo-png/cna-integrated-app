@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Driving and parking only — taxi fares now live in Taxi Claims.",
+  "notes": "Marks its days on the home screen calendar.",
   "files": [
     "index.html",
     "icon-192.png",

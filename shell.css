@@ -220,6 +220,130 @@ body:has(> .cna-topbar) {
 }
 
 /* ---------------------------------------------------------------
+   The week under the figures.
+
+   Sized so a week plus its legend still leaves the app icons on
+   screen without scrolling — that was the whole reason for showing
+   a week rather than a month by default. Empty adds no height at
+   all, so a phone with no apps opened yet looks as it did before.
+   --------------------------------------------------------------- */
+
+.cna-cal:not(:empty) { margin: 0 0 22px; }
+
+.cna-cal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 2px 2px 6px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--cna-line);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cna-cal-head:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; border-radius: 6px; }
+
+.cna-cal-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--cna-ink-soft);
+}
+.cna-cal-hint { font-size: 10px; color: var(--cna-ink-soft); opacity: .75; }
+
+.cna-cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.cna-cal-dow span {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-align: center;
+  color: var(--cna-ink-soft);
+  opacity: .8;
+}
+
+.cna-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+.cna-cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 9px;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+/* a week's cells are wider than they are tall, so they do not become
+   seven big squares on a phone */
+.cna-cal-week .cna-cal-cell { aspect-ratio: auto; padding: 7px 0; }
+.cna-cal-cell:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: -2px; }
+
+button.cna-cal-cell { cursor: pointer; }
+.cna-cal-blank { visibility: hidden; }
+
+.cna-cal-n { font-size: 12px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.cna-cal-today { background: color-mix(in srgb, var(--cna-accent) 15%, transparent); }
+.cna-cal-today .cna-cal-n { color: var(--cna-accent); font-weight: 700; }
+.cna-cal-picked { background: color-mix(in srgb, var(--cna-ink) 12%, transparent); }
+
+.cna-cal-dots { display: flex; gap: 2px; height: 4px; align-items: center; }
+.cna-cal-dots i { width: 4px; height: 4px; border-radius: 50%; display: block; }
+
+.cna-cal-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.cna-cal-detail-day { font-weight: 700; }
+.cna-cal-detail-bit { display: inline-flex; align-items: center; gap: 5px; color: var(--cna-ink-soft); }
+.cna-cal-detail-bit i { width: 6px; height: 6px; border-radius: 50%; display: block; flex: none; }
+
+.cna-cal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+.cna-cal-nav { display: flex; gap: 4px; flex: none; }
+.cna-cal-nav button {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid var(--cna-line);
+  border-radius: 8px;
+  color: var(--cna-ink-soft);
+  font: 600 15px/1 var(--cna-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cna-cal-nav button:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
+
+.cna-cal-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.cna-cal-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; color: var(--cna-ink-soft); }
+.cna-cal-legend i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+
+/* ---------------------------------------------------------------
    Today's date.
 
    Both apps are about which day you worked, so the date earns the

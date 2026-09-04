@@ -332,7 +332,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.2</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -539,8 +539,25 @@
     try {
       var open = db.rides.filter(function (r) { return !r.claimed; });
       var owed = open.reduce(function (s, r) { return s + r.amount; }, 0);
+      /* Which days had a ride, for the home screen's calendar. Purple
+         rather than the red taxi lamp, because red already means "this
+         needs doing" in the figures above and one colour should not mean
+         two things on the same screen. */
+      var cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 400);
+      var since = cutoff.toISOString().slice(0, 10);
+      var rideDays = {};
+      db.rides.forEach(function (r) {
+        if (r.date < since) return;
+        rideDays[r.date] = (rideDays[r.date] || 0) + r.amount;
+      });
+      Object.keys(rideDays).forEach(function (iso) { rideDays[iso] = money(rideDays[iso]); });
+
       localStorage.setItem("cna.card.taxi", JSON.stringify({
         app: "taxi", name: "Taxi Claims", at: Date.now(),
+        marks: [
+          { key: "taxi", label: "Taxi", colour: "#9B5FD0", days: rideDays }
+        ],
         items: [
           { key: "fares", value: money(owed).replace(/\.00$/, ""), label: "taxi fares",
             alert: owed > 0, weight: 15, go: "#list" }

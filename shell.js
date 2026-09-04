@@ -371,6 +371,250 @@
     window.addEventListener("pageshow", paint);
   }
 
+  /* ------------------------------------------------------------------
+     The week under the figures
+
+     Same bargain as the figures: the home screen never reads a sub-app's
+     storage. Each app says which days it had something on, what to call
+     it and what colour it is, under "marks" in its own card. This only
+     draws what it finds, so an app can change its mind about any of that
+     without a line of this changing, and an app that has never been
+     opened simply contributes no colour.
+
+     A week rather than a month by choice: a month grid is tall enough to
+     push the app icons off the bottom of the screen, and the icons are
+     the reason people open this page. Tapping the heading opens the
+     month for the times that is actually wanted.
+     ------------------------------------------------------------------ */
+
+  function readMarks() {
+    var out = [];
+    APPS.forEach(function (app) {
+      var card;
+      try { card = JSON.parse(localStorage.getItem("cna.card." + app.id) || "null"); }
+      catch (e) { return; }
+      if (!card || !Array.isArray(card.marks)) return;
+      card.marks.forEach(function (m) {
+        if (!m || !m.days || typeof m.days !== "object") return;
+        /* a colour is the one thing an app hands over that gets used as
+           markup, so only a plain six-digit hex is accepted */
+        if (!/^#[0-9a-fA-F]{6}$/.test(String(m.colour || ""))) return;
+        var days = {};
+        Object.keys(m.days).forEach(function (iso) {
+          /* the shape alone is not enough — "2026-13-99" passes a pattern
+             check and then quietly sits in the legend matching no day of
+             any month, so the date has to be a real one */
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+          /* Checked in UTC against UTC. Building a local Date and reading
+             it back through toISOString compares local midnight with a UTC
+             day, which is a different date everywhere east of Greenwich —
+             here in +08 that rejected every real date and left the
+             calendar blank. */
+          var bits = iso.split("-");
+          var y = +bits[0], mo = +bits[1], da = +bits[2];
+          var d = new Date(Date.UTC(y, mo - 1, da));
+          if (d.getUTCFullYear() !== y || d.getUTCMonth() + 1 !== mo || d.getUTCDate() !== da) return;
+          days[iso] = String(m.days[iso] || "").slice(0, 40);
+        });
+        if (!Object.keys(days).length) return;
+        out.push({
+          label: String(m.label || "").slice(0, 20),
+          colour: String(m.colour),
+          days: days
+        });
+      });
+    });
+    return out;   /* app order, so a colour never moves between days */
+  }
+
+  function initCalendar() {
+    var box = document.getElementById("cna-cal");
+    if (!box) return;
+
+    var DOW = ["M", "T", "W", "T", "F", "S", "S"];
+    var MONTHS = ["January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"];
+
+    var expanded = false;
+    var monthShown = null;   /* Date, first of the month being browsed */
+    var picked = null;       /* iso of the day tapped open */
+
+    function pad2(n) { return (n < 10 ? "0" : "") + n; }
+    function iso(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+    function startOfWeek(d) {
+      var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      x.setDate(x.getDate() - ((x.getDay() + 6) % 7));   /* weeks start Monday */
+      return x;
+    }
+
+    function paint() {
+      var marks = readMarks();
+      box.textContent = "";
+      if (!marks.length) return;
+
+      var today = new Date();
+      var todayIso = iso(today);
+      if (!monthShown) monthShown = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      /* ---- heading ---- */
+      var head = document.createElement("button");
+      head.type = "button";
+      head.className = "cna-cal-head";
+      var title = document.createElement("span");
+      title.className = "cna-cal-title";
+      title.textContent = expanded
+        ? MONTHS[monthShown.getMonth()] + " " + monthShown.getFullYear()
+        : "This week";
+      var hint = document.createElement("span");
+      hint.className = "cna-cal-hint";
+      hint.textContent = expanded ? "show the week" : "show the month";
+      head.appendChild(title);
+      head.appendChild(hint);
+      head.addEventListener("click", function () {
+        expanded = !expanded;
+        picked = null;
+        monthShown = new Date(today.getFullYear(), today.getMonth(), 1);
+        paint();
+      });
+      box.appendChild(head);
+
+      /* ---- day-of-week row ---- */
+      var dow = document.createElement("div");
+      dow.className = "cna-cal-dow";
+      DOW.forEach(function (d) {
+        var s = document.createElement("span");
+        s.textContent = d;
+        dow.appendChild(s);
+      });
+      box.appendChild(dow);
+
+      /* ---- the cells ---- */
+      var grid = document.createElement("div");
+      grid.className = "cna-cal-grid" + (expanded ? "" : " cna-cal-week");
+
+      var cells = [];
+      if (expanded) {
+        var first = new Date(monthShown.getFullYear(), monthShown.getMonth(), 1);
+        var lead = (first.getDay() + 6) % 7;
+        for (var i = 0; i < lead; i++) cells.push(null);
+        var last = new Date(monthShown.getFullYear(), monthShown.getMonth() + 1, 0).getDate();
+        for (var d = 1; d <= last; d++) cells.push(new Date(monthShown.getFullYear(), monthShown.getMonth(), d));
+        while (cells.length % 7) cells.push(null);
+      } else {
+        var mon = startOfWeek(today);
+        for (var k = 0; k < 7; k++) cells.push(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + k));
+      }
+
+      cells.forEach(function (date) {
+        if (!date) {
+          var blank = document.createElement("div");
+          blank.className = "cna-cal-cell cna-cal-blank";
+          grid.appendChild(blank);
+          return;
+        }
+        var key = iso(date);
+        var hits = marks.filter(function (m) { return Object.prototype.hasOwnProperty.call(m.days, key); });
+
+        var cell = document.createElement(hits.length ? "button" : "div");
+        cell.className = "cna-cal-cell" +
+          (key === todayIso ? " cna-cal-today" : "") +
+          (key === picked ? " cna-cal-picked" : "");
+        if (hits.length) {
+          cell.type = "button";
+          cell.addEventListener("click", function () {
+            picked = (picked === key) ? null : key;
+            paint();
+          });
+        }
+
+        var n = document.createElement("span");
+        n.className = "cna-cal-n";
+        n.textContent = date.getDate();
+        cell.appendChild(n);
+
+        var dots = document.createElement("span");
+        dots.className = "cna-cal-dots";
+        hits.forEach(function (m) {
+          var dot = document.createElement("i");
+          dot.style.background = m.colour;
+          dots.appendChild(dot);
+        });
+        cell.appendChild(dots);
+        grid.appendChild(cell);
+      });
+      box.appendChild(grid);
+
+      /* ---- the day tapped open ---- */
+      if (picked) {
+        var hits2 = marks.filter(function (m) { return Object.prototype.hasOwnProperty.call(m.days, picked); });
+        if (hits2.length) {
+          var line = document.createElement("div");
+          line.className = "cna-cal-detail";
+          var p = picked.split("-");
+          var when = document.createElement("span");
+          when.className = "cna-cal-detail-day";
+          when.textContent = (+p[2]) + " " + MONTHS[+p[1] - 1];
+          line.appendChild(when);
+          hits2.forEach(function (m) {
+            var bit = document.createElement("span");
+            bit.className = "cna-cal-detail-bit";
+            var dot = document.createElement("i");
+            dot.style.background = m.colour;
+            bit.appendChild(dot);
+            var txt = document.createElement("span");
+            txt.textContent = m.days[picked] ? m.label + " " + m.days[picked] : m.label;
+            bit.appendChild(txt);
+            line.appendChild(bit);
+          });
+          box.appendChild(line);
+        }
+      }
+
+      /* ---- legend, and month stepping ---- */
+      var foot = document.createElement("div");
+      foot.className = "cna-cal-foot";
+
+      if (expanded) {
+        var nav = document.createElement("div");
+        nav.className = "cna-cal-nav";
+        [["‹", -1], ["›", 1]].forEach(function (pair) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = pair[0];
+          b.setAttribute("aria-label", pair[1] < 0 ? "Previous month" : "Next month");
+          b.addEventListener("click", function () {
+            monthShown = new Date(monthShown.getFullYear(), monthShown.getMonth() + pair[1], 1);
+            picked = null;
+            paint();
+          });
+          nav.appendChild(b);
+        });
+        foot.appendChild(nav);
+      }
+
+      var legend = document.createElement("div");
+      legend.className = "cna-cal-legend";
+      marks.forEach(function (m) {
+        var s = document.createElement("span");
+        var dot = document.createElement("i");
+        dot.style.background = m.colour;
+        s.appendChild(dot);
+        var t = document.createElement("span");
+        t.textContent = m.label;
+        s.appendChild(t);
+        legend.appendChild(s);
+      });
+      foot.appendChild(legend);
+      box.appendChild(foot);
+    }
+
+    paint();
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) { picked = null; paint(); }
+    });
+    window.addEventListener("pageshow", function () { picked = null; paint(); });
+  }
+
   function initHomeScreen() {
     var grid = document.getElementById("cna-app-grid");
     if (!grid) return null;
@@ -781,6 +1025,7 @@
   window.addEventListener("load", function () {
     initToday();
     initStrip();
+    initCalendar();
     homeScreen = initHomeScreen();
     initSettings();
 

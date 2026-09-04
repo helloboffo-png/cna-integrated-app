@@ -515,7 +515,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.1</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -701,7 +701,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.0 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.1 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -906,10 +906,34 @@
       var owed = drivenThisMonth * db.settings.allowance +
                  openThisMonth.reduce(function (s, r) { return s + r.amount; }, 0);
 
+      /* Which days had something on them, for the home screen's calendar.
+         Same rule as the figures: this app decides what its own marks
+         mean, what they are called and what colour they are; the home
+         screen only draws whatever it finds. Held to roughly the last
+         year so the record cannot grow without limit. */
+      var cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 400);
+      var since = cutoff.toISOString().slice(0, 10);
+
+      var droveDays = {}, parkDays = {};
+      Object.keys(db.entries).forEach(function (iso) {
+        var e = db.entries[iso];
+        if (e && e.plate && iso >= since) droveDays[iso] = e.plate;
+      });
+      parkingRows().forEach(function (r) {
+        if (r.date < since) return;
+        parkDays[r.date] = (parkDays[r.date] || 0) + r.amount;
+      });
+      Object.keys(parkDays).forEach(function (iso) { parkDays[iso] = money(parkDays[iso]); });
+
       localStorage.setItem("cna.card.dot", JSON.stringify({
         app: "dot",
         name: "Driving Log",
         at: Date.now(),
+        marks: [
+          { key: "drive", label: "Drove", colour: "#3B82D9", days: droveDays },
+          { key: "parking", label: "Parking", colour: "#D9A017", days: parkDays }
+        ],
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
             alert: owed > 0, weight: 20, go: "#month" },
