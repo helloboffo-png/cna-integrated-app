@@ -13,7 +13,7 @@
   } catch (e) {}
 })();
 </script>
-<title>DOT.log</title>
+<title>Driving Log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Log which company vehicle you drove, plus taxi and parking receipts, then export monthly claims — works fully offline, no account needed.">
 
@@ -26,7 +26,7 @@
 <meta name="theme-color" content="#171B20">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DOT.log">
+<meta name="apple-mobile-web-app-title" content="Driving Log">
 
 <style>
   :root {
@@ -491,7 +491,7 @@
 
 <div class="app">
   <header class="top">
-    <h1 id="app-title">DOT.log</h1>
+    <h1 id="app-title">Driving Log</h1>
     <span class="date-line" id="today-line"></span>
   </header>
 
@@ -515,7 +515,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">DOT.log · v2.7</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v2.9</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -704,7 +704,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">DOT.log · v2.7 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v2.9 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -911,7 +911,7 @@
 
       localStorage.setItem("cna.card.dot", JSON.stringify({
         app: "dot",
-        name: "DOT.log",
+        name: "Driving Log",
         at: Date.now(),
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "to claim",
@@ -1387,7 +1387,7 @@
       if ("Notification" in window && Notification.permission === "granted") {
         var flag = "driveotlog.notified." + ym;
         if (!localStorage.getItem(flag)) {
-          new Notification("DOT.log", { body: monthLabel(ym) + " claim is ready — " + line });
+          new Notification("Driving Log", { body: monthLabel(ym) + " claim is ready — " + line });
           localStorage.setItem(flag, "1");
         }
       }
@@ -2416,7 +2416,7 @@
     var name = $("feedback-name").value.trim();
     var msg = $("feedback-text").value.trim();
     if (!msg) { toast("Type your feedback first"); return; }
-    var subject = "DOT.log feedback" + (name ? " from " + name : "");
+    var subject = "Driving Log feedback" + (name ? " from " + name : "");
     var body = (name ? "From: " + name + "\n\n" : "") + msg;
     var mailto = "mailto:helloboffo@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
     window.location.href = mailto;

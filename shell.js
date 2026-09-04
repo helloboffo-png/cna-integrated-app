@@ -591,7 +591,7 @@
      ------------------------------------------------------------------ */
 
   var APPS = [
-    { id: "dot", name: "DOT.log" },
+    { id: "dot", name: "Driving Log" },
     { id: "otlog", name: "OT Tracker" },
     { id: "ot", name: "Overseas Tracker" }
   ];

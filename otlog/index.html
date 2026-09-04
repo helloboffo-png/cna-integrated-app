@@ -397,7 +397,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.3</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -480,7 +480,7 @@
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
-        <p class="hint">Wipes every day logged in this app and puts the pay rules back to standard. Nothing in DOT.log or any other app is touched.</p>
+        <p class="hint">Wipes every day logged in this app and puts the pay rules back to standard. Nothing in Driving Log or any other app is touched.</p>
         <button class="secondary danger" id="wipe-all" style="width:100%">Erase everything in OT Tracker</button>
       </div>
     </details>
@@ -1064,7 +1064,7 @@
     confirmDialog({
       title: "Erase everything?",
       message: "Every day logged in OT Tracker is deleted and the pay rules go back to standard. " +
-               "DOT.log and the other apps are not touched. This can't be undone.",
+               "Driving Log and the other apps are not touched. This can't be undone.",
       confirmLabel: "Erase",
       onConfirm: function () {
         var theme = db.settings.theme; /* an appearance choice is not data */
@@ -1147,7 +1147,7 @@
     var n = carryResult.copied;
     var banner = el("div", "carry-banner");
     banner.appendChild(el("p", null,
-      "Brought in " + n + " day" + (n === 1 ? "" : "s") + " of overtime already logged in DOT.log. " +
+      "Brought in " + n + " day" + (n === 1 ? "" : "s") + " of overtime already logged in Driving Log. " +
       "Nothing there was changed or removed."));
     var btn = el("button", "secondary", "Got it");
     /* a plain re-render (the storage listener above fires on any change to
