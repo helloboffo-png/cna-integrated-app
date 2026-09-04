@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Marks its days on the home screen calendar.",
+  "notes": "Says when it was last backed up, and nudges when it has been a while.",
   "files": [
     "index.html"
   ]

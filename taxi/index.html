@@ -300,6 +300,7 @@
 
   <!-- ============ LOG ============ -->
   <section class="screen active" id="screen-log">
+    <div id="backup-note"></div>
     <div id="carry-banner"></div>
     <div id="today-status"></div>
 
@@ -332,7 +333,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.2</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.3</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -380,13 +381,14 @@
       </div>
     </details>
 
-    <details class="card sec">
+    <details class="card sec" id="sec-backup">
       <summary>
         <span class="sec-title">Backup</span>
         <span class="sec-meta" id="backup-meta"></span>
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
+        <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
         <p class="hint">Your rides live only on this phone. Export a backup now and then; import it on a new phone to get everything back.</p>
         <div class="btn-row">
           <button class="secondary" id="export-data">Backup</button>
@@ -1153,8 +1155,12 @@
     else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space.");
     $("storage-detail").textContent = lines.join(" ");
     $("wipe-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides");
-    $("backup-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides") +
-      (withPhoto ? " · " + withPhoto + " photo" + (withPhoto === 1 ? "" : "s") : "");
+    $("backup-meta").textContent = backupAgeDays() === null ? "never" : backupAgeText().replace(/^Backed up |\.$/g, "");
+    /* the plain backup carries no screenshots, so saying only "backed up"
+       would overstate what is actually protected */
+    var age = backupAgeText();
+    if (withPhoto && !db.lastFullBackupAt) age += " That backup held no screenshots.";
+    $("backup-age").textContent = age;
   }
 
   /* ---------- backup ----------
@@ -1181,6 +1187,8 @@
   $("export-data").addEventListener("click", function () {
     var text = JSON.stringify({ format: PLAIN_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
     download(new Blob([text], { type: "application/json" }), "taxi-claims-backup-" + todayISO() + ".json");
+    db.lastPlainBackupAt = Date.now();
+    noteBackupTaken();
     toast("Backup downloaded");
   });
 
@@ -1206,6 +1214,8 @@
         parts.push("}}");
         var blob = new Blob(parts, { type: "application/json" });
         download(blob, "taxi-claims-full-backup-" + todayISO() + ".json");
+        db.lastFullBackupAt = Date.now();
+        noteBackupTaken();
         toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
           (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
         return;
@@ -1263,6 +1273,11 @@
           applyTheme();
           resetForm();
           renderAll();
+          db.lastBackupAt = Date.now();   /* they clearly have a file */
+          if (photoN) db.lastFullBackupAt = Date.now();
+          db.backupSnoozeUntil = 0;
+          save();
+          renderBackupNote();
           if (!photoN) { toast("Restored " + db.rides.length + " rides"); return; }
 
           var ids = Object.keys(photos), k = 0, ok = 0;
@@ -1283,6 +1298,71 @@
     };
     reader.readAsText(f);
   });
+
+
+  /* ---------- backup reminder ----------
+     A backup is a file someone has to remember to make, and nobody does.
+     This counts the days since the last one and says so, once there is
+     something worth losing. "Later" snoozes for a week rather than
+     dismissing forever — a reminder you can silence permanently is not a
+     reminder, and the whole point is the phone that never gets backed up. */
+  var BACKUP_STALE_DAYS = 30;
+  var BACKUP_SNOOZE_DAYS = 7;
+  var DAY_MS = 86400000;
+
+  function backupAgeDays() {
+    if (!db.lastBackupAt) return null;
+    return Math.floor((Date.now() - db.lastBackupAt) / DAY_MS);
+  }
+  function backupAgeText() {
+    var n = backupAgeDays();
+    if (n === null) return "Never backed up.";
+    if (n === 0) return "Backed up today.";
+    if (n === 1) return "Backed up yesterday.";
+    if (n < 30) return "Backed up " + n + " days ago.";
+    var months = Math.round(n / 30);
+    return "Backed up about " + months + " month" + (months === 1 ? "" : "s") + " ago.";
+  }
+  function noteBackupTaken() {
+    db.lastBackupAt = Date.now();
+    db.backupSnoozeUntil = 0;
+    save();
+    renderSettings();
+    renderBackupNote();
+  }
+  function renderBackupNote() {
+    var box = $("backup-note");
+    if (!box) return;
+    box.textContent = "";
+    if (!db.rides.length) return;                       /* nothing to lose yet */
+    if (db.backupSnoozeUntil && Date.now() < db.backupSnoozeUntil) return;
+    var n = backupAgeDays();
+    if (n !== null && n < BACKUP_STALE_DAYS) return;
+
+    var b = el("div", "carry-banner");
+    b.appendChild(el("p", null, (n === null
+      ? "This has never been backed up."
+      : backupAgeText().replace(/\.$/, "") + " — worth doing again.") +
+      " Everything is on this phone only; lose it and it is gone."));
+    var row = el("div", "btn-row");
+    var go = el("button", "secondary", "Back up now");
+    go.addEventListener("click", function () {
+      switchTab("screen-settings");
+      var sec = $("sec-backup");
+      if (sec) sec.open = true;
+      $("export-archive").click();
+    });
+    var later = el("button", "secondary", "Later");
+    later.addEventListener("click", function () {
+      db.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
+      save();
+      box.textContent = "";
+    });
+    row.appendChild(go);
+    row.appendChild(later);
+    b.appendChild(row);
+    box.appendChild(b);
+  }
 
   $("wipe-all").addEventListener("click", function () {
     confirmDialog({
@@ -1395,6 +1475,7 @@
 
   /* ---------- boot ---------- */
   function renderAll() {
+    renderBackupNote();
     renderCarryBanner();
     renderTodayStatus();
     renderList();

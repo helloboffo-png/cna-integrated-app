@@ -450,8 +450,11 @@
     function paint() {
       var marks = readMarks();
       box.textContent = "";
-      if (!marks.length) return;
 
+      /* The week is drawn whether or not anything has been logged. It is
+         a calendar first and a record second: on a quiet week it still
+         answers what day it is and where the weekend falls, and the page
+         does not change height as days get logged. */
       var today = new Date();
       var todayIso = iso(today);
       if (!monthShown) monthShown = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -594,6 +597,7 @@
 
       var legend = document.createElement("div");
       legend.className = "cna-cal-legend";
+      /* nothing logged yet means nothing to explain */
       marks.forEach(function (m) {
         var s = document.createElement("span");
         var dot = document.createElement("i");
@@ -605,7 +609,7 @@
         legend.appendChild(s);
       });
       foot.appendChild(legend);
-      box.appendChild(foot);
+      if (expanded || marks.length) box.appendChild(foot);
     }
 
     paint();

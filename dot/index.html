@@ -497,6 +497,7 @@
 
   <!-- ============ TODAY ============ -->
   <section class="screen active" id="screen-log">
+    <div id="backup-note"></div>
     <div id="ot-moved-note"></div>
     <div id="claim-reminder"></div>
     <div id="today-status"></div>
@@ -515,7 +516,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.2</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -660,13 +661,14 @@
       </div>
     </details>
 
-    <details class="card sec">
+    <details class="card sec" id="sec-backup">
       <summary>
         <span class="sec-title">Backup</span>
         <span class="sec-meta" id="storage-meta"></span>
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
+        <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
         <p class="hint">Your data lives only on this device. Export a backup now and then; import it on a new phone to restore everything.</p>
         <div class="formula-box" id="storage-box">
           <p class="hint" style="margin:0" id="storage-detail"></p>
@@ -701,7 +703,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.1 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.2 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -2387,6 +2389,7 @@
     /* each collapsed section shows its own headline value, so Settings can
        be read at a glance without opening anything */
     $("veh-count").textContent = db.vehicles.length + (db.vehicles.length === 1 ? " plate" : " plates");
+    if ($("backup-age")) $("backup-age").textContent = backupAgeText();
     $("pay-meta").textContent = money(db.settings.allowance) + "/day";
     $("allowance").value = db.settings.allowance;
     document.querySelectorAll("#theme-picker button").forEach(function (b) {
@@ -2490,6 +2493,73 @@
     });
   });
 
+
+  /* ---------- backup reminder ----------
+     A backup is a file someone has to remember to make, and nobody does.
+     This counts the days since the last one and says so, once there is
+     something worth losing. "Later" snoozes for a week rather than
+     dismissing forever — a reminder that can be silenced for good is not
+     a reminder, and the phone that never gets backed up is the point. */
+  var BACKUP_STALE_DAYS = 30;
+  var BACKUP_SNOOZE_DAYS = 7;
+  var DAY_MS = 86400000;
+
+  function backupAgeDays() {
+    if (!db.lastBackupAt) return null;
+    return Math.floor((Date.now() - db.lastBackupAt) / DAY_MS);
+  }
+  function backupAgeText() {
+    var n = backupAgeDays();
+    if (n === null) return "Never backed up.";
+    if (n === 0) return "Backed up today.";
+    if (n === 1) return "Backed up yesterday.";
+    if (n < 30) return "Backed up " + n + " days ago.";
+    var months = Math.round(n / 30);
+    return "Backed up about " + months + " month" + (months === 1 ? "" : "s") + " ago.";
+  }
+  function noteBackupTaken() {
+    db.lastBackupAt = Date.now();
+    db.backupSnoozeUntil = 0;
+    save();
+    renderSettings();
+    renderBackupNote();
+  }
+  function renderBackupNote() {
+    var box = $("backup-note");
+    if (!box) return;
+    box.textContent = "";
+    var hasData = Object.keys(db.entries).length || db.taxi.length;
+    if (!hasData) return;
+    if (db.backupSnoozeUntil && Date.now() < db.backupSnoozeUntil) return;
+    var n = backupAgeDays();
+    if (n !== null && n < BACKUP_STALE_DAYS) return;
+
+    var b = el("div", "claim-banner");
+    b.appendChild(el("strong", null, n === null ? "Never backed up" : "Backup is out of date"));
+    b.appendChild(el("span", null, (n === null
+      ? "This has never been backed up."
+      : backupAgeText().replace(/\.$/, "") + ".") +
+      " Everything is on this phone only; lose it and it is gone."));
+    var row = el("div", "btn-row");
+    var go = el("button", "secondary", "Back up now");
+    go.addEventListener("click", function () {
+      switchTab("screen-settings");
+      var sec = $("sec-backup");
+      if (sec) sec.open = true;
+      $("export-archive").click();
+    });
+    var later = el("button", "secondary", "Later");
+    later.addEventListener("click", function () {
+      db.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
+      save();
+      box.textContent = "";
+    });
+    row.appendChild(go);
+    row.appendChild(later);
+    b.appendChild(row);
+    box.appendChild(b);
+  }
+
   /* ---------- backup ---------- */
   $("export-data").addEventListener("click", function () {
     var blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
@@ -2498,6 +2568,7 @@
     a.download = "drive-ot-backup-" + todayISO() + ".json";
     a.click();
     URL.revokeObjectURL(a.href);
+    noteBackupTaken();
     toast("Backup downloaded");
   });
 
@@ -2530,6 +2601,7 @@
         a.click();
         document.body.removeChild(a);
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+        noteBackupTaken();
         toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
           (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
         return;
@@ -2577,6 +2649,10 @@
             selectedPlate = null;
             resetTaxiForm();
             renderPlates(); renderTodayStatus(); renderSettings(); renderClaimReminder(); renderTaxi();
+            db.lastBackupAt = Date.now();   /* they clearly have a file */
+            db.backupSnoozeUntil = 0;
+            save();
+            renderBackupNote();
             if (!photoN) { toast("Backup restored"); return; }
             var ids = Object.keys(photos), k = 0, ok = 0;
             toast("Restoring screenshots…");
@@ -2630,6 +2706,7 @@
   renderTodayStatus();
   renderClaimReminder(); /* puts the roster note up too */
   renderOtMovedNote();
+  renderBackupNote();
   requestPersist();
   publishCard(); /* keep the home screen's figures current on every open */
   openScreenFromHash();
