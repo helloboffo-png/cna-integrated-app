@@ -436,8 +436,10 @@
                   "July", "August", "September", "October", "November", "December"];
 
     var expanded = false;
-    var monthShown = null;   /* Date, first of the month being browsed */
+    var cursor = null;       /* Date, any day inside the period being shown */
     var picked = null;       /* iso of the day tapped open */
+    var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     function pad2(n) { return (n < 10 ? "0" : "") + n; }
     function iso(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
@@ -457,7 +459,22 @@
          does not change height as days get logged. */
       var today = new Date();
       var todayIso = iso(today);
-      if (!monthShown) monthShown = new Date(today.getFullYear(), today.getMonth(), 1);
+      if (!cursor) cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      /* is the period on screen the one today falls in? */
+      var weekStart = startOfWeek(cursor);
+      var weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+      var onNow = expanded
+        ? (cursor.getFullYear() === today.getFullYear() && cursor.getMonth() === today.getMonth())
+        : (todayIso >= iso(weekStart) && todayIso <= iso(weekEnd));
+
+      function step(n) {
+        cursor = expanded
+          ? new Date(cursor.getFullYear(), cursor.getMonth() + n, 1)
+          : new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + n * 7);
+        picked = null;
+        paint();
+      }
 
       /* ---- heading ---- */
       var head = document.createElement("button");
@@ -465,9 +482,15 @@
       head.className = "cna-cal-head";
       var title = document.createElement("span");
       title.className = "cna-cal-title";
-      title.textContent = expanded
-        ? MONTHS[monthShown.getMonth()] + " " + monthShown.getFullYear()
-        : "This week";
+      if (expanded) {
+        title.textContent = MONTHS[cursor.getMonth()] + " " + cursor.getFullYear();
+      } else if (onNow) {
+        title.textContent = "This week";
+      } else {
+        /* a week that has been swiped away from has to say which one it is */
+        title.textContent = weekStart.getDate() + " " + MONTHS_SHORT[weekStart.getMonth()] +
+          " – " + weekEnd.getDate() + " " + MONTHS_SHORT[weekEnd.getMonth()];
+      }
       var hint = document.createElement("span");
       hint.className = "cna-cal-hint";
       hint.textContent = expanded ? "show the week" : "show the month";
@@ -476,8 +499,7 @@
       head.addEventListener("click", function () {
         expanded = !expanded;
         picked = null;
-        monthShown = new Date(today.getFullYear(), today.getMonth(), 1);
-        paint();
+        paint();     /* stay on whatever period was being looked at */
       });
       box.appendChild(head);
 
@@ -497,15 +519,16 @@
 
       var cells = [];
       if (expanded) {
-        var first = new Date(monthShown.getFullYear(), monthShown.getMonth(), 1);
+        var first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
         var lead = (first.getDay() + 6) % 7;
         for (var i = 0; i < lead; i++) cells.push(null);
-        var last = new Date(monthShown.getFullYear(), monthShown.getMonth() + 1, 0).getDate();
-        for (var d = 1; d <= last; d++) cells.push(new Date(monthShown.getFullYear(), monthShown.getMonth(), d));
+        var last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        for (var d = 1; d <= last; d++) cells.push(new Date(cursor.getFullYear(), cursor.getMonth(), d));
         while (cells.length % 7) cells.push(null);
       } else {
-        var mon = startOfWeek(today);
-        for (var k = 0; k < 7; k++) cells.push(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + k));
+        for (var k = 0; k < 7; k++) {
+          cells.push(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + k));
+        }
       }
 
       cells.forEach(function (date) {
@@ -545,6 +568,33 @@
         cell.appendChild(dots);
         grid.appendChild(cell);
       });
+      /* Swipe the grid sideways to move a week or a month. Only a
+         decidedly horizontal drag counts, so scrolling the page down
+         through it still works, and a swipe that started on a day must
+         not also open that day — the click after it is swallowed. */
+      (function () {
+        var x0 = 0, y0 = 0, tracking = false, swiped = false;
+        grid.addEventListener("pointerdown", function (ev) {
+          if (!ev.isPrimary) return;
+          x0 = ev.clientX; y0 = ev.clientY; tracking = true; swiped = false;
+        });
+        grid.addEventListener("pointerup", function (ev) {
+          if (!tracking) return;
+          tracking = false;
+          var dx = ev.clientX - x0, dy = ev.clientY - y0;
+          if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          swiped = true;
+          step(dx < 0 ? 1 : -1);        /* drag left goes forward */
+        });
+        grid.addEventListener("pointercancel", function () { tracking = false; });
+        grid.addEventListener("click", function (ev) {
+          if (!swiped) return;
+          swiped = false;
+          ev.stopPropagation();
+          ev.preventDefault();
+        }, true);
+      })();
+
       box.appendChild(grid);
 
       /* ---- the day tapped open ---- */
@@ -577,23 +627,33 @@
       var foot = document.createElement("div");
       foot.className = "cna-cal-foot";
 
-      if (expanded) {
-        var nav = document.createElement("div");
-        nav.className = "cna-cal-nav";
-        [["‹", -1], ["›", 1]].forEach(function (pair) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.textContent = pair[0];
-          b.setAttribute("aria-label", pair[1] < 0 ? "Previous month" : "Next month");
-          b.addEventListener("click", function () {
-            monthShown = new Date(monthShown.getFullYear(), monthShown.getMonth() + pair[1], 1);
-            picked = null;
-            paint();
-          });
-          nav.appendChild(b);
+      /* the arrows stay alongside the swipe: a swipe cannot be reached
+         from a keyboard, and nothing on screen would otherwise say that
+         moving between weeks is possible at all */
+      var nav = document.createElement("div");
+      nav.className = "cna-cal-nav";
+      [["‹", -1], ["›", 1]].forEach(function (pair) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = pair[0];
+        b.setAttribute("aria-label",
+          (pair[1] < 0 ? "Previous " : "Next ") + (expanded ? "month" : "week"));
+        b.addEventListener("click", function () { step(pair[1]); });
+        nav.appendChild(b);
+      });
+      if (!onNow) {
+        var back = document.createElement("button");
+        back.type = "button";
+        back.className = "cna-cal-back";
+        back.textContent = "Today";
+        back.addEventListener("click", function () {
+          cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          picked = null;
+          paint();
         });
-        foot.appendChild(nav);
+        nav.appendChild(back);
       }
+      foot.appendChild(nav);
 
       var legend = document.createElement("div");
       legend.className = "cna-cal-legend";
@@ -609,7 +669,7 @@
         legend.appendChild(s);
       });
       foot.appendChild(legend);
-      if (expanded || marks.length) box.appendChild(foot);
+      box.appendChild(foot);
     }
 
     paint();

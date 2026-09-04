@@ -272,7 +272,14 @@ body:has(> .cna-topbar) {
   opacity: .8;
 }
 
-.cna-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cna-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  /* the sideways drag belongs to the calendar; up and down still scrolls
+     the page through it */
+  touch-action: pan-y;
+}
 
 .cna-cal-cell {
   aspect-ratio: 1;
@@ -338,6 +345,16 @@ button.cna-cal-cell { cursor: pointer; }
   -webkit-tap-highlight-color: transparent;
 }
 .cna-cal-nav button:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
+
+/* only present once the calendar has been moved away from today */
+.cna-cal-back {
+  width: auto !important;
+  padding: 0 10px;
+  font-size: 11px !important;
+  font-weight: 600;
+  color: var(--cna-accent) !important;
+  border-color: color-mix(in srgb, var(--cna-accent) 45%, var(--cna-line)) !important;
+}
 
 .cna-cal-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .cna-cal-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; color: var(--cna-ink-soft); }
