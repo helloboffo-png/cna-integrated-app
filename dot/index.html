@@ -515,19 +515,16 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v2.9</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.0</p>
   </section>
 
   <!-- ============ TAXI ============ -->
   <section class="screen" id="screen-taxi">
+    <div id="taxi-moved-note"></div>
+
     <div class="card">
       <h2 id="taxi-form-title">Log a ride</h2>
       <p class="hint" id="taxi-form-hint">Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.</p>
-
-      <div class="seg" id="rcpt-kind" role="group" aria-label="Receipt type">
-        <button type="button" data-v="taxi" class="on">Taxi / Grab</button>
-        <button type="button" data-v="parking">Parking</button>
-      </div>
 
       <label class="field" for="taxi-date">Date</label>
       <div class="field-clip"><input type="date" id="taxi-date" max="2100-12-31"></div>
@@ -560,9 +557,9 @@
     </div>
 
     <div class="card">
-      <h2>Logged receipts</h2>
+      <h2>Logged parking</h2>
       <p class="hint" id="taxi-summary"></p>
-      <select id="taxi-month" aria-label="Receipts to show"></select>
+      <select id="taxi-month" aria-label="Parking to show"></select>
       <div id="taxi-list"></div>
     </div>
   </section>
@@ -608,8 +605,8 @@
     </div>
 
     <div class="card">
-      <h2>Receipt claims</h2>
-      <p class="hint">Taxi fares and parking logged this month. The screenshots stay on the Receipts tab — upload those to the portal yourself.</p>
+      <h2>Parking claims</h2>
+      <p class="hint">Parking logged this month. The screenshots stay on the Parking tab — upload those to the portal yourself. Taxi fares are in Taxi Claims now.</p>
       <div class="tbl-wrap"><table id="taxi-table"></table></div>
       <div class="totals-line" id="taxi-month-total"></div>
       <div class="btn-row"><button class="secondary" id="copy-taxi">Copy list</button></div>
@@ -704,7 +701,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v2.9 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.0 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -718,7 +715,7 @@
   <button data-screen="screen-taxi">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M5 3h14v18l-3.5-2-3.5 2-3.5-2L5 21V3z"/><path d="M9 8.5h6M9 12.5h6"/>
-    </svg>Receipts<span class="ico-bar"></span>
+    </svg>Parking<span class="ico-bar"></span>
   </button>
   <button data-screen="screen-history">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -904,7 +901,7 @@
     try {
       var ym = todayISO().slice(0, 7);
       var drivenThisMonth = monthEntries(ym).filter(function (e) { return e.plate; }).length;
-      var open = db.taxi.filter(function (r) { return !r.claimed; });
+      var open = parkingRows().filter(function (r) { return !r.claimed; });
       var openThisMonth = open.filter(function (r) { return r.date.slice(0, 7) === ym; });
       var owed = drivenThisMonth * db.settings.allowance +
                  openThisMonth.reduce(function (s, r) { return s + r.amount; }, 0);
@@ -914,11 +911,11 @@
         name: "Driving Log",
         at: Date.now(),
         items: [
-          { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "to claim",
+          { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
             alert: owed > 0, weight: 20, go: "#month" },
           /* every unclaimed receipt, not just this month's — an old one
              left unsent is exactly the thing worth being reminded of */
-          { key: "todo", value: String(open.length), label: "to do",
+          { key: "todo", value: String(open.length), label: "receipts to send",
             alert: open.length > 0, weight: 10, go: "#taxi" }
         ]
       }));
@@ -1048,7 +1045,7 @@
   }
 
   function photoCount() {
-    return db.taxi.filter(function (r) { return r.photo; }).length;
+    return parkingRows().filter(function (r) { return r.photo; }).length;
   }
   function renderStorage() {
     var meta = $("storage-meta"), detail = $("storage-detail");
@@ -1113,7 +1110,7 @@
     tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(screenId).classList.add("active");
-    if (screenId === "screen-taxi") renderTaxi();
+    if (screenId === "screen-taxi") { renderTaxi(); renderTaxiMovedNote(); }
     if (screenId === "screen-history") renderHistory();
     if (screenId === "screen-month") renderMonth();
     if (screenId === "screen-settings") renderSettings();
@@ -1183,7 +1180,7 @@
     box.textContent = "";
     var iso = todayISO();
     var e = db.entries[iso];
-    var rides = db.taxi.filter(function (r) { return r.date === iso; });
+    var rides = parkingRows().filter(function (r) { return r.date === iso; });
     if (!e && !rides.length) return;
     var banner = el("div", "status-banner");
     banner.appendChild(el("span", "dot"));
@@ -1305,6 +1302,26 @@
 
   /* one-off note when an update changed the company vehicle list, so a
      plate appearing or vanishing from the dropdown isn't a mystery */
+  /* Taxi fares used to be logged on the Receipts screen alongside
+     parking. Same reasoning as the overtime note below: a section that
+     quietly loses half its contents reads as a fault. */
+  function renderTaxiMovedNote() {
+    var box = $("taxi-moved-note");
+    if (!box || db.taxiMovedNoticeSeen) return;
+    var b = el("div", "claim-banner");
+    b.appendChild(el("strong", null, "Taxi has moved"));
+    b.appendChild(el("span", null,
+      "Log taxi and Grab fares in Taxi Claims on the main page. The ones you already logged went with them, screenshots and all. Parking stays here."));
+    var row = el("div", "btn-row");
+    var ok = el("button", "secondary", "Got it");
+    ok.addEventListener("click", function () {
+      db.taxiMovedNoticeSeen = true; save(); box.textContent = "";
+    });
+    row.appendChild(ok);
+    b.appendChild(row);
+    box.appendChild(b);
+  }
+
   /* Overtime used to be logged on this screen. Taking a box away with no
      word at all reads as a bug to the person who used it every day, so
      this says where it went — once, then never again. */
@@ -1500,16 +1517,11 @@
   var editingRide = null;      /* id of the receipt loaded into the form, if any */
   var formPhoto = null;        /* newly picked screenshot, not yet written */
   var formPhotoHas = false;    /* the receipt being edited already has one stored */
-  var formKind = "taxi";       /* which of the two receipt types the form is on */
+  var formKind = "parking";    /* the only receipt type this app still logs */
 
+  /* Taxi moved to its own app in v3.0. Parking is what is left here, so
+     the form no longer has a type to choose between. */
   var KIND = {
-    taxi: {
-      title: "Log a ride", editTitle: "Edit ride",
-      save: "Save ride", update: "Update ride", label: "Taxi",
-      hint: "Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.",
-      refLabel: "Receipt no.", refPlaceholder: "A-3F92KQ", amtPlaceholder: "12.40",
-      noteLabel: "Trip", notePlaceholder: "e.g. Caldecott to Punggol shoot"
-    },
     parking: {
       title: "Log parking", editTitle: "Edit parking",
       save: "Save parking", update: "Update parking", label: "Parking",
@@ -1550,9 +1562,6 @@
   function setRcptKind(v, keepPlate) {
     formKind = v;
     var k = KIND[v];
-    document.querySelectorAll("#rcpt-kind button").forEach(function (b) {
-      b.classList.toggle("on", b.dataset.v === v);
-    });
     $("lbl-receipt").textContent = k.refLabel;
     $("taxi-receipt").placeholder = k.refPlaceholder;
     $("taxi-amount").placeholder = k.amtPlaceholder;
@@ -1565,26 +1574,30 @@
     if (v === "parking" && !keepPlate) renderRcptPlates(plateLoggedOn($("taxi-date").value));
   }
 
-  document.querySelectorAll("#rcpt-kind button").forEach(function (b) {
-    b.addEventListener("click", function () { setRcptKind(b.dataset.v); });
-  });
-
   $("taxi-date").addEventListener("change", function () {
     /* follow the date to that day's vehicle, but never overwrite a plate
        the user picked deliberately */
     if (formKind === "parking" && !$("rcpt-plate").value) renderRcptPlates(plateLoggedOn(this.value));
   });
 
+  /* Every screen reads receipts through here. Taxi rides that have not
+     yet been carried across still sit in db.taxi untouched — Taxi Claims
+     reads them from there on its first open — but nothing in this app
+     shows or counts them any more. */
+  function parkingRows() {
+    return db.taxi.filter(function (r) { return r.kind === "parking"; });
+  }
+
   function ridesSorted() {
     /* newest first, and stable for two rides on the same date via the id,
        which carries the timestamp it was created at */
-    return db.taxi.slice().sort(function (a, b) {
+    return parkingRows().sort(function (a, b) {
       if (a.date !== b.date) return a.date > b.date ? -1 : 1;
       return a.id > b.id ? -1 : 1;
     });
   }
   function monthRides(ym) {
-    return db.taxi.filter(function (r) { return r.date.slice(0, 7) === ym; })
+    return parkingRows().filter(function (r) { return r.date.slice(0, 7) === ym; })
       .sort(function (a, b) { return a.date > b.date ? 1 : a.date < b.date ? -1 : (a.id > b.id ? 1 : -1); });
   }
 
@@ -1734,7 +1747,7 @@
 
   function monthsWithRides() {
     var seen = {};
-    db.taxi.forEach(function (r) { seen[r.date.slice(0, 7)] = true; });
+    parkingRows().forEach(function (r) { seen[r.date.slice(0, 7)] = true; });
     return Object.keys(seen).sort().reverse();
   }
   /* set when something is saved, so the list jumps to the month it landed
@@ -1747,7 +1760,7 @@
     var months = monthsWithRides();
     var cur = todayISO().slice(0, 7);
     if (months.indexOf(cur) === -1) months.unshift(cur);
-    var open = db.taxi.filter(function (r) { return !r.claimed; }).length;
+    var open = parkingRows().filter(function (r) { return !r.claimed; }).length;
     var keep = wantTaxiMonth || sel.value;
     wantTaxiMonth = null;
     sel.textContent = "";
@@ -1772,7 +1785,7 @@
 
     var cur = todayISO().slice(0, 7);
     var thisMonth = monthRides(cur);
-    var unclaimed = db.taxi.filter(function (r) { return !r.claimed; });
+    var unclaimed = parkingRows().filter(function (r) { return !r.claimed; });
     /* two separate facts, stated separately — a single "·" list reads as
        though the unclaimed count is also scoped to this month, when it's
        deliberately every outstanding receipt regardless of age */
@@ -1888,7 +1901,7 @@
         renderRcptPlates(r.plate || "");
         /* keepPlate: show exactly what this receipt was saved with, rather
            than re-deriving it from whatever is logged for that date now */
-        setRcptKind(r.kind || "taxi", true);
+        setRcptKind("parking", true);
         $("cancel-taxi").style.display = "";
         renderPhotoSlot();
         window.scrollTo(0, 0);
@@ -2313,7 +2326,7 @@
       return [fmt(r.date), KIND[r.kind].label, r.receipt || "-",
               r.plate || "", r.amount.toFixed(2)].join("\t");
     }).join("\n");
-    openExport("Receipt claims — " + monthLabel(ym), text, null);
+    openExport("Parking claims — " + monthLabel(ym), text, null);
   });
 
   /* ---------- settings ---------- */
@@ -2478,7 +2491,7 @@
     r.readAsDataURL(blob);
   }
   $("export-archive").addEventListener("click", function () {
-    var withPhotos = db.taxi.filter(function (r) { return r.photo; });
+    var withPhotos = parkingRows().filter(function (r) { return r.photo; });
     var parts = ['{"format":"dotlog-archive-1","data":', JSON.stringify(db), ',"photos":{'];
     var i = 0, written = 0, missing = 0;
     toast("Building full backup — this can take a while");

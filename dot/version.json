@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "2.9.0",
+  "version": "3.0.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Renamed to Driving Log.",
+  "notes": "Driving and parking only — taxi fares now live in Taxi Claims.",
   "files": [
     "index.html",
     "icon-192.png",

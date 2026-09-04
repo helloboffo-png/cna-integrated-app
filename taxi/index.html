@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>
+/* applied before first paint so switching Appearance never flashes the
+   wrong theme for a frame on the next load */
+(function () {
+  try {
+    var raw = localStorage.getItem("taxiclaims.v1");
+    var t = raw && JSON.parse(raw).settings && JSON.parse(raw).settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<title>Taxi Claims</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Log taxi and Grab fares you paid for yourself, keep the receipt screenshot, and export the monthly claim — works fully offline.">
+
+<!-- The container owns the one install identity for every app here, so
+     this points at its manifest rather than declaring another. -->
+<link rel="manifest" href="../manifest.json">
+<link rel="stylesheet" href="../shell.css">
+<meta name="theme-color" content="#171B20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taxi Claims">
+
+<style>
+  /* Its own copy of the look rather than a stylesheet shared with Driving
+     Log. They are meant to be separately upgradable, and a shared file
+     would mean a change to one could break the other. The tokens match
+     deliberately: this used to be part of Driving Log, and the people
+     using it should not have to learn a second set of habits. */
+  :root {
+    --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
+    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
+    --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
+      --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+      --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+      --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
+    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
+    --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
+    --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
+    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+    --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+    --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
+    --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink);
+    /* Inter Tight is served from this site by the container's stylesheet,
+       not fetched from Google. The phone's own font stays behind it. */
+    font: 16px/1.5 "Inter Tight", -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 480px; margin: 0 auto;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));
+  }
+  header.top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+  header.top h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+  header.top .date-line { font-size: 13px; color: var(--ink-soft); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow);
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 4px; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-soft);
+  }
+  .card .hint { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
+
+  label.field { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin: 12px 0 4px; }
+  input[type="date"], input[type="number"], input[type="text"], select {
+    width: 100%; max-width: 100%; box-sizing: border-box;
+    font: inherit; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  input:focus-visible, button:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  /* iOS renders its native date control wider than the box it is given
+     and lets it spill past the card; this clips it back. */
+  .field-clip { overflow: hidden; border-radius: 10px; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  #taxi-month, #month-pick { margin: 8px 0 10px; font-weight: 600; }
+
+  button.primary {
+    width: 100%; margin-top: 16px;
+    font: inherit; font-weight: 700; font-size: 16px;
+    background: var(--accent); color: var(--accent-ink);
+    border: none; border-radius: 12px; padding: 13px; cursor: pointer;
+  }
+  button.primary:active { filter: brightness(0.95); }
+  button.secondary {
+    font: inherit; font-weight: 600; font-size: 14px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 14px; cursor: pointer;
+  }
+  button.secondary.danger { color: var(--danger); border-color: var(--danger); }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row button { flex: 1; }
+
+  .status-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--good-soft); color: var(--good);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 14px; font-weight: 600; margin-bottom: 12px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
+
+  .carry-banner {
+    background: color-mix(in srgb, var(--accent) 16%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px;
+  }
+  .carry-banner p { margin: 0 0 10px; }
+  .carry-banner button { padding: 8px 14px; }
+
+  /* ---- photo ---- */
+  .photo-add {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--paper); border: 1.5px dashed var(--line);
+    border-radius: 12px; padding: 20px 12px;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-soft);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .photo-prev { display: flex; gap: 12px; align-items: flex-start; }
+  .photo-prev img {
+    width: 74px; height: 94px; object-fit: cover;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper); cursor: zoom-in; flex: none;
+  }
+  .photo-prev .btn-row { margin-top: 0; flex-direction: column; }
+
+  /* ---- receipt list ---- */
+  .ride-month {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-soft); padding: 14px 2px 4px; border-bottom: 1px solid var(--line);
+  }
+  .ride-month:first-child { padding-top: 4px; }
+  .ride { display: flex; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .ride:last-child { border-bottom: none; }
+  .ride-thumb {
+    width: 44px; height: 56px; flex: none;
+    border-radius: 8px; border: 1px solid var(--line);
+    object-fit: cover; background: var(--paper); cursor: zoom-in;
+  }
+  .ride-thumb.none {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    cursor: default; text-align: center; line-height: 1.2;
+  }
+  .ride-main { flex: 1; min-width: 0; }
+  .ride-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .ride-amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ride-sub { font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ride-acts { display: flex; gap: 16px; margin-top: 6px; }
+  .ride-acts button {
+    font: inherit; font-size: 12px; font-weight: 600;
+    background: none; border: none; cursor: pointer; padding: 2px 0; color: var(--ink);
+  }
+  .ride-acts button.danger { color: var(--danger); }
+  .tag {
+    flex: none; font: inherit; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border: none; border-radius: 999px; padding: 4px 9px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .tag.done { background: var(--good-soft); color: var(--good); }
+  .tag.todo { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--ink); }
+
+  /* ---- month ---- */
+  .stat-row { display: flex; gap: 10px; margin: 12px 0 0; }
+  .stat { flex: 1; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .stat .n { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  .totals-line { margin-top: 10px; font-size: 14px; }
+  .empty { color: var(--ink-soft); font-size: 14px; text-align: center; padding: 18px 0; }
+
+  /* ---- settings sections ---- */
+  details.sec { padding: 0; }
+  details.sec > summary {
+    list-style: none; display: flex; align-items: center; gap: 10px;
+    padding: 15px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  details.sec > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+  .sec-title { flex: 1; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink); }
+  .sec-meta { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .chev {
+    flex: none; width: 8px; height: 8px; margin: -3px 2px 0 0;
+    border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
+    transform: rotate(45deg); transition: transform .15s ease;
+  }
+  details.sec[open] > summary .chev { transform: rotate(-135deg); margin-top: 3px; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  .sec-body { padding: 0 16px 16px; }
+
+  /* ---- tabs ---- */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--tab-bg); border-top: 1px solid var(--line);
+    display: flex; max-width: 480px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabs button {
+    flex: 1; font: inherit; font-size: 11px; font-weight: 600;
+    background: none; border: none; color: var(--ink-soft);
+    padding: 9px 0 10px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.tabs button.active { color: var(--ink); }
+  nav.tabs button svg { width: 22px; height: 22px; display: block; }
+  nav.tabs button.active .ico-bar { background: var(--accent); }
+  .ico-bar { width: 22px; height: 3px; border-radius: 2px; background: transparent; margin-top: 2px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    background: var(--ink); color: var(--paper);
+    font-size: 14px; font-weight: 600;
+    border-radius: 999px; padding: 9px 18px;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+    max-width: 90vw; text-align: center; z-index: 10;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; z-index: 20;
+  }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow);
+    width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; padding: 18px;
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 16px; }
+  .modal .hint { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+  .modal textarea {
+    width: 100%; font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px; resize: none;
+  }
+  .modal img#modal-img {
+    width: 100%; height: auto; display: block;
+    border-radius: 10px; border: 1px solid var(--line); background: var(--paper);
+  }
+</style>
+</head>
+<body>
+
+<div class="cna-topbar"><a class="cna-back" href="../"><span class="cna-back-arrow" aria-hidden="true">‹</span>Main Page</a></div>
+
+<div class="app">
+  <header class="top">
+    <h1>Taxi Claims</h1>
+    <span class="date-line" id="today-line"></span>
+  </header>
+
+  <!-- ============ LOG ============ -->
+  <section class="screen active" id="screen-log">
+    <div id="carry-banner"></div>
+    <div id="today-status"></div>
+
+    <div class="card">
+      <h2 id="form-title">Log a ride</h2>
+      <p class="hint">Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.</p>
+
+      <label class="field" for="ride-date">Date</label>
+      <div class="field-clip"><input type="date" id="ride-date" max="2100-12-31"></div>
+
+      <div class="row2">
+        <div>
+          <label class="field" for="ride-amount">Amount ($)</label>
+          <input type="number" id="ride-amount" min="0" step="0.01" inputmode="decimal" placeholder="12.40">
+        </div>
+        <div>
+          <label class="field" for="ride-receipt">Receipt no.</label>
+          <input type="text" id="ride-receipt" placeholder="A-3F92KQ" autocapitalize="characters">
+        </div>
+      </div>
+
+      <label class="field" for="ride-note">Trip <span style="font-weight:400">(optional)</span></label>
+      <input type="text" id="ride-note" placeholder="e.g. Caldecott to Punggol shoot">
+
+      <label class="field">Receipt screenshot</label>
+      <div id="photo-slot"></div>
+      <input type="file" id="ride-file" accept="image/*" style="display:none">
+
+      <button class="primary" id="save-ride">Save ride</button>
+      <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
+    </div>
+
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.0</p>
+  </section>
+
+  <!-- ============ RECEIPTS ============ -->
+  <section class="screen" id="screen-list">
+    <div class="card">
+      <h2>Logged rides</h2>
+      <p class="hint" id="list-summary"></p>
+      <select id="taxi-month" aria-label="Rides to show"></select>
+      <div id="ride-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ MONTH ============ -->
+  <section class="screen" id="screen-month">
+    <div class="card">
+      <h2>Month summary</h2>
+      <label class="field" for="month-pick">Month</label>
+      <div class="field-clip"><input type="month" id="month-pick" max="2100-12"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stat-count">0</div><div class="l">Rides</div></div>
+        <div class="stat"><div class="n" id="stat-total">$0</div><div class="l">Total</div></div>
+        <div class="stat"><div class="n" id="stat-open">$0</div><div class="l">To claim</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Claim list</h2>
+      <p class="hint">Exactly what you key into the company system.</p>
+      <div class="tbl-wrap"><table id="claim-table"></table></div>
+      <div class="totals-line" id="claim-total"></div>
+      <div class="btn-row"><button class="secondary" id="copy-claims">Copy list</button></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen" id="screen-settings">
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Storage</span>
+        <span class="sec-meta" id="storage-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint" id="storage-detail"></p>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Start again</span>
+        <span class="sec-meta" id="wipe-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Deletes every ride and every screenshot in this app. Nothing in Driving Log or any other app is touched.</p>
+        <button class="secondary danger" id="wipe-all" style="width:100%">Erase everything in Taxi Claims</button>
+      </div>
+    </details>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <button data-screen="screen-log" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M5 3h14v18l-3.5-2-3.5 2-3.5-2L5 21V3z"/><path d="M9 8.5h6M9 12.5h6"/>
+    </svg>Log<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>
+    </svg>Rides<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-month">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
+    </svg>Month<span class="ico-bar"></span>
+  </button>
+  <button data-screen="screen-settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 8h9M19 8h1M4 16h3M13 16h7"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/>
+    </svg>Settings<span class="ico-bar"></span>
+  </button>
+</nav>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <p class="hint" id="modal-message" style="display:none; font-size:14px; margin:0 0 12px;"></p>
+    <img id="modal-img" alt="Receipt screenshot" style="display:none">
+    <textarea id="modal-text" readonly rows="9" style="display:none"></textarea>
+    <div class="btn-row" id="modal-actions"></div>
+    <p class="hint" id="modal-hint"></p>
+    <button class="primary" id="modal-close">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "taxiclaims.v1";
+  var SRC_KEY = "driveotlog.v1";        /* Driving Log's own store, read only */
+  var PHOTO_DB = "taxiclaims-photos";
+  var SRC_PHOTO_DB = "dotlog-photos";   /* Driving Log's photo store */
+
+  var $ = function (id) { return document.getElementById(id); };
+  var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var MONTHS = ["January","February","March","April","May","June",
+                "July","August","September","October","November","December"];
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function todayISO() { var d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+  function fmt(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
+  function monthLabel(ym) { var p = ym.split("-"); return MONTHS[+p[1]-1] + " " + p[0]; }
+  function money(n) { return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+  }
+
+  /* ---------- storage ---------- */
+  function defaults() {
+    return { schema: 1, rides: [], settings: { theme: "auto" } };
+  }
+  function load() {
+    var db;
+    try { db = JSON.parse(localStorage.getItem(KEY)) || defaults(); }
+    catch (e) { db = defaults(); }
+    if (!db || typeof db !== "object") db = defaults();
+    if (!Array.isArray(db.rides)) db.rides = [];
+    if (!db.settings || typeof db.settings !== "object") db.settings = defaults().settings;
+    if (["light","dark","auto"].indexOf(db.settings.theme) === -1) db.settings.theme = "auto";
+    /* drop anything malformed rather than let it break rendering later */
+    db.rides = db.rides.filter(function (r) {
+      return r && typeof r === "object" && r.id && /^\d{4}-\d{2}-\d{2}$/.test(r.date || "");
+    });
+    db.rides.forEach(function (r) {
+      if (typeof r.amount !== "number" || isNaN(r.amount) || r.amount < 0) r.amount = 0;
+      if (typeof r.receipt !== "string") r.receipt = "";
+      if (typeof r.note !== "string") r.note = "";
+      r.photo = !!r.photo;
+      r.claimed = !!r.claimed;
+    });
+    db.schema = 1;
+    return db;
+  }
+  var db = load();
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch (e) { toast("Phone storage is full — not saved"); }
+    publishCard();
+  }
+
+  function applyTheme() {
+    var t = db.settings.theme;
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme");
+  }
+  applyTheme();
+  window.addEventListener("storage", function (ev) {
+    if (ev.key !== KEY) return;
+    db = load(); applyTheme(); renderAll();
+  });
+
+  /* ---------- the figure this app puts on the home screen ----------
+     The home screen never reads this app's storage. This app decides its
+     own numbers and leaves them here in the shape the home screen agrees
+     to read, so Taxi Claims can change freely without the home screen
+     knowing. weight fixes the order so figures never swap places. */
+  function publishCard() {
+    try {
+      var open = db.rides.filter(function (r) { return !r.claimed; });
+      var owed = open.reduce(function (s, r) { return s + r.amount; }, 0);
+      localStorage.setItem("cna.card.taxi", JSON.stringify({
+        app: "taxi", name: "Taxi Claims", at: Date.now(),
+        items: [
+          { key: "fares", value: money(owed).replace(/\.00$/, ""), label: "taxi fares",
+            alert: owed > 0, weight: 15, go: "#list" }
+        ]
+      }));
+    } catch (e) { /* nothing on the home screen is worth failing over */ }
+  }
+
+  /* ---------- photos ----------
+     Screenshots go in IndexedDB rather than the main store: localStorage
+     is small and shared, and one oversized photo there would take every
+     ride down with it. Every call degrades to "no photo" rather than
+     throwing, so the app still works where IndexedDB is unavailable. */
+  function openPhotoDb(name, cb) {
+    if (!window.indexedDB) return cb(null);
+    var req;
+    /* Always with an upgrade handler that creates the store. Opening a
+       database that does not exist creates it — without this it would be
+       created empty, and the owning app, opening at the same version,
+       would never get an upgrade event to add the store back. That is a
+       real way to break Driving Log's photos from over here. */
+    try { req = indexedDB.open(name, 1); }
+    catch (e) { return cb(null); }
+    req.onupgradeneeded = function () {
+      if (!req.result.objectStoreNames.contains("photos")) req.result.createObjectStore("photos");
+    };
+    req.onsuccess = function () { cb(req.result); };
+    req.onerror = function () { cb(null); };
+    req.onblocked = function () { cb(null); };
+  }
+
+  var MyDb = { conn: null, dead: false };
+  function idb(cb) {
+    if (MyDb.conn) return cb(MyDb.conn);
+    if (MyDb.dead) return cb(null);
+    openPhotoDb(PHOTO_DB, function (d) {
+      if (!d) { MyDb.dead = true; return cb(null); }
+      MyDb.conn = d; cb(d);
+    });
+  }
+  function photoPut(id, blob, cb) {
+    idb(function (d) {
+      if (!d) return cb(false);
+      try {
+        var tx = d.transaction("photos", "readwrite");
+        tx.objectStore("photos").put(blob, id);
+        tx.oncomplete = function () { cb(true); };
+        tx.onerror = function () { cb(false); };
+        tx.onabort = function () { cb(false); };
+      } catch (e) { cb(false); }
+    });
+  }
+  function photoGet(id, cb) {
+    idb(function (d) {
+      if (!d) return cb(null);
+      try {
+        var r = d.transaction("photos", "readonly").objectStore("photos").get(id);
+        r.onsuccess = function () { cb(r.result || null); };
+        r.onerror = function () { cb(null); };
+      } catch (e) { cb(null); }
+    });
+  }
+  function photoDel(id) {
+    idb(function (d) {
+      if (!d) return;
+      try { d.transaction("photos", "readwrite").objectStore("photos").delete(id); } catch (e) {}
+    });
+  }
+
+  var liveUrls = [];
+  function objUrl(blob) { var u = URL.createObjectURL(blob); liveUrls.push(u); return u; }
+  function releaseUrls() { liveUrls.forEach(function (u) { URL.revokeObjectURL(u); }); liveUrls = []; }
+
+  function shrinkImage(file, cb) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var MAX = 1400;
+      var scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      var cw = Math.max(1, Math.round(img.naturalWidth * scale));
+      var ch = Math.max(1, Math.round(img.naturalHeight * scale));
+      var c = document.createElement("canvas");
+      c.width = cw; c.height = ch;
+      c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+      URL.revokeObjectURL(url);
+      if (!c.toBlob) return cb(file);
+      c.toBlob(function (b) { cb(b || file); }, "image/jpeg", 0.82);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); cb(null); };
+    img.src = url;
+  }
+
+  /* ---------- one-time carry-over from Driving Log ----------
+     Taxi rides lived inside Driving Log's receipt list, mixed in with
+     parking. This moves the taxi ones across, one at a time.
+
+     A ride's screenshot is only freed from Driving Log after it has been
+     written here AND read back at the same size — a verified copy, never
+     a hopeful one. If any step fails, that ride is left exactly where it
+     was and picked up again next time this app opens. So an interrupted
+     move is never a lost receipt, and running it twice is harmless.
+
+     Parking is not touched: it stays Driving Log's. */
+  function readSource() {
+    try {
+      var raw = localStorage.getItem(SRC_KEY);
+      var src = raw && JSON.parse(raw);
+      if (!src || typeof src !== "object" || !Array.isArray(src.taxi)) return null;
+      return src;
+    } catch (e) { return null; }
+  }
+
+  function carryOver(done) {
+    var src = readSource();
+    if (!src) return done(0);
+    var rows = src.taxi.filter(function (r) { return r && typeof r === "object" && r.kind === "taxi" && r.id; });
+    if (!rows.length) return done(0);
+
+    var have = {};
+    db.rides.forEach(function (r) { have[r.id] = true; });
+
+    var moved = 0, i = 0;
+
+    function drop(id) {
+      for (var k = src.taxi.length - 1; k >= 0; k--) {
+        if (src.taxi[k] && src.taxi[k].id === id) src.taxi.splice(k, 1);
+      }
+    }
+    function take(r) {
+      if (!have[r.id]) {
+        db.rides.push({
+          id: r.id,
+          date: r.date,
+          amount: typeof r.amount === "number" ? r.amount : 0,
+          receipt: typeof r.receipt === "string" ? r.receipt : "",
+          note: typeof r.note === "string" ? r.note : "",
+          photo: !!r.photo,
+          claimed: !!r.claimed
+        });
+        have[r.id] = true;
+      }
+      drop(r.id);
+      moved++;
+    }
+
+    function next() {
+      if (i >= rows.length) return finish();
+      var r = rows[i++];
+
+      /* already carried over on an earlier run but not cleared from the
+         source — just clear it, do not copy twice */
+      if (have[r.id]) { drop(r.id); return next(); }
+      if (!r.photo) { take(r); return next(); }
+
+      copyPhoto(r.id, function (ok) {
+        if (ok) take(r);
+        /* not ok: leave the ride and its screenshot in Driving Log
+           untouched, and try again the next time this app opens */
+        next();
+      });
+    }
+
+    function finish() {
+      save();
+      if (moved) {
+        try { localStorage.setItem(SRC_KEY, JSON.stringify(src)); } catch (e) {}
+      }
+      done(moved);
+    }
+
+    next();
+  }
+
+  /* read from Driving Log, write here, read back and check, only then
+     delete the original */
+  function copyPhoto(id, cb) {
+    openPhotoDb(SRC_PHOTO_DB, function (srcDb) {
+      if (!srcDb) return cb(false);
+      var got;
+      try {
+        got = srcDb.transaction("photos", "readonly").objectStore("photos").get(id);
+      } catch (e) { return cb(false); }
+      got.onerror = function () { cb(false); };
+      got.onsuccess = function () {
+        var blob = got.result;
+        /* the row claims a photo but the store has none — nothing to
+           copy, and nothing to lose by moving the ride across */
+        if (!blob) return cb(true);
+        photoPut(id, blob, function (ok) {
+          if (!ok) return cb(false);
+          photoGet(id, function (back) {
+            var same = back && typeof back.size === "number" &&
+                       typeof blob.size === "number" && back.size === blob.size;
+            if (!same) return cb(false);
+            try {
+              srcDb.transaction("photos", "readwrite").objectStore("photos").delete(id);
+            } catch (e) {}
+            cb(true);
+          });
+        });
+      };
+    });
+  }
+
+  /* ---------- tabs ---------- */
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  function switchTab(screenId) {
+    tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
+    document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+    $(screenId).classList.add("active");
+    if (screenId === "screen-list") renderList();
+    if (screenId === "screen-month") renderMonth();
+    if (screenId === "screen-settings") renderSettings();
+    window.scrollTo(0, 0);
+  }
+  tabButtons.forEach(function (b) {
+    b.addEventListener("click", function () { switchTab(b.dataset.screen); });
+  });
+
+  /* ---------- the form ---------- */
+  var editingId = null;
+  var formPhoto = null;      /* a newly picked blob, not yet saved */
+  var formPhotoHas = false;  /* the ride being edited already has one */
+
+  function resetForm() {
+    editingId = null;
+    formPhoto = null;
+    formPhotoHas = false;
+    $("ride-date").value = todayISO();
+    $("ride-amount").value = "";
+    $("ride-receipt").value = "";
+    $("ride-note").value = "";
+    $("form-title").textContent = "Log a ride";
+    $("save-ride").textContent = "Save ride";
+    $("cancel-ride").style.display = "none";
+    renderPhotoSlot();
+  }
+
+  function renderPhotoSlot() {
+    var slot = $("photo-slot");
+    slot.textContent = "";
+
+    function addButton() {
+      var b = el("button", "photo-add", "＋ Add screenshot");
+      b.type = "button";
+      b.addEventListener("click", function () { $("ride-file").click(); });
+      slot.appendChild(b);
+    }
+    function preview(blob) {
+      var wrap = el("div", "photo-prev");
+      var img = document.createElement("img");
+      img.src = objUrl(blob);
+      img.alt = "Receipt screenshot";
+      img.addEventListener("click", function () { openPhoto(blob); });
+      var col = el("div", "btn-row");
+      var rep = el("button", "secondary", "Replace");
+      rep.type = "button";
+      rep.addEventListener("click", function () { $("ride-file").click(); });
+      var rem = el("button", "secondary danger", "Remove");
+      rem.type = "button";
+      rem.addEventListener("click", function () {
+        formPhoto = null; formPhotoHas = false; renderPhotoSlot();
+      });
+      col.appendChild(rep); col.appendChild(rem);
+      wrap.appendChild(img); wrap.appendChild(col);
+      slot.appendChild(wrap);
+    }
+
+    if (formPhoto) { preview(formPhoto); return; }
+    if (formPhotoHas && editingId) {
+      var forId = editingId;
+      photoGet(forId, function (blob) {
+        /* the form may have moved on while this read was in flight */
+        if (editingId !== forId || formPhoto) return;
+        slot.textContent = "";
+        if (blob) preview(blob); else addButton();
+      });
+      return;
+    }
+    addButton();
+  }
+
+  $("ride-file").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { toast("Pick an image file"); return; }
+    toast("Processing screenshot…");
+    shrinkImage(f, function (blob) {
+      if (!blob) { toast("Couldn't read that image"); return; }
+      formPhoto = blob;
+      formPhotoHas = false;
+      renderPhotoSlot();
+    });
+  });
+
+  $("cancel-ride").addEventListener("click", function () {
+    resetForm();
+    toast("Edit cancelled");
+  });
+
+  /* a half-typed ride is worth protecting from a container reload */
+  window.cnaHasUnsaved = function () {
+    return !!(formPhoto || $("ride-amount").value.trim() || $("ride-receipt").value.trim() || $("ride-note").value.trim());
+  };
+
+  $("save-ride").addEventListener("click", function () {
+    var date = $("ride-date").value;
+    if (!date) { toast("Pick a date first"); return; }
+    var amtRaw = $("ride-amount").value.trim();
+    var amt = parseFloat(amtRaw);
+    if (amtRaw === "" || isNaN(amt) || amt <= 0) { toast("Enter the fare amount"); return; }
+    /* receipt numbers stay ASCII — the copy/export path assumes it */
+    var receipt = $("ride-receipt").value.trim().toUpperCase().replace(/[^A-Z0-9 \-\/]/g, "");
+    var note = $("ride-note").value.trim().replace(/[^\x20-\x7E]/g, "");
+
+    var id = editingId || ("r" + Date.now() + Math.random().toString(36).slice(2, 6));
+    var existing = editingId ? db.rides.filter(function (r) { return r.id === id; })[0] : null;
+
+    function commit(hasPhoto) {
+      var rec = {
+        id: id, date: date,
+        amount: Math.round(amt * 100) / 100,
+        receipt: receipt, note: note,
+        photo: hasPhoto,
+        claimed: existing ? !!existing.claimed : false
+      };
+      if (existing) db.rides[db.rides.indexOf(existing)] = rec;
+      else db.rides.push(rec);
+      save();
+      resetForm();
+      renderTodayStatus();
+      toast((existing ? "Updated " : "Saved ") + money(rec.amount) + " fare");
+    }
+
+    if (formPhoto) {
+      photoPut(id, formPhoto, function (ok) {
+        if (!ok) toast("Screenshot could not be saved — the ride was");
+        commit(ok);
+      });
+    } else if (formPhotoHas && existing) {
+      commit(true);                 /* kept the one already stored */
+    } else {
+      if (existing && existing.photo) photoDel(id);   /* removed on purpose */
+      commit(false);
+    }
+  });
+
+  function renderTodayStatus() {
+    var box = $("today-status");
+    box.textContent = "";
+    var today = db.rides.filter(function (r) { return r.date === todayISO(); });
+    if (!today.length) return;
+    var sum = today.reduce(function (s, r) { return s + r.amount; }, 0);
+    var b = el("div", "status-banner");
+    b.appendChild(el("span", "dot"));
+    b.appendChild(el("span", null,
+      today.length + " ride" + (today.length === 1 ? "" : "s") + " today · " + money(sum)));
+    box.appendChild(b);
+  }
+
+  /* ---------- the list ---------- */
+  function monthsWithRides() {
+    var seen = {};
+    db.rides.forEach(function (r) { seen[r.date.slice(0, 7)] = true; });
+    var out = Object.keys(seen).sort().reverse();
+    var cur = todayISO().slice(0, 7);
+    if (out.indexOf(cur) === -1) out.unshift(cur);
+    return out;
+  }
+
+  function fillMonthPicker() {
+    var sel = $("taxi-month");
+    var want = sel.value;
+    sel.textContent = "";
+    var opt = el("option", null, "Still to claim");
+    opt.value = "__open__";
+    sel.appendChild(opt);
+    monthsWithRides().forEach(function (ym) {
+      var o = el("option", null, monthLabel(ym));
+      o.value = ym;
+      sel.appendChild(o);
+    });
+    sel.value = want && [].slice.call(sel.options).some(function (o) { return o.value === want; })
+      ? want : "__open__";
+  }
+
+  function renderList() {
+    releaseUrls();
+    fillMonthPicker();
+    var pick = $("taxi-month").value;
+    var open = db.rides.filter(function (r) { return !r.claimed; });
+
+    var sum = open.reduce(function (s, r) { return s + r.amount; }, 0);
+    $("list-summary").textContent = open.length
+      ? open.length + " ride" + (open.length === 1 ? "" : "s") + " still to claim (" + money(sum) + ")."
+      : "Everything is marked claimed.";
+
+    var rides = pick === "__open__"
+      ? open.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; })
+      : db.rides.filter(function (r) { return r.date.slice(0, 7) === pick; })
+                .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+
+    var list = $("ride-list");
+    list.textContent = "";
+    if (!rides.length) {
+      list.appendChild(el("div", "empty", pick === "__open__"
+        ? "Nothing outstanding — everything is marked claimed."
+        : "No rides in " + monthLabel(pick) + "."));
+      return;
+    }
+
+    rides.forEach(function (r) {
+      var row = el("div", "ride");
+
+      var thumb;
+      if (r.photo) {
+        thumb = document.createElement("img");
+        thumb.className = "ride-thumb";
+        thumb.alt = "Receipt";
+        photoGet(r.id, function (blob) {
+          if (blob) {
+            thumb.src = objUrl(blob);
+            thumb.addEventListener("click", function () { openPhoto(blob); });
+          } else {
+            /* the row says there is a screenshot but the phone has since
+               binned it — say so rather than showing a broken image */
+            var gone = el("div", "ride-thumb none", "gone");
+            if (thumb.parentNode) thumb.parentNode.replaceChild(gone, thumb);
+          }
+        });
+      } else {
+        thumb = el("div", "ride-thumb none", "no photo");
+      }
+      row.appendChild(thumb);
+
+      var main = el("div", "ride-main");
+      var top = el("div", "ride-top");
+      top.appendChild(el("div", "ride-amt", money(r.amount)));
+
+      var tag = el("button", "tag " + (r.claimed ? "done" : "todo"), r.claimed ? "Claimed" : "To claim");
+      tag.type = "button";
+      tag.addEventListener("click", function () {
+        r.claimed = !r.claimed;
+        save();
+        renderList();
+        toast(r.claimed ? "Marked claimed" : "Back on the to-claim list");
+      });
+      top.appendChild(tag);
+      main.appendChild(top);
+
+      var bits = [fmt(r.date)];
+      if (r.receipt) bits.push(r.receipt);
+      if (r.note) bits.push(r.note);
+      main.appendChild(el("div", "ride-sub", bits.join(" · ")));
+
+      var acts = el("div", "ride-acts");
+      var edit = el("button", null, "Edit");
+      edit.type = "button";
+      edit.addEventListener("click", function () {
+        editingId = r.id;
+        formPhoto = null;
+        formPhotoHas = !!r.photo;
+        $("ride-date").value = r.date;
+        $("ride-amount").value = r.amount;
+        $("ride-receipt").value = r.receipt;
+        $("ride-note").value = r.note;
+        $("form-title").textContent = "Edit ride";
+        $("save-ride").textContent = "Update ride";
+        $("cancel-ride").style.display = "";
+        renderPhotoSlot();
+        switchTab("screen-log");
+        toast("Editing " + money(r.amount) + " on " + fmt(r.date));
+      });
+
+      var del = el("button", "danger", "Delete");
+      del.type = "button";
+      del.addEventListener("click", function () {
+        confirmDialog({
+          title: "Delete this ride?",
+          message: "Delete the " + money(r.amount) + " fare from " + fmt(r.date) +
+                   "? The screenshot goes with it. This can't be undone.",
+          confirmLabel: "Delete",
+          onConfirm: function () {
+            var i = db.rides.indexOf(r);
+            if (i !== -1) db.rides.splice(i, 1);
+            if (r.photo) photoDel(r.id);
+            if (editingId === r.id) resetForm();
+            save();
+            renderList();
+            renderTodayStatus();
+            toast("Deleted");
+          }
+        });
+      });
+
+      acts.appendChild(edit);
+      acts.appendChild(del);
+      main.appendChild(acts);
+      row.appendChild(main);
+      list.appendChild(row);
+    });
+  }
+  $("taxi-month").addEventListener("change", renderList);
+
+  /* ---------- month ---------- */
+  function renderMonth() {
+    var pick = $("month-pick");
+    if (!pick.value) pick.value = todayISO().slice(0, 7);
+    var rides = db.rides.filter(function (r) { return r.date.slice(0, 7) === pick.value; })
+                        .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+
+    var total = rides.reduce(function (s, r) { return s + r.amount; }, 0);
+    var open = rides.filter(function (r) { return !r.claimed; });
+    var openSum = open.reduce(function (s, r) { return s + r.amount; }, 0);
+
+    $("stat-count").textContent = rides.length;
+    $("stat-total").textContent = money(total).replace(/\.00$/, "");
+    $("stat-open").textContent = money(openSum).replace(/\.00$/, "");
+
+    var tbl = $("claim-table");
+    tbl.textContent = "";
+    var totals = $("claim-total");
+
+    if (!rides.length) {
+      totals.textContent = "";
+      tbl.appendChild(el("caption", "empty", "No rides in " + monthLabel(pick.value) + "."));
+      return;
+    }
+
+    var head = el("tr");
+    ["Date", "Receipt no.", "Trip", "Amount"].forEach(function (h, i) {
+      head.appendChild(el("th", i === 3 ? "num" : null, h));
+    });
+    var thead = el("thead"); thead.appendChild(head); tbl.appendChild(thead);
+
+    var tb = el("tbody");
+    rides.forEach(function (r) {
+      var tr = el("tr");
+      tr.appendChild(el("td", null, fmt(r.date)));
+      tr.appendChild(el("td", null, r.receipt || "–"));
+      tr.appendChild(el("td", null, r.note || "–"));
+      tr.appendChild(el("td", "num", money(r.amount)));
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+
+    var line = rides.length + " ride" + (rides.length === 1 ? "" : "s") + " = " + money(total) + ".";
+    if (open.length) line += " " + open.length + " still to claim (" + money(openSum) + ").";
+    totals.textContent = line;
+  }
+  $("month-pick").addEventListener("change", renderMonth);
+
+  /* Plain text rather than a file: it pastes straight into an email or a
+     chat, and never runs into a phone blocking a download. */
+  $("copy-claims").addEventListener("click", function () {
+    var ym = $("month-pick").value || todayISO().slice(0, 7);
+    var rides = db.rides.filter(function (r) { return r.date.slice(0, 7) === ym; })
+                        .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    if (!rides.length) { toast("Nothing to copy for " + monthLabel(ym)); return; }
+    var lines = ["Taxi Claims — " + monthLabel(ym), ""];
+    var total = 0;
+    rides.forEach(function (r) {
+      total += r.amount;
+      lines.push(fmt(r.date) + "  " + money(r.amount) +
+                 (r.receipt ? "  " + r.receipt : "") +
+                 (r.note ? "  " + r.note : ""));
+    });
+    lines.push("");
+    lines.push("TOTAL  " + rides.length + " rides  " + money(total));
+    showText("Copy for " + monthLabel(ym), lines.join("\n"));
+  });
+
+  /* ---------- settings ---------- */
+  var persistState = "unknown";
+  function requestPersist() {
+    if (!navigator.storage || !navigator.storage.persist) { persistState = "unsupported"; return; }
+    navigator.storage.persisted().then(function (already) {
+      if (already) { persistState = "granted"; renderSettings(); return; }
+      navigator.storage.persist().then(function (ok) {
+        persistState = ok ? "granted" : "denied";
+        renderSettings();
+      }, function () { persistState = "unknown"; });
+    }, function () { persistState = "unknown"; });
+  }
+
+  function renderSettings() {
+    var withPhoto = db.rides.filter(function (r) { return r.photo; }).length;
+    $("storage-meta").textContent = withPhoto + (withPhoto === 1 ? " screenshot" : " screenshots");
+    var lines = [db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") +
+                 " and " + withPhoto + " screenshot" + (withPhoto === 1 ? "" : "s") + " saved on this phone."];
+    if (persistState === "granted") lines.push("The phone has been asked to keep these and agreed.");
+    else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space.");
+    $("storage-detail").textContent = lines.join(" ");
+    $("wipe-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides");
+  }
+
+  $("wipe-all").addEventListener("click", function () {
+    confirmDialog({
+      title: "Erase everything?",
+      message: "Every ride and every screenshot in Taxi Claims is deleted. " +
+               "Driving Log and the other apps are not touched. This can't be undone.",
+      confirmLabel: "Erase",
+      onConfirm: function () {
+        db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
+        var theme = db.settings.theme;   /* an appearance choice is not data */
+        db = defaults();
+        db.settings.theme = theme;
+        save();
+        resetForm();
+        renderAll();
+        toast("Taxi Claims is empty");
+      }
+    });
+  });
+
+  /* ---------- dialog ---------- */
+  var overlay = $("overlay");
+  function resetModal() {
+    $("modal-text").style.display = "none";
+    $("modal-message").style.display = "none";
+    $("modal-img").style.display = "none";
+    $("modal-img").removeAttribute("src");
+    $("modal-actions").textContent = "";
+    $("modal-hint").textContent = "";
+  }
+  function closeModal() { overlay.hidden = true; resetModal(); }
+  $("modal-close").addEventListener("click", closeModal);
+  overlay.addEventListener("click", function (ev) { if (ev.target === overlay) closeModal(); });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !overlay.hidden) closeModal();
+  });
+
+  function confirmDialog(opts) {
+    resetModal();
+    $("modal-title").textContent = opts.title;
+    var msg = $("modal-message");
+    msg.textContent = opts.message;
+    msg.style.display = "";
+    var acts = $("modal-actions");
+    var go = el("button", "secondary danger", opts.confirmLabel);
+    go.addEventListener("click", function () { closeModal(); opts.onConfirm(); });
+    var no = el("button", "secondary", "Cancel");
+    no.addEventListener("click", closeModal);
+    acts.appendChild(no); acts.appendChild(go);
+    overlay.hidden = false;
+    go.focus();
+  }
+
+  function showText(title, text) {
+    resetModal();
+    $("modal-title").textContent = title;
+    var area = $("modal-text");
+    area.value = text;
+    area.style.display = "";
+    var copy = el("button", "secondary", "Copy to clipboard");
+    copy.addEventListener("click", function () {
+      /* the clipboard API is refused in some in-app browsers, so the text
+         is on screen and selectable either way */
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { toast("Copied"); },
+          function () { area.select(); toast("Press and hold to copy"); }
+        );
+      } else { area.select(); toast("Press and hold to copy"); }
+    });
+    $("modal-actions").appendChild(copy);
+    $("modal-hint").textContent = "Paste it into an email or a chat.";
+    overlay.hidden = false;
+  }
+
+  function openPhoto(blob) {
+    resetModal();
+    $("modal-title").textContent = "Receipt";
+    var img = $("modal-img");
+    img.src = objUrl(blob);
+    img.style.display = "block";
+    var file = null;
+    try { file = new File([blob], "receipt.jpg", { type: blob.type || "image/jpeg" }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      var share = el("button", "secondary", "Share");
+      share.addEventListener("click", function () {
+        navigator.share({ files: [file] }).catch(function () {});
+      });
+      $("modal-actions").appendChild(share);
+    }
+    overlay.hidden = false;
+  }
+
+  /* ---------- the one-time note about the move ---------- */
+  var carryResult = null, carryDismissed = false;
+  function renderCarryBanner() {
+    var box = $("carry-banner");
+    box.textContent = "";
+    if (carryDismissed || !carryResult || carryResult <= 0) return;
+    var n = carryResult;
+    var b = el("div", "carry-banner");
+    b.appendChild(el("p", null,
+      "Brought over " + n + " taxi ride" + (n === 1 ? "" : "s") + " from Driving Log, screenshots and all. " +
+      "Parking stays in Driving Log."));
+    var ok = el("button", "secondary", "Got it");
+    ok.addEventListener("click", function () { carryDismissed = true; box.textContent = ""; });
+    b.appendChild(ok);
+    box.appendChild(b);
+  }
+
+  /* ---------- boot ---------- */
+  function renderAll() {
+    renderCarryBanner();
+    renderTodayStatus();
+    renderList();
+    renderMonth();
+    renderSettings();
+  }
+
+  var now = new Date();
+  $("today-line").textContent = DAYS[now.getDay()] + " " + fmt(todayISO());
+  resetForm();
+  publishCard();
+  requestPersist();
+  renderAll();
+
+  carryOver(function (moved) {
+    carryResult = moved;
+    if (moved) { renderAll(); toast("Brought over " + moved + " ride" + (moved === 1 ? "" : "s")); }
+  });
+
+  /* A figure on the home screen links to the screen it came from, as
+     "taxi/#list". Anything unrecognised is ignored. */
+  function openScreenFromHash() {
+    var want = (location.hash || "").replace(/^#/, "");
+    if (!want) return;
+    var id = "screen-" + want.replace(/[^a-z-]/g, "");
+    if (document.getElementById(id)) switchTab(id);
+  }
+  openScreenFromHash();
+  window.addEventListener("hashchange", openScreenFromHash);
+})();
+</script>
+<script src="../shell.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@
    someone half-way through logging a day. That rule came from DOT.log and
    it still holds here. */
 
-const SHELL_VERSION = "1.15.0";
+const SHELL_VERSION = "1.16.0";
 const SHELL_CACHE = "cna-shell-v" + SHELL_VERSION;
 
 /* Everything is resolved against the worker's own scope, so the app works
@@ -46,7 +46,7 @@ const SHELL_ASSETS = [
 /* Every prefix ends in a slash, which is what keeps "ot/" and "otlog/"
    apart — without it every OT Tracker request would be claimed by
    Overseas Tracker's cache. */
-const MODULE_PREFIXES = { dot: at("dot/"), ot: at("ot/"), otlog: at("otlog/") };
+const MODULE_PREFIXES = { dot: at("dot/"), ot: at("ot/"), otlog: at("otlog/"), taxi: at("taxi/") };
 
 /* ---------------------------------------------------------------- */
 

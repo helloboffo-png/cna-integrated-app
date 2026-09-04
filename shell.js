@@ -593,6 +593,7 @@
   var APPS = [
     { id: "dot", name: "Driving Log" },
     { id: "otlog", name: "OT Tracker" },
+    { id: "taxi", name: "Taxi Claims" },
     { id: "ot", name: "Overseas Tracker" }
   ];
 

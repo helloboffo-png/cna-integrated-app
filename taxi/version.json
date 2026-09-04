@@ -1,0 +1,11 @@
+{
+  "id": "taxi",
+  "name": "Taxi Claims",
+  "version": "1.0.0",
+  "build": 1,
+  "date": "2026-09-04",
+  "notes": "Taxi and Grab fares, split out of Driving Log.",
+  "files": [
+    "index.html"
+  ]
+}
