@@ -333,7 +333,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.3</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.4</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -539,8 +539,15 @@
      knowing. weight fixes the order so figures never swap places. */
   function publishCard() {
     try {
+      /* this month only — the home screen starts each month clean */
+      var thisMonth = todayISO().slice(0, 7);
       var open = db.rides.filter(function (r) { return !r.claimed; });
-      var owed = open.reduce(function (s, r) { return s + r.amount; }, 0);
+      var owed = open.filter(function (r) { return r.date.slice(0, 7) === thisMonth; })
+                     .reduce(function (s, r) { return s + r.amount; }, 0);
+      /* but a fare from an earlier month that was never claimed must not
+         vanish with the turn of the month */
+      var olderOwed = open.filter(function (r) { return r.date.slice(0, 7) < thisMonth; })
+                          .reduce(function (s, r) { return s + r.amount; }, 0);
       /* Which days had a ride, for the home screen's calendar. Purple
          rather than the red taxi lamp, because red already means "this
          needs doing" in the figures above and one colour should not mean
@@ -563,7 +570,10 @@
         items: [
           { key: "fares", value: money(owed).replace(/\.00$/, ""), label: "taxi fares",
             alert: owed > 0, weight: 15, go: "#list" }
-        ]
+        ].concat(olderOwed > 0 ? [
+          { key: "older", value: money(olderOwed).replace(/\.00$/, ""), label: "older fares",
+            alert: true, weight: 4, go: "#list" }
+        ] : [])
       }));
     } catch (e) { /* nothing on the home screen is worth failing over */ }
   }

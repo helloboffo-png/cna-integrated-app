@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Says when it was last backed up, and nudges when it has been a while.",
+  "notes": "Home screen figures cover this month only.",
   "files": [
     "index.html",
     "icon-192.png",

@@ -516,7 +516,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.2</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.3</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -703,7 +703,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.2 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.3 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -907,6 +907,8 @@
       var openThisMonth = open.filter(function (r) { return r.date.slice(0, 7) === ym; });
       var owed = drivenThisMonth * db.settings.allowance +
                  openThisMonth.reduce(function (s, r) { return s + r.amount; }, 0);
+      var olderOwed = open.filter(function (r) { return r.date.slice(0, 7) < ym; })
+                          .reduce(function (s, r) { return s + r.amount; }, 0);
 
       /* Which days had something on them, for the home screen's calendar.
          Same rule as the figures: this app decides what its own marks
@@ -939,11 +941,18 @@
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
             alert: owed > 0, weight: 20, go: "#month" },
-          /* every unclaimed receipt, not just this month's — an old one
-             left unsent is exactly the thing worth being reminded of */
-          { key: "todo", value: String(open.length), label: "receipts to send",
-            alert: open.length > 0, weight: 10, go: "#taxi" }
-        ]
+          /* this month only, like every figure here — the home screen
+             starts each month clean */
+          { key: "todo", value: String(openThisMonth.length), label: "receipts to send",
+            alert: openThisMonth.length > 0, weight: 10, go: "#taxi" }
+        ].concat(olderOwed > 0 ? [
+          /* The one thing a clean slate must not do is bury money from
+             before it. Anything still unclaimed from an earlier month
+             gets its own quiet figure, low enough to sit on the second
+             row, and it disappears the moment it is marked claimed. */
+          { key: "older", value: money(olderOwed).replace(/\.00$/, ""), label: "older, unclaimed",
+            alert: true, weight: 5, go: "#taxi" }
+        ] : [])
       }));
     } catch (e) { /* storage full or blocked: the home screen just shows
                      nothing for this app, which is not worth failing over */ }
