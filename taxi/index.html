@@ -332,7 +332,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.1</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -377,6 +377,26 @@
       </summary>
       <div class="sec-body">
         <p class="hint" id="storage-detail"></p>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Backup</span>
+        <span class="sec-meta" id="backup-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Your rides live only on this phone. Export a backup now and then; import it on a new phone to get everything back.</p>
+        <div class="btn-row">
+          <button class="secondary" id="export-data">Backup</button>
+          <button class="secondary" id="import-data">Restore</button>
+        </div>
+        <p class="hint" style="margin-top:14px;">The plain backup above is small and quick, but holds no receipt screenshots. The full one includes every screenshot, so it is large and takes a while — use it before changing phones.</p>
+        <div class="btn-row">
+          <button class="secondary" id="export-archive" style="flex:1">Full backup, with screenshots</button>
+        </div>
+        <input type="file" id="import-file" accept="application/json,.json" style="display:none">
       </div>
     </details>
 
@@ -1116,7 +1136,136 @@
     else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space.");
     $("storage-detail").textContent = lines.join(" ");
     $("wipe-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides");
+    $("backup-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides") +
+      (withPhoto ? " · " + withPhoto + " photo" + (withPhoto === 1 ? "" : "s") : "");
   }
+
+  /* ---------- backup ----------
+     Two files on purpose, the same pair Driving Log offers. The plain one
+     is a few kilobytes of text. The full one carries every screenshot as
+     well, which is the only kind worth taking before changing phones —
+     on this app especially, since the receipt IS the screenshot.
+
+     The format is stamped so a backup from another app in this family is
+     refused outright rather than half-restored into the wrong place. */
+  var PLAIN_FORMAT = "taxiclaims-backup-1";
+  var ARCHIVE_FORMAT = "taxiclaims-archive-1";
+
+  function download(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+  }
+
+  $("export-data").addEventListener("click", function () {
+    var text = JSON.stringify({ format: PLAIN_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
+    download(new Blob([text], { type: "application/json" }), "taxi-claims-backup-" + todayISO() + ".json");
+    toast("Backup downloaded");
+  });
+
+  function blobToDataUrl(blob, cb) {
+    var r = new FileReader();
+    r.onload = function () { cb(r.result); };
+    r.onerror = function () { cb(null); };
+    r.readAsDataURL(blob);
+  }
+
+  /* Assembled as an array of string pieces handed to Blob rather than one
+     giant JSON.stringify, and photos are read one at a time: a few hundred
+     screenshots is tens of megabytes, and building that as a single string
+     can fail outright on a phone. */
+  $("export-archive").addEventListener("click", function () {
+    var withPhotos = db.rides.filter(function (r) { return r.photo; });
+    var parts = ['{"format":"' + ARCHIVE_FORMAT + '","saved":' + JSON.stringify(new Date().toISOString()) +
+                 ',"data":', JSON.stringify(db), ',"photos":{'];
+    var i = 0, written = 0, missing = 0;
+    toast("Building full backup — this can take a while");
+    (function next() {
+      if (i >= withPhotos.length) {
+        parts.push("}}");
+        var blob = new Blob(parts, { type: "application/json" });
+        download(blob, "taxi-claims-full-backup-" + todayISO() + ".json");
+        toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
+          (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
+        return;
+      }
+      var rec = withPhotos[i++];
+      photoGet(rec.id, function (blob) {
+        if (!blob) { missing++; return next(); }
+        blobToDataUrl(blob, function (url) {
+          if (url) {
+            parts.push((written ? "," : "") + JSON.stringify(rec.id) + ":" + JSON.stringify(url));
+            written++;
+          } else { missing++; }
+          next();
+        });
+      });
+    })();
+  });
+
+  $("import-data").addEventListener("click", function () { $("import-file").click(); });
+  $("import-file").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data, photos;
+      try {
+        var parsed = JSON.parse(reader.result);
+        var isArchive = parsed && parsed.format === ARCHIVE_FORMAT;
+        if (!parsed || (!isArchive && parsed.format !== PLAIN_FORMAT)) throw new Error("not ours");
+        data = parsed.data;
+        if (!data || typeof data !== "object" || !Array.isArray(data.rides)) throw new Error("bad shape");
+        photos = isArchive && parsed.photos && typeof parsed.photos === "object" ? parsed.photos : null;
+      } catch (e) {
+        toast("That file isn't a Taxi Claims backup");
+        return;
+      }
+      var photoN = photos ? Object.keys(photos).length : 0;
+      confirmDialog({
+        title: "Restore backup?",
+        message: "Replace every ride in Taxi Claims with the backup (" +
+                 data.rides.length + " ride" + (data.rides.length === 1 ? "" : "s") +
+                 (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots") +
+                 ")? What is here now is lost, screenshots included. " +
+                 "Driving Log and the other apps are not touched.",
+        confirmLabel: "Restore",
+        onConfirm: function () {
+          /* clear the screenshots being replaced, so the store is not left
+             holding pictures for rides that no longer exist */
+          db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
+          try { localStorage.setItem(KEY, JSON.stringify(data)); }
+          catch (e) { toast("Phone storage is full — not restored"); return; }
+          db = load();
+          save();
+          applyTheme();
+          resetForm();
+          renderAll();
+          if (!photoN) { toast("Restored " + db.rides.length + " rides"); return; }
+
+          var ids = Object.keys(photos), k = 0, ok = 0;
+          toast("Restoring screenshots…");
+          (function put() {
+            if (k >= ids.length) {
+              renderAll();
+              toast("Restored — " + ok + " of " + ids.length + " screenshots");
+              return;
+            }
+            var id = ids[k++];
+            fetch(photos[id]).then(function (r) { return r.blob(); })
+              .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                    function () { put(); });
+          })();
+        }
+      });
+    };
+    reader.readAsText(f);
+  });
 
   $("wipe-all").addEventListener("click", function () {
     confirmDialog({

@@ -397,7 +397,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.3</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.4</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -470,6 +470,22 @@
         </div>
 
         <button class="primary" id="save-pay">Save pay rules</button>
+      </div>
+    </details>
+
+    <details class="card sec">
+      <summary>
+        <span class="sec-title">Backup</span>
+        <span class="sec-meta" id="backup-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <p class="hint">Your overtime lives only on this phone. Export a backup now and then; import it on a new phone to get everything back.</p>
+        <div class="btn-row">
+          <button class="secondary" id="export-data">Backup</button>
+          <button class="secondary" id="import-data">Restore</button>
+        </div>
+        <input type="file" id="import-file" accept="application/json,.json" style="display:none">
       </div>
     </details>
 
@@ -1026,6 +1042,7 @@
       " · " + s.multLow + "× / " + s.multHigh + "×";
     var n = Object.keys(db.entries).length;
     $("wipe-meta").textContent = n + " day" + (n === 1 ? "" : "s");
+    $("backup-meta").textContent = n + " day" + (n === 1 ? "" : "s") + " to save";
   }
 
   /* the rate calculator came across from DOT.log with the pay rules —
@@ -1058,6 +1075,66 @@
     renderSettings();
     renderLiveCalc();
     toast("Pay rules saved");
+  });
+
+  /* ---------- backup ----------
+     Everything this app knows is a small amount of text, so one file
+     covers it. The format is stamped so a backup from another app in
+     this family is refused rather than half-restored into the wrong
+     place — Driving Log's file also has an "entries" object, and without
+     the stamp it would look close enough to accept. */
+  var BACKUP_FORMAT = "otlog-backup-1";
+
+  $("export-data").addEventListener("click", function () {
+    var text = JSON.stringify({ format: BACKUP_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
+    var blob = new Blob([text], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ot-tracker-backup-" + todayISO() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    toast("Backup downloaded");
+  });
+
+  $("import-data").addEventListener("click", function () { $("import-file").click(); });
+  $("import-file").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try {
+        var parsed = JSON.parse(reader.result);
+        if (!parsed || parsed.format !== BACKUP_FORMAT) throw new Error("not ours");
+        data = parsed.data;
+        if (!data || typeof data !== "object" || !data.entries || typeof data.entries !== "object") throw new Error("bad shape");
+      } catch (e) {
+        toast("That file isn't an OT Tracker backup");
+        return;
+      }
+      var days = Object.keys(data.entries).length;
+      confirmDialog({
+        title: "Restore backup?",
+        message: "Replace every day in OT Tracker with the backup (" + days +
+                 " day" + (days === 1 ? "" : "s") + ")? What is here now is lost. " +
+                 "Driving Log and the other apps are not touched.",
+        confirmLabel: "Restore",
+        onConfirm: function () {
+          try { localStorage.setItem(KEY, JSON.stringify(data)); }
+          catch (e) { toast("Phone storage is full — not restored"); return; }
+          db = load();
+          save();
+          applyTheme();
+          loadEntryIntoForm(todayISO());
+          renderAll();
+          toast("Restored " + Object.keys(db.entries).length + " days");
+        }
+      });
+    };
+    reader.readAsText(f);
   });
 
   $("wipe-all").addEventListener("click", function () {

@@ -1,10 +1,10 @@
 {
   "id": "taxi",
   "name": "Taxi Claims",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "build": 1,
   "date": "2026-09-04",
-  "notes": "Taxi and Grab fares, split out of Driving Log.",
+  "notes": "Backup and restore, screenshots included.",
   "files": [
     "index.html"
   ]
