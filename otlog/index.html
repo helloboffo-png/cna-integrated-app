@@ -398,7 +398,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.7</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.8</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -1148,26 +1148,58 @@
         return;
       }
       var days = Object.keys(data.entries).length;
+
+      function afterRestore(message) {
+        db.lastBackupAt = Date.now();   /* they clearly have a file */
+        db.backupSnoozeUntil = 0;
+        save();
+        applyTheme();
+        loadEntryIntoForm(todayISO());
+        renderAll();
+        toast(message);
+      }
+
+      /* Adding only what is missing, so nothing already logged here is
+         touched. A day already on this phone always wins, and the pay
+         rules in use now beat ones saved months ago. */
+      function mergeIn() {
+        var added = 0, kept = 0;
+        Object.keys(data.entries).forEach(function (iso) {
+          var e = data.entries[iso];
+          if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+          var ot = typeof e.ot === "number" ? e.ot : NaN;
+          if (isNaN(ot) || ot <= 0) return;
+          if (db.entries[iso]) { kept++; return; }
+          db.entries[iso] = { date: iso, ot: ot, dayType: DAY_TYPE_LABEL[e.dayType] ? e.dayType : "normal" };
+          added++;
+        });
+        /* a rate is only taken onto one nobody has set here yet */
+        var s2 = data.settings;
+        if (db.settings.baseRate === null && s2 && typeof s2 === "object" &&
+            typeof s2.baseRate === "number" && s2.baseRate > 0) {
+          db.settings.baseRate = s2.baseRate;
+        }
+        afterRestore("Added " + added + " day" + (added === 1 ? "" : "s") +
+          (kept ? " · kept your " + kept + " existing day" + (kept === 1 ? "" : "s") : ""));
+      }
+
+      function replaceAll() {
+        try { localStorage.setItem(KEY, JSON.stringify(data)); }
+        catch (e) { toast("Phone storage is full — not restored"); return; }
+        db = load();
+        afterRestore("Everything replaced — " + Object.keys(db.entries).length + " days");
+      }
+
       confirmDialog({
         title: "Restore backup?",
-        message: "Replace every day in OT Tracker with the backup (" + days +
-                 " day" + (days === 1 ? "" : "s") + ")? What is here now is lost. " +
-                 "Driving Log and the other apps are not touched.",
-        confirmLabel: "Restore",
-        onConfirm: function () {
-          try { localStorage.setItem(KEY, JSON.stringify(data)); }
-          catch (e) { toast("Phone storage is full — not restored"); return; }
-          db = load();
-          save();
-          applyTheme();
-          loadEntryIntoForm(todayISO());
-          renderAll();
-          db.lastBackupAt = Date.now();   /* they clearly have a file */
-          db.backupSnoozeUntil = 0;
-          save();
-          renderBackupNote();
-          toast("Restored " + Object.keys(db.entries).length + " days");
-        }
+        message: "This backup holds " + days + " day" + (days === 1 ? "" : "s") + ". " +
+                 "Add missing only keeps every day already on this phone and fills in the gaps. " +
+                 "Replace everything wipes what is here first — only use that on a phone with " +
+                 "nothing on it yet. Driving Log and the other apps are not touched either way.",
+        altLabel: "Add missing only",
+        onAlt: mergeIn,
+        confirmLabel: "Replace everything",
+        onConfirm: replaceAll
       });
     };
     reader.readAsText(f);
@@ -1283,6 +1315,13 @@
     var no = el("button", "secondary", "Cancel");
     no.addEventListener("click", closeModal);
     acts.appendChild(no);
+    /* an optional safer choice, offered before the destructive one so the
+       row reads left to right from least to most damaging */
+    if (opts.altLabel) {
+      var alt = el("button", "secondary", opts.altLabel);
+      alt.addEventListener("click", function () { closeModal(); opts.onAlt(); });
+      acts.appendChild(alt);
+    }
     acts.appendChild(go);
     overlay.hidden = false;
     go.focus();

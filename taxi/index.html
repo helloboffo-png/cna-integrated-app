@@ -333,7 +333,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.4</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.5</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -1264,46 +1264,82 @@
         return;
       }
       var photoN = photos ? Object.keys(photos).length : 0;
+
+      /* Only the screenshots for rides actually taken in are written, so a
+         merge never overwrites a picture belonging to a ride already here. */
+      function finish(photoIds, message) {
+        db.lastBackupAt = Date.now();   /* they clearly have a file */
+        if (photoN) db.lastFullBackupAt = Date.now();
+        db.backupSnoozeUntil = 0;
+        save();
+        applyTheme();
+        resetForm();
+        renderAll();
+        if (!photoIds.length) { toast(message); return; }
+        var k = 0, ok = 0;
+        toast("Restoring screenshots…");
+        (function put() {
+          if (k >= photoIds.length) {
+            renderAll();
+            toast(message + " · " + ok + " of " + photoIds.length + " screenshots");
+            return;
+          }
+          var id = photoIds[k++];
+          fetch(photos[id]).then(function (r) { return r.blob(); })
+            .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                  function () { put(); });
+        })();
+      }
+
+      /* Adding only what is missing. A ride already on this phone always
+         wins — its own screenshot is left exactly as it is. */
+      function mergeIn() {
+        var added = 0, kept = 0, want = [];
+        var have = {};
+        db.rides.forEach(function (r) { have[r.id] = true; });
+        data.rides.forEach(function (r) {
+          if (!r || typeof r !== "object" || !r.id || !r.date) return;
+          if (have[r.id]) { kept++; return; }
+          db.rides.push({
+            id: r.id,
+            date: r.date,
+            amount: typeof r.amount === "number" ? r.amount : 0,
+            receipt: typeof r.receipt === "string" ? r.receipt : "",
+            note: typeof r.note === "string" ? r.note : "",
+            photo: !!r.photo,
+            claimed: !!r.claimed
+          });
+          have[r.id] = true;
+          added++;
+          if (r.photo && photos && photos[r.id]) want.push(r.id);
+        });
+        finish(want, "Added " + added + " ride" + (added === 1 ? "" : "s") +
+          (kept ? " · kept your " + kept + " existing ride" + (kept === 1 ? "" : "s") : ""));
+      }
+
+      function replaceAll() {
+        /* clear the screenshots being replaced, so the store is not left
+           holding pictures for rides that no longer exist */
+        db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
+        try { localStorage.setItem(KEY, JSON.stringify(data)); }
+        catch (e) { toast("Phone storage is full — not restored"); return; }
+        db = load();
+        finish(photos ? Object.keys(photos) : [],
+               "Everything replaced — " + db.rides.length + " rides");
+      }
+
       confirmDialog({
         title: "Restore backup?",
-        message: "Replace every ride in Taxi Claims with the backup (" +
+        message: "This backup holds " +
                  data.rides.length + " ride" + (data.rides.length === 1 ? "" : "s") +
-                 (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots") +
-                 ")? What is here now is lost, screenshots included. " +
-                 "Driving Log and the other apps are not touched.",
-        confirmLabel: "Restore",
-        onConfirm: function () {
-          /* clear the screenshots being replaced, so the store is not left
-             holding pictures for rides that no longer exist */
-          db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
-          try { localStorage.setItem(KEY, JSON.stringify(data)); }
-          catch (e) { toast("Phone storage is full — not restored"); return; }
-          db = load();
-          save();
-          applyTheme();
-          resetForm();
-          renderAll();
-          db.lastBackupAt = Date.now();   /* they clearly have a file */
-          if (photoN) db.lastFullBackupAt = Date.now();
-          db.backupSnoozeUntil = 0;
-          save();
-          renderBackupNote();
-          if (!photoN) { toast("Restored " + db.rides.length + " rides"); return; }
-
-          var ids = Object.keys(photos), k = 0, ok = 0;
-          toast("Restoring screenshots…");
-          (function put() {
-            if (k >= ids.length) {
-              renderAll();
-              toast("Restored — " + ok + " of " + ids.length + " screenshots");
-              return;
-            }
-            var id = ids[k++];
-            fetch(photos[id]).then(function (r) { return r.blob(); })
-              .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
-                    function () { put(); });
-          })();
-        }
+                 (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots") + ". " +
+                 "Add missing only keeps every ride already on this phone, screenshots included, " +
+                 "and fills in the gaps. Replace everything wipes what is here first — only use that " +
+                 "on a phone with nothing on it yet. Driving Log and the other apps are not touched either way.",
+        altLabel: "Add missing only",
+        onAlt: mergeIn,
+        confirmLabel: "Replace everything",
+        onConfirm: replaceAll
       });
     };
     reader.readAsText(f);
@@ -1421,7 +1457,15 @@
     go.addEventListener("click", function () { closeModal(); opts.onConfirm(); });
     var no = el("button", "secondary", "Cancel");
     no.addEventListener("click", closeModal);
-    acts.appendChild(no); acts.appendChild(go);
+    acts.appendChild(no);
+    /* an optional safer choice, offered before the destructive one so the
+       row reads left to right from least to most damaging */
+    if (opts.altLabel) {
+      var alt = el("button", "secondary", opts.altLabel);
+      alt.addEventListener("click", function () { closeModal(); opts.onAlt(); });
+      acts.appendChild(alt);
+    }
+    acts.appendChild(go);
     overlay.hidden = false;
     go.focus();
   }
