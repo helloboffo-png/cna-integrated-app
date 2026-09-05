@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "build": 1,
-  "date": "2026-09-04",
-  "notes": "Says when it was last backed up, and nudges when it has been a while.",
+  "date": "2026-09-05",
+  "notes": "Restoring an old backup adds what is missing instead of wiping what is here.",
   "files": [
     "index.html"
   ]

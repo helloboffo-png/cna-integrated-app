@@ -398,7 +398,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.6</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.7</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -641,14 +641,28 @@
      DOT.log today, still there if this copy is ever wrong and needs to be
      taken again by clearing db.migratedFromDotLog by hand.
 
-     Runs once ever, guarded by db.migratedFromDotLog, so a day someone
-     deletes in OT Tracker afterwards does not reappear on the next boot. */
+     Normally runs once ever, so a day someone deletes in OT Tracker does
+     not reappear on the next boot. The exception is a restore: Driving Log
+     stamps restoredAt into its own store when an old backup is brought
+     back, and overtime inside that backup would otherwise sit there
+     invisible forever, since this app had already had its one run. So a
+     restore newer than the last run makes this look again — and even then
+     it only adds dates that are not already here. This app reads Driving
+     Log's store and decides for itself; nothing writes into anyone else's. */
   function carryOverFromDotLog() {
-    if (db.migratedFromDotLog) return { ranAlready: true, copied: 0 };
+    var raw, src = null;
+    try { raw = localStorage.getItem("driveotlog.v1"); src = raw && JSON.parse(raw); }
+    catch (e) { src = null; }
+
+    /* older installs stored true rather than a time; treat that as "long
+       ago" so any real restore still counts as newer */
+    var lastRun = typeof db.migratedFromDotLog === "number" ? db.migratedFromDotLog
+                : db.migratedFromDotLog ? 1 : 0;
+    var restoredAt = src && typeof src.restoredAt === "number" ? src.restoredAt : 0;
+    if (lastRun && restoredAt <= lastRun) return { ranAlready: true, copied: 0 };
+
     var copied = 0;
     try {
-      var raw = localStorage.getItem("driveotlog.v1");
-      var src = raw && JSON.parse(raw);
       if (src && typeof src === "object" && src.entries && typeof src.entries === "object") {
         Object.keys(src.entries).forEach(function (iso) {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || db.entries[iso]) return;
@@ -668,9 +682,9 @@
           if (typeof s.multHigh === "number" && s.multHigh > 0) db.settings.multHigh = s.multHigh;
         }
       }
-    } catch (e) { /* DOT.log has never been used on this phone, or its store
-                      is unreadable — nothing to carry, not a failure */ }
-    db.migratedFromDotLog = true;
+    } catch (e) { /* Driving Log has never been used on this phone, or its
+                      store is unreadable — nothing to carry, not a failure */ }
+    db.migratedFromDotLog = Date.now();
     return { ranAlready: false, copied: copied };
   }
 

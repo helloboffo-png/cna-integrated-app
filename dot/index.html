@@ -516,7 +516,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.3</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.4</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -703,7 +703,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.3 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.4 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -2094,6 +2094,16 @@
       opts.onConfirm();
     });
     actions.appendChild(cancelBtn);
+    /* an optional safer choice, offered before the destructive one so it
+       reads left to right from least to most damaging */
+    if (opts.altLabel) {
+      var altBtn = el("button", "secondary", opts.altLabel);
+      altBtn.addEventListener("click", function () {
+        $("overlay").hidden = true;
+        opts.onAlt();
+      });
+      actions.appendChild(altBtn);
+    }
     actions.appendChild(okBtn);
     $("overlay").hidden = false;
   }
@@ -2643,41 +2653,122 @@
         var photos = isArchive && parsed.photos ? parsed.photos : null;
         if (!data || typeof data.entries !== "object" || !Array.isArray(data.vehicles)) throw new Error("bad shape");
         var photoN = photos ? Object.keys(photos).length : 0;
+
+        /* Adding only what is missing, so nothing already on this phone is
+           touched. This is the one people actually want when they are
+           bringing an old backup onto a phone they are already using:
+           a day, a receipt or a plate already here always wins, and the
+           backup only fills the gaps. Settings are never taken from the
+           backup — the allowance in use now beats one saved months ago. */
+        function mergeIn() {
+          var addedDays = 0, keptDays = 0, addedRides = 0, addedPlates = 0, filledOt = 0;
+          var wantPhotos = [];
+
+          Object.keys(data.entries).forEach(function (iso) {
+            var e = data.entries[iso];
+            if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+            if (!db.entries[iso]) { db.entries[iso] = e; addedDays++; return; }
+
+            keptDays++;
+            /* The day itself stays exactly as it is — the plate here wins.
+               But ot and dayType are dormant fields now; they sit in this
+               store purely so OT Tracker can pick them up. If this day has
+               no overtime recorded and the backup does, take just those two
+               fields rather than throw the hours away. Never overwrites
+               overtime that is already here. */
+            var mine = db.entries[iso];
+            var theirs = typeof e.ot === "number" ? e.ot : 0;
+            if (theirs > 0 && !(typeof mine.ot === "number" && mine.ot > 0)) {
+              mine.ot = theirs;
+              if (e.dayType) mine.dayType = e.dayType;
+              filledOt++;
+            }
+          });
+
+          if (Array.isArray(data.taxi)) {
+            var haveId = {};
+            db.taxi.forEach(function (r) { haveId[r.id] = true; });
+            data.taxi.forEach(function (r) {
+              if (!r || typeof r !== "object" || !r.id || !r.date) return;
+              if (haveId[r.id]) return;
+              db.taxi.push(r);
+              haveId[r.id] = true;
+              addedRides++;
+              if (r.photo && photos && photos[r.id]) wantPhotos.push(r.id);
+            });
+          }
+
+          if (Array.isArray(data.vehicles)) {
+            data.vehicles.forEach(function (p) {
+              if (typeof p === "string" && p && !hasPlate(db.vehicles, p)) {
+                db.vehicles.push(p);
+                addedPlates++;
+              }
+            });
+          }
+
+          if (data.dismissed && typeof data.dismissed === "object") {
+            Object.keys(data.dismissed).forEach(function (k) {
+              if (!db.dismissed[k]) db.dismissed[k] = data.dismissed[k];
+            });
+          }
+
+          finish(wantPhotos, "Added " + addedDays + " day" + (addedDays === 1 ? "" : "s") +
+            ", " + addedRides + " receipt" + (addedRides === 1 ? "" : "s") +
+            (addedPlates ? ", " + addedPlates + " plate" + (addedPlates === 1 ? "" : "s") : "") +
+            (keptDays ? " · kept your " + keptDays + " existing day" + (keptDays === 1 ? "" : "s") : "") +
+            (filledOt ? ", took overtime for " + filledOt + " of them" : ""));
+        }
+
+        function replaceAll() {
+          localStorage.setItem(KEY, JSON.stringify(data));
+          db = load();
+          selectedPlate = null;
+          finish(photos ? Object.keys(photos) : [], "Everything replaced with the backup");
+        }
+
+        function finish(photoIds, message) {
+          /* Stamped so the apps that were split out of this one can notice
+             that old records have just arrived and take another look. They
+             read this store themselves; nothing here writes into theirs. */
+          db.restoredAt = Date.now();
+          db.lastBackupAt = Date.now();   /* they clearly have a file */
+          db.backupSnoozeUntil = 0;
+          save();
+          resetTaxiForm();
+          renderPlates(); renderTodayStatus(); renderSettings();
+          renderClaimReminder(); renderTaxi(); renderBackupNote();
+
+          if (!photoIds.length) { toast(message); return; }
+          var k = 0, ok = 0;
+          toast("Restoring screenshots…");
+          (function put() {
+            if (k >= photoIds.length) {
+              renderTaxi();
+              renderStorage();
+              toast(message + " · " + ok + " of " + photoIds.length + " screenshots");
+              return;
+            }
+            var id = photoIds[k++];
+            fetch(photos[id]).then(function (r) { return r.blob(); })
+              .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                    function () { put(); });
+          })();
+        }
+
         confirmDialog({
           title: "Restore backup?",
-          message: "Replace everything on this device with the backup (" +
+          message: "This backup holds " +
             Object.keys(data.entries).length + " days, " +
             (Array.isArray(data.taxi) ? data.taxi.length : 0) + " receipts, " +
             data.vehicles.length + " vehicles" +
-            (photoN ? ", " + photoN + " screenshots" : ", no screenshots") + ")?",
-          confirmLabel: "Restore",
-          onConfirm: function () {
-            localStorage.setItem(KEY, JSON.stringify(data));
-            db = load();
-            save();
-            selectedPlate = null;
-            resetTaxiForm();
-            renderPlates(); renderTodayStatus(); renderSettings(); renderClaimReminder(); renderTaxi();
-            db.lastBackupAt = Date.now();   /* they clearly have a file */
-            db.backupSnoozeUntil = 0;
-            save();
-            renderBackupNote();
-            if (!photoN) { toast("Backup restored"); return; }
-            var ids = Object.keys(photos), k = 0, ok = 0;
-            toast("Restoring screenshots…");
-            (function put() {
-              if (k >= ids.length) {
-                renderTaxi();
-                renderStorage();
-                toast("Restored — " + ok + " of " + ids.length + " screenshots");
-                return;
-              }
-              var id = ids[k++];
-              fetch(photos[id]).then(function (r) { return r.blob(); })
-                .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
-                      function () { put(); });
-            })();
-          }
+            (photoN ? ", " + photoN + " screenshots" : ", no screenshots") + ". " +
+            "Add missing only keeps everything already on this phone and fills in the gaps. " +
+            "Replace everything wipes what is here first — only use that on a phone with nothing on it yet.",
+          altLabel: "Add missing only",
+          onAlt: mergeIn,
+          confirmLabel: "Replace everything",
+          onConfirm: replaceAll
         });
       } catch (e) {
         toast("That file doesn't look like a backup from this app");
