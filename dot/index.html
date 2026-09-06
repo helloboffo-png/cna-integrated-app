@@ -35,8 +35,8 @@
     --ink: #22282E;
     --ink-soft: #5B646D;
     --line: #DDE1DC;
-    --accent: #2E6FBF;      /* the blue of its own calendar dots */
-    --accent-ink: #FFFFFF;
+    --accent: #E8A020;      /* road-sign amber, the yellow of its driving days */
+    --accent-ink: #2A2008;
     --good: #3E9B6B;
     --good-soft: #E3F1E9;
     --danger: #C9553D;
@@ -52,8 +52,8 @@
       --ink: #E9ECEE;
       --ink-soft: #9AA4AD;
       --line: #333B44;
-      --accent: #5A9BE8;
-      --accent-ink: #0B1A2B;
+      --accent: #EFAF35;
+      --accent-ink: #241C06;
       --good: #52B983;
       --good-soft: #22352B;
       --danger: #E07A63;
@@ -65,18 +65,32 @@
   }
   :root[data-theme="light"] {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #2E6FBF; --accent-ink: #FFFFFF;
+    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
     --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
     --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
   }
   :root[data-theme="dark"] {
     --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-    --line: #333B44; --accent: #5A9BE8; --accent-ink: #0B1A2B;
+    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
     --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
     --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
     --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
   }
+
+
+  /* ---- Parking wears blue, the rest of the app stays yellow ----
+     Set on body rather than :root so it inherits the theme above it and
+     only has to say what differs. Every theme needs its own pair: the
+     button label has to stay readable on whichever blue is showing. */
+  body[data-tab="screen-taxi"] { --accent: #2E6FBF; --accent-ink: #FFFFFF; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body[data-tab="screen-taxi"] {
+      --accent: #5A9BE8; --accent-ink: #0B1A2B;
+    }
+  }
+  :root[data-theme="light"] body[data-tab="screen-taxi"] { --accent: #2E6FBF; --accent-ink: #FFFFFF; }
+  :root[data-theme="dark"]  body[data-tab="screen-taxi"] { --accent: #5A9BE8; --accent-ink: #0B1A2B; }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -516,7 +530,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.5</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.6</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -703,7 +717,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.5 (4 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.6 (4 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -935,8 +949,8 @@
         name: "Driving Log",
         at: Date.now(),
         marks: [
-          { key: "drive", label: "Drove", colour: "#3B82D9", days: droveDays },
-          { key: "parking", label: "Parking", colour: "#A8790A", days: parkDays }
+          { key: "drive", label: "Drove", colour: "#AF820D", days: droveDays },
+          { key: "parking", label: "Parking", colour: "#3B82D9", days: parkDays }
         ],
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
@@ -1142,6 +1156,11 @@
   /* ---------- tabs ---------- */
   var tabButtons = document.querySelectorAll("nav.tabs button");
   function switchTab(screenId) {
+    /* Parking is blue everywhere it appears — its dots on the home screen
+       calendar, and this screen. Driving stays yellow. Marking which screen
+       is open lets the stylesheet swap the accent without any screen having
+       to know about colours. */
+    document.body.setAttribute("data-tab", screenId);
     tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(screenId).classList.add("active");
@@ -2801,6 +2820,7 @@
      "nothing logged" over a day that was in fact logged — and one tap on
      Save would then wipe it. Loading it means the form always shows what
      is actually stored. */
+  document.body.setAttribute("data-tab", "screen-log");
   loadEntryIntoForm(todayISO());
   resetTaxiForm();
   renderTodayStatus();

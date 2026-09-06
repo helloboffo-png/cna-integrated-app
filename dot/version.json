@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "build": 1,
   "date": "2026-09-06",
-  "notes": "Its own colour, matching its days on the home screen calendar.",
+  "notes": "Driving is yellow, parking is blue — on the screen and on the calendar.",
   "files": [
     "index.html",
     "icon-192.png",
