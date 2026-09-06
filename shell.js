@@ -387,6 +387,17 @@
      month for the times that is actually wanted.
      ------------------------------------------------------------------ */
 
+  /* Checked in UTC against UTC. Building a local Date and reading it back
+     through toISOString compares local midnight with a UTC day, which is a
+     different date everywhere east of Greenwich — here in +08 that would
+     reject every real date. */
+  function realDate(v) {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    var b = v.split("-"), y = +b[0], mo = +b[1], da = +b[2];
+    var d = new Date(Date.UTC(y, mo - 1, da));
+    return d.getUTCFullYear() === y && d.getUTCMonth() + 1 === mo && d.getUTCDate() === da;
+  }
+
   function readMarks() {
     var out = [];
     APPS.forEach(function (app) {
@@ -395,7 +406,20 @@
       catch (e) { return; }
       if (!card || !Array.isArray(card.marks)) return;
       card.marks.forEach(function (m) {
-        if (!m || !m.days || typeof m.days !== "object") return;
+        if (!m) return;
+        /* a mark carries single days, a run of days, or both */
+        var spans = [];
+        if (Array.isArray(m.ranges)) {
+          m.ranges.forEach(function (r) {
+            if (!r || !realDate(r.from) || !realDate(r.to)) return;
+            if (r.to < r.from) return;                 /* backwards, ignore */
+            spans.push({ from: r.from, to: r.to, detail: String(r.detail || "").slice(0, 40) });
+          });
+        }
+        if (!m.days || typeof m.days !== "object") {
+          if (!spans.length) return;
+          m = { label: m.label, colour: m.colour, days: {} };
+        }
         /* a colour is the one thing an app hands over that gets used as
            markup, so only a plain six-digit hex is accepted */
         if (!/^#[0-9a-fA-F]{6}$/.test(String(m.colour || ""))) return;
@@ -404,23 +428,20 @@
           /* the shape alone is not enough — "2026-13-99" passes a pattern
              check and then quietly sits in the legend matching no day of
              any month, so the date has to be a real one */
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+          if (!realDate(iso)) return;
           /* Checked in UTC against UTC. Building a local Date and reading
              it back through toISOString compares local midnight with a UTC
              day, which is a different date everywhere east of Greenwich —
              here in +08 that rejected every real date and left the
              calendar blank. */
-          var bits = iso.split("-");
-          var y = +bits[0], mo = +bits[1], da = +bits[2];
-          var d = new Date(Date.UTC(y, mo - 1, da));
-          if (d.getUTCFullYear() !== y || d.getUTCMonth() + 1 !== mo || d.getUTCDate() !== da) return;
           days[iso] = String(m.days[iso] || "").slice(0, 40);
         });
-        if (!Object.keys(days).length) return;
+        if (!Object.keys(days).length && !spans.length) return;
         out.push({
           label: String(m.label || "").slice(0, 20),
           colour: String(m.colour),
-          days: days
+          days: days,
+          spans: spans
         });
       });
     });
@@ -531,21 +552,28 @@
         }
       }
 
-      cells.forEach(function (date) {
+      /* Drawn a week at a time so a run of days can be a single line
+         underneath them. A trip that carries on past Sunday is cut flat at
+         that edge and picked up rounded on the next row, the way a
+         calendar shows an event continuing. */
+      function drawCell(date) {
         if (!date) {
           var blank = document.createElement("div");
           blank.className = "cna-cal-cell cna-cal-blank";
-          grid.appendChild(blank);
-          return;
+          return blank;
         }
         var key = iso(date);
         var hits = marks.filter(function (m) { return Object.prototype.hasOwnProperty.call(m.days, key); });
+        var inSpan = marks.some(function (m) {
+          return m.spans.some(function (sp) { return key >= sp.from && key <= sp.to; });
+        });
+        var openable = hits.length || inSpan;
 
-        var cell = document.createElement(hits.length ? "button" : "div");
+        var cell = document.createElement(openable ? "button" : "div");
         cell.className = "cna-cal-cell" +
           (key === todayIso ? " cna-cal-today" : "") +
           (key === picked ? " cna-cal-picked" : "");
-        if (hits.length) {
+        if (openable) {
           cell.type = "button";
           cell.addEventListener("click", function () {
             picked = (picked === key) ? null : key;
@@ -566,8 +594,54 @@
           dots.appendChild(dot);
         });
         cell.appendChild(dots);
-        grid.appendChild(cell);
-      });
+        return cell;
+      }
+
+      for (var w = 0; w < cells.length; w += 7) {
+        var row = cells.slice(w, w + 7);
+
+        var weekEl = document.createElement("div");
+        weekEl.className = "cna-cal-week-row";
+
+        var daysEl = document.createElement("div");
+        daysEl.className = "cna-cal-days";
+        row.forEach(function (date) { daysEl.appendChild(drawCell(date)); });
+        weekEl.appendChild(daysEl);
+
+        /* every run of days that touches this week gets its own line */
+        var real = row.filter(Boolean);
+        if (real.length) {
+          var rowFrom = iso(real[0]), rowTo = iso(real[real.length - 1]);
+          marks.forEach(function (m) {
+            m.spans.forEach(function (sp) {
+              if (sp.to < rowFrom || sp.from > rowTo) return;
+              var startCol = -1, endCol = -1;
+              row.forEach(function (date, idx) {
+                if (!date) return;
+                var k = iso(date);
+                if (k >= sp.from && k <= sp.to) {
+                  if (startCol === -1) startCol = idx;
+                  endCol = idx;
+                }
+              });
+              if (startCol === -1) return;
+
+              var barsEl = document.createElement("div");
+              barsEl.className = "cna-cal-bars";
+              var bar = document.createElement("span");
+              bar.className = "cna-cal-bar" +
+                (sp.from >= rowFrom ? " cna-cal-bar-opens" : "") +
+                (sp.to <= rowTo ? " cna-cal-bar-closes" : "");
+              bar.style.background = m.colour;
+              bar.style.gridColumn = (startCol + 1) + " / " + (endCol + 2);
+              barsEl.appendChild(bar);
+              weekEl.appendChild(barsEl);
+            });
+          });
+        }
+
+        grid.appendChild(weekEl);
+      }
       /* Swipe the grid sideways to move a week or a month. Only a
          decidedly horizontal drag counts, so scrolling the page down
          through it still works, and a swipe that started on a day must
@@ -600,6 +674,15 @@
       /* ---- the day tapped open ---- */
       if (picked) {
         var hits2 = marks.filter(function (m) { return Object.prototype.hasOwnProperty.call(m.days, picked); });
+        /* a day inside a run of days reads out too, with the run's own words */
+        marks.forEach(function (m) {
+          m.spans.forEach(function (sp) {
+            if (picked < sp.from || picked > sp.to) return;
+            hits2.push({ label: m.label, colour: m.colour, days: (function () {
+              var one = {}; one[picked] = sp.detail; return one;
+            })() });
+          });
+        });
         if (hits2.length) {
           var line = document.createElement("div");
           line.className = "cna-cal-detail";

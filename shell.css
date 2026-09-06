@@ -272,9 +272,26 @@ body:has(> .cna-topbar) {
   opacity: .8;
 }
 
+.cna-cal-week-row { display: flex; flex-direction: column; gap: 2px; }
+.cna-cal-week-row + .cna-cal-week-row { margin-top: 2px; }
+.cna-cal-days,
+.cna-cal-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+/* a run of days is one line under them, so a trip reads as one thing
+   rather than seven separate marks. Square where it carries on past the
+   edge of the week, rounded where it genuinely starts or ends. */
+.cna-cal-bar {
+  height: 4px;
+  border-radius: 0;
+  display: block;
+  min-width: 0;
+}
+.cna-cal-bar-opens { border-top-left-radius: 3px; border-bottom-left-radius: 3px; margin-left: 3px; }
+.cna-cal-bar-closes { border-top-right-radius: 3px; border-bottom-right-radius: 3px; margin-right: 3px; }
+
 .cna-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   /* the sideways drag belongs to the calendar; up and down still scrolls
      the page through it */
