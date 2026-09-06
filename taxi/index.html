@@ -29,12 +29,13 @@
 <style>
   /* Its own copy of the look rather than a stylesheet shared with Driving
      Log. They are meant to be separately upgradable, and a shared file
-     would mean a change to one could break the other. The tokens match
-     deliberately: this used to be part of Driving Log, and the people
-     using it should not have to learn a second set of habits. */
+     would mean a change to one could break the other. The greys are shared
+     with the rest of the family so the apps still feel like one set; the
+     accent is this app's own, matching the purple of its rides on the home
+     screen calendar, so a purple dot and this app read as the same thing. */
   :root {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --line: #DDE1DC; --accent: #7B45B0; --accent-ink: #FFFFFF;
     --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
     --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
@@ -42,7 +43,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-      --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+      --line: #333B44; --accent: #B07FE0; --accent-ink: #1A0A2B;
       --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
       --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
       --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
@@ -50,14 +51,14 @@
   }
   :root[data-theme="light"] {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
+    --line: #DDE1DC; --accent: #7B45B0; --accent-ink: #FFFFFF;
     --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
     --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
   }
   :root[data-theme="dark"] {
     --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
+    --line: #333B44; --accent: #B07FE0; --accent-ink: #1A0A2B;
     --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
     --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
     --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
@@ -333,7 +334,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.5</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.6</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->

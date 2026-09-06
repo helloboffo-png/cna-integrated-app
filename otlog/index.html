@@ -30,18 +30,19 @@
   /* This app carries its own copy of the look rather than sharing a
      stylesheet with DOT.log. They are meant to be separately upgradable,
      and a shared file would mean a change to one could break the other —
-     the one thing this whole app family is built to prevent. The tokens
-     match DOT.log deliberately: this used to be part of it, and the people
-     using it should not have to learn a second set of habits. */
+     the one thing this whole app family is built to prevent. The greys are
+     shared with the rest of the family so the apps still feel like one set;
+     the accent is this app's own, matching the green of its days on the home
+     screen calendar, so a green dot and this app read as the same thing. */
   :root {
     --paper: #F4F5F2;
     --card: #FFFFFF;
     --ink: #22282E;
     --ink-soft: #5B646D;
     --line: #DDE1DC;
-    --accent: #E8A020;      /* road-sign amber, as DOT.log */
-    --accent-ink: #2A2008;
-    --good: #3E9B6B;
+    --accent: #2F7D54;      /* the green of its own calendar dots */
+    --accent-ink: #FFFFFF;
+    --good: #1F7A70;
     --good-soft: #E3F1E9;
     --danger: #C9553D;
     --tab-bg: #FFFFFF;
@@ -50,23 +51,23 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-      --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
-      --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+      --line: #333B44; --accent: #52B983; --accent-ink: #06251A;
+      --good: #46B3A8; --good-soft: #22352B; --danger: #E07A63;
       --tab-bg: #21262D;
       --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
     }
   }
   :root[data-theme="light"] {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #E8A020; --accent-ink: #2A2008;
-    --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
+    --line: #DDE1DC; --accent: #2F7D54; --accent-ink: #FFFFFF;
+    --good: #1F7A70; --good-soft: #E3F1E9; --danger: #C9553D;
     --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
   }
   :root[data-theme="dark"] {
     --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-    --line: #333B44; --accent: #EFAF35; --accent-ink: #241C06;
-    --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
+    --line: #333B44; --accent: #52B983; --accent-ink: #06251A;
+    --good: #46B3A8; --good-soft: #22352B; --danger: #E07A63;
     --tab-bg: #21262D;
     --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
   }
@@ -398,7 +399,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.8</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.9</p>
   </section>
 
   <!-- ============ HISTORY ============ -->

@@ -1,10 +1,10 @@
 {
   "id": "taxi",
   "name": "Taxi Claims",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "build": 1,
-  "date": "2026-09-05",
-  "notes": "Restoring a backup adds what is missing instead of wiping what is here.",
+  "date": "2026-09-06",
+  "notes": "Its own colour, matching its days on the home screen calendar.",
   "files": [
     "index.html"
   ]

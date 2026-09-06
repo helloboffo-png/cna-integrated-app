@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "build": 1,
-  "date": "2026-09-05",
-  "notes": "Restoring an old backup adds what is missing instead of wiping what is here.",
+  "date": "2026-09-06",
+  "notes": "Its own colour, matching its days on the home screen calendar.",
   "files": [
     "index.html",
     "icon-192.png",
