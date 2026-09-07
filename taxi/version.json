@@ -1,10 +1,10 @@
 {
   "id": "taxi",
   "name": "Taxi Claims",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "build": 1,
   "date": "2026-09-07",
-  "notes": "Home sits in the bottom row, where your thumb already is.",
+  "notes": "What still needs doing now shows on the home screen.",
   "files": [
     "index.html"
   ]

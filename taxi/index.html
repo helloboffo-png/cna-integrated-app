@@ -355,7 +355,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.7</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.8</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -592,8 +592,26 @@
       });
       Object.keys(rideDays).forEach(function (iso) { rideDays[iso] = money(rideDays[iso]); });
 
+      /* What is still outstanding, in this app's own words. Rides from
+         any month, not only this one — the turn of a month does not
+         claim anything. */
+      var jobs = [];
+      if (open.length) {
+        jobs.push({ key: "claim", weight: 18, go: "#list",
+          text: open.length === 1 ? "1 taxi ride to claim"
+                                  : open.length + " taxi rides to claim" });
+      }
+      var backupAge = db.lastBackupAt
+        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
+      if (db.rides.length && (backupAge === null || backupAge >= 30)) {
+        jobs.push({ key: "backup", weight: 3, go: "#settings",
+          text: backupAge === null ? "Back up Taxi Claims \u2014 never done"
+                                   : "Back up Taxi Claims \u2014 " + backupAge + " days ago" });
+      }
+
       localStorage.setItem("cna.card.taxi", JSON.stringify({
         app: "taxi", name: "Taxi Claims", at: Date.now(),
+        todo: jobs,
         marks: [
           { key: "taxi", label: "Taxi", colour: "#9B5FD0", days: rideDays }
         ],

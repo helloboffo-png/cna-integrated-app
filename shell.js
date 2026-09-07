@@ -372,6 +372,106 @@
   }
 
   /* ------------------------------------------------------------------
+     What still needs doing
+
+     The figures say what the numbers are. This says what the job is —
+     and tapping one lands on the screen where it gets done.
+
+     Same bargain as everything else here: the home screen never looks
+     inside an app. Each app writes its own list of jobs under "todo" in
+     its own card, in its own words, and this only arranges what it
+     finds. An app with nothing outstanding writes nothing and this
+     takes up no height at all, which is the point: a clear day should
+     look clear.
+     ------------------------------------------------------------------ */
+
+  var TODO_SHOWN = 3;
+
+  function readTodos() {
+    var out = [];
+    APPS.forEach(function (app) {
+      var card;
+      try { card = JSON.parse(localStorage.getItem("cna.card." + app.id) || "null"); }
+      catch (e) { return; }
+      if (!card || !Array.isArray(card.todo)) return;
+      /* no app gets to fill the home screen on its own */
+      card.todo.slice(0, 3).forEach(function (t) {
+        if (!t || typeof t.text !== "string") return;
+        var text = t.text.replace(/\s+/g, " ").trim();
+        if (!text) return;
+        out.push({
+          text: text.slice(0, 60),
+          weight: typeof t.weight === "number" && isFinite(t.weight) ? t.weight : 0,
+          /* only a bare #screen name is accepted, so nothing an app
+             writes can turn into a link off to somewhere else */
+          go: typeof t.go === "string" && /^#[a-z-]{1,20}$/.test(t.go)
+            ? app.id + "/" + t.go
+            : null
+        });
+      });
+    });
+    /* by the weight each app gave the job, so the order is the app's
+       judgement of what matters rather than whichever app was opened
+       last */
+    out.sort(function (a, b) { return b.weight - a.weight; });
+    return out;
+  }
+
+  function initTodos() {
+    var box = document.getElementById("cna-todo");
+    if (!box) return;
+
+    function paint() {
+      var jobs = readTodos();
+      box.textContent = "";
+      if (!jobs.length) return;
+
+      var head = document.createElement("div");
+      head.className = "cna-todo-head";
+      /* The count rather than a "+3 more" line underneath: it says the
+         same thing, and a row of the app icons is worth more than a row
+         that cannot be tapped. */
+      head.textContent = jobs.length > TODO_SHOWN
+        ? "Needs doing \u00b7 " + jobs.length
+        : "Needs doing";
+      box.appendChild(head);
+
+      var list = document.createElement("div");
+      list.className = "cna-todo-list";
+
+      jobs.slice(0, TODO_SHOWN).forEach(function (j) {
+        var row = document.createElement(j.go ? "a" : "div");
+        row.className = "cna-todo-row";
+        if (j.go) row.setAttribute("href", j.go);
+
+        var t = document.createElement("span");
+        t.className = "cna-todo-text";
+        t.textContent = j.text;
+        row.appendChild(t);
+
+        if (j.go) {
+          var go = document.createElement("span");
+          go.className = "cna-todo-go";
+          go.setAttribute("aria-hidden", "true");
+          go.textContent = "›";
+          row.appendChild(go);
+        }
+        list.appendChild(row);
+      });
+
+      box.appendChild(list);
+    }
+
+    paint();
+    /* coming back from an app is often a back gesture rather than a
+       fresh load, so repaint whenever this page is looked at again */
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) paint();
+    });
+    window.addEventListener("pageshow", paint);
+  }
+
+  /* ------------------------------------------------------------------
      The week under the figures
 
      Same bargain as the figures: the home screen never reads a sub-app's
@@ -1537,6 +1637,7 @@
   window.addEventListener("load", function () {
     initToday();
     initStrip();
+    initTodos();
     initCalendar();
     homeScreen = initHomeScreen();
     initModal();

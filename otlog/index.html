@@ -420,7 +420,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.10</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.11</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -750,10 +750,28 @@
         if (e && e.ot > 0 && iso >= since) otDays[iso] = hoursStr(e.ot) + "h";
       });
 
+      /* What is still outstanding, in this app's own words. Hours with
+         no rate set are the one that matters: the app can count them but
+         cannot tell anyone what they are worth. */
+      var jobs = [];
+      var anyHours = Object.keys(db.entries).length > 0;
+      if (anyHours && !db.settings.baseRate) {
+        jobs.push({ key: "rate", weight: 8, go: "#settings",
+          text: "Set your hourly rate" });
+      }
+      var backupAge = db.lastBackupAt
+        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
+      if (anyHours && (backupAge === null || backupAge >= 30)) {
+        jobs.push({ key: "backup", weight: 4, go: "#settings",
+          text: backupAge === null ? "Back up OT Tracker \u2014 never done"
+                                   : "Back up OT Tracker \u2014 " + backupAge + " days ago" });
+      }
+
       localStorage.setItem("cna.card.otlog", JSON.stringify({
         app: "otlog",
         name: "OT Tracker",
         at: Date.now(),
+        todo: jobs,
         marks: [
           { key: "ot", label: "Overtime", colour: "#3E9B6B", days: otDays }
         ],

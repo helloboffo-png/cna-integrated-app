@@ -75,6 +75,21 @@ away its stored copy and take the new one; without it, people keep seeing the
 previous version. Sub-apps are unaffected either way — their stores are
 separate and are never swept by a container release.
 
+## What an app tells the home screen
+
+Each app writes its own summary to `cna.card.<id>` and the home screen only
+arranges what it finds. Four things go in it, all optional:
+
+- `items` — the figures. `{key, value, label, alert, weight, go}`
+- `marks` — the calendar. `{key, label, colour, days, ranges}`
+- `todo` — what still needs doing. `{key, text, weight, go}`, at most three
+  per app, shown as tappable lines under the figures. Only the app knows
+  what counts as outstanding, so it writes the sentence itself.
+- `name`, `at` — who wrote it and when
+
+Everything read from a card is treated as untrusted: text only, capped
+lengths, and `go` must be a bare `#screen` inside that app's own folder.
+
 ## Adding a new app later
 
 1. Put it in its own folder, e.g. `payslips/`.

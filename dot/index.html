@@ -551,7 +551,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.7</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.8</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -738,7 +738,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.7 (7 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.8 (7 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -973,10 +973,31 @@
       });
       Object.keys(parkDays).forEach(function (iso) { parkDays[iso] = money(parkDays[iso]); });
 
+      /* The figures above say what the numbers are; these say what the
+         job is. Written here rather than worked out by the home screen,
+         because only this app knows what counts as outstanding. Its own
+         threshold and its own words, and nothing is listed when there is
+         nothing to do. */
+      var jobs = [];
+      if (open.length) {
+        jobs.push({ key: "send", weight: 20, go: "#taxi",
+          text: open.length === 1 ? "1 parking receipt to send"
+                                  : open.length + " parking receipts to send" });
+      }
+      var backupAge = db.lastBackupAt
+        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
+      var worthBacking = Object.keys(db.entries).length > 0 || parkingRows().length > 0;
+      if (worthBacking && (backupAge === null || backupAge >= 30)) {
+        jobs.push({ key: "backup", weight: 5, go: "#settings",
+          text: backupAge === null ? "Back up Driving Log \u2014 never done"
+                                   : "Back up Driving Log \u2014 " + backupAge + " days ago" });
+      }
+
       localStorage.setItem("cna.card.dot", JSON.stringify({
         app: "dot",
         name: "Driving Log",
         at: Date.now(),
+        todo: jobs,
         marks: [
           { key: "drive", label: "Drove", colour: "#AF820D", days: droveDays },
           { key: "parking", label: "Parking", colour: "#3B82D9", days: parkDays }

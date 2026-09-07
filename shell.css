@@ -391,21 +391,21 @@ button.cna-cal-cell { cursor: pointer; }
   gap: 10px;
   flex-wrap: wrap;
 
-  margin: 0 0 26px;
-  padding-bottom: 14px;
+  margin: 0 0 18px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--cna-line);
 }
 
+/* The day sits beside the date rather than above it. The phone's own
+   status bar is already carrying the time and the day; two big lines of
+   it here cost 79px of a 667px screen, which is a whole figure's worth
+   of room spent on something nobody came to the home screen to read. */
 .cna-today-day {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: .16em;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--cna-accent);
-
-  /* sits on its own line above the date, like a torn-off page */
-  flex: 0 0 100%;
-  margin-bottom: 3px;
 }
 
 /* ---------------------------------------------------------------
@@ -459,11 +459,74 @@ button.cna-cal-cell { cursor: pointer; }
 .cna-strip-row + .cna-strip-row .cna-fig-l { font-size: 9px; }
 
 .cna-today-date {
-  font-size: 29px;
-  font-weight: 500;
-  letter-spacing: -.02em;
-  line-height: 1.05;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------
+   What still needs doing.
+
+   The figures above are numbers; these are jobs, and each one is a
+   link straight to the screen where it gets done. Empty adds no
+   height at all — a clear day should look clear.
+   --------------------------------------------------------------- */
+
+.cna-todo:not(:empty) { margin: 0 0 20px; }
+
+.cna-todo-head {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cna-ink-soft);
+}
+
+.cna-todo-list {
+  border: 1px solid var(--cna-line);
+  border-radius: 12px;
+  background: var(--cna-card);
+  overflow: hidden;
+}
+
+.cna-todo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 9px 12px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--cna-line);
+
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-todo-row:last-child { border-bottom: none; }
+a.cna-todo-row:active { background: var(--cna-paper); }
+
+.cna-todo-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.cna-todo-go {
+  flex: 0 0 auto;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--cna-ink-soft);
+}
+
+a.cna-todo-row:focus-visible {
+  outline: 2px solid var(--cna-accent);
+  outline-offset: -2px;
 }
 
 
