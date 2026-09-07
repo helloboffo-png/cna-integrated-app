@@ -158,6 +158,10 @@
   /* Any sub-app may expose window.cnaHasUnsaved to protect a half-typed
      entry from a reload. DOT.log named its own hook before there was a
      second app to share it, so that name is still honoured. */
+  /* Set once Settings has drawn the container's own update line, so a
+     release that turns up while that screen is open reaches it. */
+  var repaintShellRow = null;
+
   function hasUnsavedWork() {
     try {
       var fn = window.cnaHasUnsaved || window.dotlogHasUnsaved;
@@ -166,6 +170,9 @@
   }
 
   function showUpdateBar(worker) {
+    /* Settings may be open with the container's line already drawn as
+       up to date, so tell it a new one has landed. */
+    if (repaintShellRow) { try { repaintShellRow(); } catch (e) {} }
     if (document.getElementById("cna-update-bar")) return;
 
     var bar = document.createElement("div");
@@ -511,6 +518,7 @@
            in the tick list and in the calendar file — so anything that is
            not a plain word is dropped rather than trusted. */
         var markKey = String(m.key || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 20) || ("m" + mi);
+        var markGo = m.go;
         /* a mark carries single days, a run of days, or both */
         var spans = [];
         if (Array.isArray(m.ranges)) {
@@ -546,6 +554,13 @@
           key: markKey,
           label: String(m.label || "").slice(0, 20),
           colour: String(m.colour),
+          /* Where a tap on this activity should land. Same rule as the
+             figures: only a bare #screen inside that app's own folder is
+             accepted, so nothing an app writes can become a link off to
+             somewhere else. With none given, the app's front page. */
+          go: typeof markGo === "string" && /^#[a-z-]{1,20}$/.test(markGo)
+            ? app.id + "/" + markGo
+            : app.id + "/",
           days: days,
           spans: spans
         });
@@ -784,7 +799,7 @@
         marks.forEach(function (m) {
           m.spans.forEach(function (sp) {
             if (picked < sp.from || picked > sp.to) return;
-            hits2.push({ label: m.label, colour: m.colour, days: (function () {
+            hits2.push({ label: m.label, colour: m.colour, go: m.go, days: (function () {
               var one = {}; one[picked] = sp.detail; return one;
             })() });
           });
@@ -797,15 +812,29 @@
           when.className = "cna-cal-detail-day";
           when.textContent = (+p[2]) + " " + MONTHS[+p[1] - 1];
           line.appendChild(when);
+          /* Each activity is the way into the app that logged it. A day
+             can hold several — drove, parked and worked late are three
+             different apps — so the day itself cannot lead anywhere in
+             particular; the activity can, and does. */
           hits2.forEach(function (m) {
-            var bit = document.createElement("span");
+            var bit = document.createElement(m.go ? "a" : "span");
             bit.className = "cna-cal-detail-bit";
+            if (m.go) bit.setAttribute("href", m.go);
+
             var dot = document.createElement("i");
             dot.style.background = m.colour;
             bit.appendChild(dot);
+
             var txt = document.createElement("span");
             txt.textContent = m.days[picked] ? m.label + " " + m.days[picked] : m.label;
             bit.appendChild(txt);
+
+            if (m.go) {
+              var go = document.createElement("b");
+              go.setAttribute("aria-hidden", "true");
+              go.textContent = "\u203a";
+              bit.appendChild(go);
+            }
             line.appendChild(bit);
           });
           box.appendChild(line);
@@ -1140,10 +1169,20 @@
   var RELEASES = [
     {
       when: "7 September 2026",
-      what: "Home button, and your days in Apple Calendar",
+      what: "A cleaner home screen, and fixes",
+      points: [
+        "The home screen was tidied: one set of text sizes, even columns of figures, the settings button on the date line, and everything in matching panels.",
+        "Tap a day on the calendar and each thing logged that day is now a way straight into the app that logged it.",
+        "This list now covers the app itself, not only the four inside it — Settings shows its version and offers the reload when a new one is waiting.",
+        "Add to Calendar: on a phone that will not hand the file over by itself, there is now a link to press instead of nothing happening."
+      ]
+    },
+    {
+      when: "7 September 2026",
+      what: "Home button, and your days in the calendar",
       points: [
         "Home is now the first tab along the bottom of Driving Log, OT Tracker and Taxi Claims, where your thumb already sits. The old link across the top is gone.",
-        "Settings can send your logged days to the phone's own Calendar. Tick the activities you want, press the button, choose Calendar.",
+        "Settings can send your logged days to the phone's own Calendar. Tick the activities you want and press the button.",
         "This list. Press What's new any time to see what changed."
       ]
     },
@@ -1219,8 +1258,8 @@
      so no sub-app has to be changed, or even know this exists.
 
      A calendar file is a handover, not a live link: pressing the button
-     hands Apple a copy of the days as they stand. Doing it again later
-     hands over a fresh copy. Every day carries an id built from the app,
+     hands the phone a copy of the days as they stand. Doing it again
+     later hands over a fresh copy. Every day carries an id built from the app,
      the activity and the date, so the second copy lands on top of the
      first rather than beside it.
      ------------------------------------------------------------------ */
@@ -1315,42 +1354,55 @@
     return { text: lines.join("\r\n") + "\r\n", count: count };
   }
 
-  /* Handed straight to the phone's share sheet where that exists, which
-     is what puts Calendar in the list on an iPhone. Everywhere else it
-     saves as a file, which opens in Calendar when tapped. Both are called
-     inside the press itself — a share asked for later is refused. */
-  function handOver(text) {
+  /* Handed to the phone's share sheet where there is one, which is what
+     puts Calendar in the list on an iPhone. It has to be asked for inside
+     the press itself — a share asked for after any waiting is refused.
+
+     Where that is not available, or refuses, the file is offered as a
+     link for the person to tap. It is deliberately NOT a link this code
+     taps for them: a page added to the home screen runs without a browser
+     around it, and a tap made by script there is very often ignored with
+     no error at all — which is exactly the "nothing happens" this used to
+     produce. A link somebody presses themselves always works.
+
+     Whichever route it takes, it says which, so a phone that will not
+     play along can be described rather than guessed at. */
+  function handOver(text, onFallback) {
     var blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
     var file = null;
     try { file = new File([blob], "CNA Apps.ics", { type: "text/calendar" }); } catch (e) {}
 
-    if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      return navigator.share({ files: [file], title: "CNA Apps" })
-        .then(function () { return "shared"; })
-        .catch(function (err) {
-          if (err && err.name === "AbortError") return "cancelled";
-          return saveFile(blob);
-        });
+    function offerLink(why) {
+      var url = URL.createObjectURL(blob);
+      onFallback(url, why);
+      /* left alive: the link is only useful for as long as it is on screen */
+      return why;
     }
-    return Promise.resolve(saveFile(blob));
-  }
 
-  function saveFile(blob) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "CNA Apps.ics";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-    return "saved";
+    if (!file || !navigator.share) return Promise.resolve(offerLink("no-share"));
+
+    /* canShare is the polite question, but some phones answer it wrongly
+       or do not have it at all, so a no from it is not taken as final. */
+    var welcome = true;
+    try {
+      if (navigator.canShare) welcome = navigator.canShare({ files: [file] });
+    } catch (e) { welcome = false; }
+
+    if (!welcome) return Promise.resolve(offerLink("share-refused-file"));
+
+    return navigator.share({ files: [file], title: "CNA Apps" })
+      .then(function () { return "shared"; })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return "cancelled";
+        return offerLink("share-failed");
+      });
   }
 
   function initCalendarExport() {
     var picksBox = document.getElementById("cna-cal-picks");
     var sendBtn = document.getElementById("cna-cal-send");
     var note = document.getElementById("cna-cal-note");
+    var fallback = document.getElementById("cna-cal-fallback");
     if (!picksBox || !sendBtn) return;
 
     var marks = [];
@@ -1360,6 +1412,7 @@
       var picks = readPicks();
       picksBox.textContent = "";
       note.hidden = true;
+      if (fallback) { fallback.textContent = ""; fallback.hidden = true; }
 
       if (!marks.length) {
         var empty = document.createElement("p");
@@ -1405,7 +1458,27 @@
       return [].some.call(picksBox.querySelectorAll("input"), function (b) { return b.checked; });
     }
 
+    function days(n) { return n + (n === 1 ? " day" : " days"); }
+
+    /* Shown when the phone will not take the file by itself. A real link,
+       waiting to be pressed, rather than one this code presses. */
+    function showLink(url, count) {
+      if (!fallback) return;
+      fallback.textContent = "";
+      var a = document.createElement("a");
+      a.className = "cna-btn cna-btn-link";
+      a.href = url;
+      a.download = "CNA Apps.ics";
+      a.type = "text/calendar";
+      a.rel = "noopener";
+      a.textContent = "Open the file with " + days(count);
+      fallback.appendChild(a);
+      fallback.hidden = false;
+    }
+
     sendBtn.addEventListener("click", function () {
+      if (fallback) { fallback.textContent = ""; fallback.hidden = true; }
+
       var built = buildIcs(marks, readPicks());
       if (!built.count) {
         note.hidden = false;
@@ -1413,16 +1486,25 @@
         return;
       }
       note.hidden = false;
-      note.textContent = "Preparing " + built.count + (built.count === 1 ? " day…" : " days…");
+      note.textContent = "Preparing " + days(built.count) + "\u2026";
 
-      handOver(built.text).then(function (how) {
-        if (how === "cancelled") { note.textContent = "Left it. Nothing was sent."; return; }
-        note.textContent = how === "shared"
-          ? built.count + (built.count === 1 ? " day" : " days") + " handed over. Choose Calendar to add them."
-          : built.count + (built.count === 1 ? " day" : " days") + " saved as a file. Open it to add them to Calendar.";
-      }).catch(function () {
-        note.textContent = "Could not hand it over. Try again.";
-      });
+      handOver(built.text, function (url, why) { showLink(url, built.count); })
+        .then(function (how) {
+          if (how === "cancelled") {
+            note.textContent = "Left it. Nothing was sent.";
+            return;
+          }
+          if (how === "shared") {
+            note.textContent = days(built.count) + " handed over. Choose Calendar to add them.";
+            return;
+          }
+          /* every remaining answer means the link below is the way in */
+          note.textContent = "This phone will not hand the file over on its own. "
+            + "Press below, then choose Calendar.";
+        })
+        .catch(function () {
+          note.textContent = "Could not prepare the file. Try again.";
+        });
     });
 
     paint();
@@ -1498,6 +1580,63 @@
     });
     paintSize();
 
+    /* ---- the container's own line ----
+       It updates by a different route from the apps it holds: there is no
+       version file to fetch and no button to install one, because the new
+       copy downloads itself and then waits. So this row reports what is
+       installed, and offers the same reload the prompt at the bottom of
+       the screen offers. Without it, Settings listed four apps and said
+       nothing at all about the thing they live in. */
+    var shellRow = document.getElementById("cna-shell-row");
+    var shellHave = null;
+
+    function paintShell() {
+      if (!shellRow) return;
+      shellRow.textContent = "";
+
+      var el = document.createElement("div");
+      el.className = "cna-update-row";
+
+      var name = document.createElement("div");
+      name.className = "cna-update-name";
+      name.textContent = "CNA Apps";
+
+      var state = document.createElement("span");
+      state.className = "cna-update-state";
+      var waiting = !!(reg && reg.waiting);
+      state.textContent = !shellHave
+        ? (waiting ? "Update ready" : "Checking\u2026")
+        : "v" + shellHave + (waiting ? " \u00b7 update ready" : " \u00b7 up to date");
+      name.appendChild(state);
+      el.appendChild(name);
+
+      if (waiting) {
+        var btn = document.createElement("button");
+        btn.className = "cna-update-btn";
+        btn.type = "button";
+        var armed = false;
+        btn.textContent = "Reload";
+        btn.addEventListener("click", function () {
+          /* the same manners as the prompt: never swap a version out from
+             under a half-typed entry without saying so first */
+          if (hasUnsavedWork() && !armed) {
+            armed = true;
+            state.textContent = "You have an unsaved entry \u2014 reloading loses it";
+            btn.textContent = "Reload anyway";
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = "Updating\u2026";
+          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        });
+        el.appendChild(btn);
+      }
+
+      shellRow.appendChild(el);
+    }
+    repaintShellRow = paintShell;
+    paintShell();
+
     /* updates */
     var list = document.getElementById("cna-update-list");
     var checkBtn = document.getElementById("cna-check-updates");
@@ -1529,10 +1668,17 @@
       checkBtn.disabled = true;
       checkBtn.textContent = "Checking…";
 
+      /* Checking for updates should mean all of them. Without this the
+         button only ever asked the four apps, and a waiting container
+         release was found by accident on some later visit. */
+      if (reg) { try { reg.update(); } catch (e) {} }
+
       Promise.all([ask({ type: "STATUS" })].concat(APPS.map(function (a) { return fetchVersionFile(a.id); })))
         .then(function (results) {
           var installed = results[0] || {};
           var offline = false;
+          shellHave = installed.shell || null;
+          paintShell();
 
           APPS.forEach(function (app, i) {
             var latest = results[i + 1];

@@ -1,10 +1,10 @@
 {
   "id": "taxi",
   "name": "Taxi Claims",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "build": 1,
   "date": "2026-09-07",
-  "notes": "What still needs doing now shows on the home screen.",
+  "notes": "Calendar dots lead into the app, and the container shows its own version.",
   "files": [
     "index.html"
   ]

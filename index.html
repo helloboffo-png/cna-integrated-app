@@ -23,8 +23,10 @@
   <!-- The date and the wrench share one line. The wrench used to sit
        alone in an empty strip above it, which read as a leftover. -->
   <header class="cna-today" id="cna-today">
-    <span class="cna-today-day" id="cna-today-day"></span>
-    <span class="cna-today-date" id="cna-today-date"></span>
+    <span class="cna-today-when">
+      <span class="cna-today-day" id="cna-today-day"></span>
+      <span class="cna-today-date" id="cna-today-date"></span>
+    </span>
     <button id="cna-settings-open" class="cna-gear" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -154,15 +156,21 @@
   <!-- Ticked activities are written into a calendar file the phone hands
        to its own Calendar app. Built from the same summaries the home
        screen already reads, so no app has to be touched to feed it. -->
-  <h2 class="cna-section-title">Add to Apple Calendar</h2>
+  <h2 class="cna-section-title">Add to Calendar</h2>
   <div class="cna-card">
     <div id="cna-cal-picks" class="cna-checks"></div>
-    <button id="cna-cal-send" class="cna-btn" type="button">Add to Apple Calendar</button>
+    <button id="cna-cal-send" class="cna-btn" type="button">Add to Calendar</button>
     <p id="cna-cal-note" class="cna-note" hidden></p>
+    <!-- Filled in only when the phone will not hand the file over by
+         itself, so there is always something real to tap. -->
+    <div id="cna-cal-fallback" hidden></div>
   </div>
 
   <h2 class="cna-section-title">App updates</h2>
   <div class="cna-card">
+    <!-- The container itself first, then the apps it holds. It updates by
+         a different route from theirs, so it is drawn separately. -->
+    <div id="cna-shell-row" class="cna-update-list"></div>
     <div id="cna-update-list" class="cna-update-list"></div>
     <div class="cna-btn-row">
       <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>

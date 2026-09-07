@@ -355,7 +355,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.8</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.9</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -613,7 +613,9 @@
         app: "taxi", name: "Taxi Claims", at: Date.now(),
         todo: jobs,
         marks: [
-          { key: "taxi", label: "Taxi", colour: "#9B5FD0", days: rideDays }
+          /* go is where a tap on that day's dot lands, on the home
+             screen's calendar. A bare #screen in this app's own folder. */
+          { key: "taxi", label: "Taxi", colour: "#9B5FD0", days: rideDays, go: "#list" }
         ],
         items: [
           { key: "fares", value: money(owed).replace(/\.00$/, ""), label: "taxi fares",

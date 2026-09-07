@@ -420,7 +420,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.11</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.12</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -773,7 +773,9 @@
         at: Date.now(),
         todo: jobs,
         marks: [
-          { key: "ot", label: "Overtime", colour: "#3E9B6B", days: otDays }
+          /* go is where a tap on that day's dot lands, on the home
+             screen's calendar. A bare #screen in this app's own folder. */
+          { key: "ot", label: "Overtime", colour: "#3E9B6B", days: otDays, go: "#history" }
         ],
         items: [
           { key: "hours", value: hoursStr(hours), label: "OT hours",

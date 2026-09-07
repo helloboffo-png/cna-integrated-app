@@ -376,8 +376,24 @@ button.cna-cal-cell { cursor: pointer; }
   font-size: var(--t-small);
 }
 .cna-cal-detail-day { font-weight: 700; }
-.cna-cal-detail-bit { display: inline-flex; align-items: center; gap: 5px; color: var(--cna-ink-soft); }
+/* Each activity on a tapped day is a link into the app that logged it,
+   so it is built to look like one rather than like a caption. */
+.cna-cal-detail-bit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 7px;
+  border: 1px solid var(--cna-line);
+  border-radius: 999px;
+  color: var(--cna-ink-soft);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+a.cna-cal-detail-bit { color: var(--cna-ink); }
+a.cna-cal-detail-bit:active { background: var(--cna-paper); }
+a.cna-cal-detail-bit:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
 .cna-cal-detail-bit i { width: 6px; height: 6px; border-radius: 50%; display: block; flex: none; }
+.cna-cal-detail-bit b { font-weight: 400; color: var(--cna-ink-soft); }
 
 .cna-cal-foot {
   display: flex;
@@ -426,21 +442,36 @@ button.cna-cal-cell { cursor: pointer; }
 
 /* The date and the settings wrench share one line. The wrench used to
    float alone in an empty strip of its own above everything, which read
-   as a leftover rather than a header. Room is kept clear on the right so
-   a long date never runs underneath it. */
+   as a leftover rather than a header.
+
+   The wrench is an ordinary item on the row rather than something pinned
+   to a corner: pinned, it was placed by a guessed offset and sat low
+   enough to cross the rule underneath. Sitting in the row, it is centred
+   against the date by the layout itself, and stays centred when the date
+   wraps at the largest text size. */
 .cna-today {
-  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 
   margin: 0 0 16px;
-  padding: 0 46px 12px 0;
+  padding: 0 0 12px;
   border-bottom: 1px solid var(--cna-line);
 }
 
-.cna-today .cna-gear { top: -2px; right: 0; }
+.cna-today-when {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cna-today .cna-gear {
+  position: static;
+  flex: 0 0 auto;
+}
 
 /* The day sits beside the date rather than above it. The phone's own
    status bar is already carrying the time and the day; two big lines of
@@ -945,6 +976,19 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 }
 
 .cna-btn[disabled] { opacity: .55; cursor: default; }
+
+/* The same button, but a link, because it hands over a file and a phone
+   only honours that from a press somebody actually made. */
+a.cna-btn-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  text-decoration: none;
+  border-color: var(--cna-accent);
+  color: var(--cna-accent);
+  font-weight: 700;
+}
+a.cna-btn-link:active { background: var(--cna-paper); }
 
 /* two buttons sharing a row */
 .cna-btn-row {

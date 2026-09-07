@@ -551,7 +551,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.9</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.10</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -738,7 +738,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.9 (7 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.10 (7 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -999,8 +999,10 @@
         at: Date.now(),
         todo: jobs,
         marks: [
-          { key: "drive", label: "Drove", colour: "#AF820D", days: droveDays },
-          { key: "parking", label: "Parking", colour: "#3B82D9", days: parkDays }
+          /* go is where a tap on that day's dot lands, on the home
+             screen's calendar. A bare #screen in this app's own folder. */
+          { key: "drive", label: "Drove", colour: "#AF820D", days: droveDays, go: "#history" },
+          { key: "parking", label: "Parking", colour: "#3B82D9", days: parkDays, go: "#taxi" }
         ],
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
