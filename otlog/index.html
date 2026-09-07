@@ -311,6 +311,29 @@
   nav.tabs button svg { width: 22px; height: 22px; display: block; }
   nav.tabs button.active .ico-bar { background: var(--accent); }
   .ico-bar { width: 22px; height: 3px; border-radius: 2px; background: transparent; margin-top: 2px; }
+  /* Home rides in the same row as the tabs but leaves the app instead of
+     switching screens, so it is a link and carries its own copy of the tab
+     styling. It never lights up — you are never "on" Home while you are in
+     here. The empty bar keeps its label sitting on the same line as the
+     others. */
+  nav.tabs a.tab-home {
+    flex: 1;
+    font: inherit; font-size: 11px; font-weight: 600;
+    color: var(--ink-soft);
+    padding: 9px 0 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  nav.tabs a.tab-home svg { width: 22px; height: 22px; display: block; }
+  nav.tabs a.tab-home:active { opacity: .6; }
+  nav.tabs a.tab-home:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  /* A 320px phone splits six tabs into 53px each, which the word "Settings"
+     fills to the pixel. Drop the label a notch there so nothing sits on the
+     screen edge. */
+  @media (max-width: 359px) {
+    nav.tabs button, nav.tabs a.tab-home { font-size: 10px; }
+  }
 
   .screen { display: none; }
   .screen.active { display: block; }
@@ -363,8 +386,6 @@
 </head>
 <body>
 
-<div class="cna-topbar"><a class="cna-back" href="../"><span class="cna-back-arrow" aria-hidden="true">‹</span>Main Page</a></div>
-
 <div class="app">
   <header class="top">
     <h1>OT Tracker</h1>
@@ -399,7 +420,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.9</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.10</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -507,6 +528,14 @@
 </div>
 
 <nav class="tabs" aria-label="Sections">
+  <!-- Home leaves this app for the front door. It is a link rather than a
+       button on purpose: the app's own tab code looks for buttons, so it
+       never sees this one and never tries to open it as a screen. -->
+  <a class="tab-home" href="../">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 10.6 12 4.2l8 6.4V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M9.5 21v-6h5v6"/>
+    </svg>Home<span class="ico-bar"></span>
+  </a>
   <button data-screen="screen-log" class="active">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.6 2.1"/>

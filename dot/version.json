@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "build": 1,
-  "date": "2026-09-06",
-  "notes": "Driving is yellow, parking is blue — on the screen and on the calendar.",
+  "date": "2026-09-07",
+  "notes": "Home sits in the bottom row, where your thumb already is.",
   "files": [
     "index.html",
     "icon-192.png",

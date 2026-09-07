@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "build": 1,
-  "date": "2026-09-06",
-  "notes": "Its own colour, matching its days on the home screen calendar.",
+  "date": "2026-09-07",
+  "notes": "Home sits in the bottom row, where your thumb already is.",
   "files": [
     "index.html"
   ]

@@ -55,8 +55,16 @@ still see the app's real version; the stored copy refreshes all the same.
 People then see **update ready** next to that app in Settings, with its own
 button. Pressing it refreshes only that app.
 
-Keep the handful of container lines in the app's `index.html` — the top bar,
-the shared stylesheet and `shell.js`. They are marked with comments.
+Keep the handful of container lines in the app's `index.html` — the shared
+stylesheet and `shell.js`, and the top bar where the app still carries one.
+They are marked with comments.
+
+The way back to the front door differs by app, on purpose. Driving Log, OT
+Tracker and Taxi Claims already have a row of tabs across the bottom, so Home
+is the first tab in that row — bottom left, under the thumb — and those three
+have no top bar at all. Overseas Tracker has its own bottom row with its own
+Home button in it, so a second one there would mean two different Homes; it
+keeps the top bar instead.
 
 ## Changing the container itself
 
