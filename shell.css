@@ -797,6 +797,184 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 
 .cna-btn[disabled] { opacity: .55; cursor: default; }
 
+/* two buttons sharing a row */
+.cna-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------
+   Which activities go across to the phone's own calendar.
+   One row per activity, in the colour it already wears everywhere
+   else, so the tick list reads as the same set of things as the
+   dots on the home screen.
+   --------------------------------------------------------------- */
+
+.cna-checks {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.cna-check {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cna-line);
+
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cna-check:last-child { border-bottom: none; }
+
+.cna-check input {
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  margin: 0;
+  accent-color: var(--cna-accent);
+  cursor: pointer;
+}
+
+.cna-check i {
+  flex: 0 0 auto;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+}
+
+.cna-check span { flex: 1 1 auto; min-width: 0; }
+
+.cna-check:focus-within { outline: none; }
+.cna-check input:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
+
+/* Result of pressing a button — what just happened, not a standing
+   explanation of what the button is for. */
+.cna-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cna-ink-soft);
+}
+
+.cna-empty {
+  margin: 2px 0 14px;
+  font-size: 14px;
+  color: var(--cna-ink-soft);
+}
+
+/* ---------------------------------------------------------------
+   A small window over the page. Used for the list of recent
+   updates. It sits above everything, dims what is behind it, and
+   closes on the backdrop, the cross, or Escape.
+   --------------------------------------------------------------- */
+
+/* A class that sets display beats the browser's own rule for hidden, so
+   the window has to be told to stay shut. */
+.cna-modal[hidden] { display: none; }
+
+.cna-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483100;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+
+  background: rgba(12, 15, 18, .5);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+@media (min-height: 640px) {
+  .cna-modal { align-items: center; }
+}
+
+.cna-sheet {
+  width: 100%;
+  max-width: 448px;
+  /* Measured against the window box above, not vh. Larger text sizes are
+     done with zoom on the page, and vh does not scale with it — at Larger
+     a 78vh sheet came out taller than the screen and lost its cross off
+     the top. A percentage of the box it sits in cannot. */
+  max-height: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  border: 1px solid var(--cna-line);
+  border-radius: 16px;
+  background: var(--cna-card);
+  box-shadow: 0 8px 40px rgba(12, 15, 18, .28);
+}
+
+.cna-sheet:focus { outline: none; }
+
+.cna-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 12px 12px 16px;
+  border-bottom: 1px solid var(--cna-line);
+}
+
+/* The round button is normally pinned to the corner of the home or
+   settings header. In here it is one item in a row, so it sits where the
+   row puts it. Without this it escapes to the corner of the screen. */
+.cna-sheet-head .cna-gear { position: static; }
+
+.cna-sheet-head h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cna-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 16px 16px;
+}
+
+/* one release, newest first */
+.cna-news-when {
+  margin: 14px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--cna-ink-soft);
+}
+
+.cna-news-what {
+  margin: 3px 0 0;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.cna-news-points {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.cna-news-points li {
+  margin: 4px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--cna-ink-soft);
+}
+
 /* ---------------------------------------------------------------
    "Update ready" prompt — same manners as DOT.log's own: it waits,
    it never swaps versions under someone mid-entry.

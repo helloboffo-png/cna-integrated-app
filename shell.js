@@ -405,8 +405,12 @@
       try { card = JSON.parse(localStorage.getItem("cna.card." + app.id) || "null"); }
       catch (e) { return; }
       if (!card || !Array.isArray(card.marks)) return;
-      card.marks.forEach(function (m) {
+      card.marks.forEach(function (m, mi) {
         if (!m) return;
+        /* An app names its own marks. The name is only ever used as an id —
+           in the tick list and in the calendar file — so anything that is
+           not a plain word is dropped rather than trusted. */
+        var markKey = String(m.key || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 20) || ("m" + mi);
         /* a mark carries single days, a run of days, or both */
         var spans = [];
         if (Array.isArray(m.ranges)) {
@@ -438,6 +442,8 @@
         });
         if (!Object.keys(days).length && !spans.length) return;
         out.push({
+          app: app.id,
+          key: markKey,
           label: String(m.label || "").slice(0, 20),
           colour: String(m.colour),
           days: days,
@@ -978,6 +984,352 @@
   var homeScreen = null;
 
   /* ------------------------------------------------------------------
+     The small window
+
+     One window, reused. It is filled by whatever opens it, closes on
+     the cross, the backdrop or Escape, and hands focus back to the
+     button that opened it.
+     ------------------------------------------------------------------ */
+
+  var modalOpener = null;
+  var repaintCalPicks = null;
+
+  function openModal(title, body) {
+    var box = document.getElementById("cna-modal");
+    if (!box) return;
+    document.getElementById("cna-modal-title").textContent = title;
+    var slot = document.getElementById("cna-modal-body");
+    slot.textContent = "";
+    slot.appendChild(body);
+    slot.scrollTop = 0;
+    box.hidden = false;
+    /* Focus the window itself rather than its cross. A screen reader still
+       announces the window, and a thumb does not get a focus ring drawn
+       round a button it never pressed. */
+    box.querySelector(".cna-sheet").focus();
+  }
+
+  function closeModal() {
+    var box = document.getElementById("cna-modal");
+    if (!box || box.hidden) return;
+    box.hidden = true;
+    document.getElementById("cna-modal-body").textContent = "";
+    if (modalOpener) { try { modalOpener.focus(); } catch (e) {} }
+    modalOpener = null;
+  }
+
+  function initModal() {
+    var box = document.getElementById("cna-modal");
+    if (!box) return;
+    document.getElementById("cna-modal-close").addEventListener("click", closeModal);
+    /* the backdrop only, never a press that landed inside the sheet */
+    box.addEventListener("click", function (e) { if (e.target === box) closeModal(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeModal();
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     What's new
+
+     Written by hand, in the words someone using the app would use.
+     Newest first, and only the recent ones — this is a note about what
+     changed lately, not a history of the whole build.
+     ------------------------------------------------------------------ */
+
+  var RELEASES = [
+    {
+      when: "7 September 2026",
+      what: "Home button, and your days in Apple Calendar",
+      points: [
+        "Home is now the first tab along the bottom of Driving Log, OT Tracker and Taxi Claims, where your thumb already sits. The old link across the top is gone.",
+        "Settings can send your logged days to the phone's own Calendar. Tick the activities you want, press the button, choose Calendar.",
+        "This list. Press What's new any time to see what changed."
+      ]
+    },
+    {
+      when: "6 September 2026",
+      what: "Colour means the activity",
+      points: [
+        "Driving is yellow, parking blue, overtime green, taxi purple — the same colour on the home screen calendar as inside the app it came from.",
+        "The Parking tab inside Driving Log turns blue, so a blue dot and a blue screen match.",
+        "A trip lasting several days can draw as one line across those dates instead of a dot on each."
+      ]
+    },
+    {
+      when: "5 September 2026",
+      what: "Restoring a backup no longer wipes what is already here",
+      points: [
+        "Restoring now offers Add missing only, which brings in what the phone is missing and leaves everything already logged alone.",
+        "Replace everything is still there when that is genuinely what you want.",
+        "Restoring the same file twice changes nothing the second time."
+      ]
+    },
+    {
+      when: "4 September 2026",
+      what: "Taxi Claims split out, and a calendar on the home screen",
+      points: [
+        "Taxi rides moved into their own app. Everything already logged came across on its own, receipts included.",
+        "DOT.log is now called Driving Log. Nothing inside it changed.",
+        "The home screen shows the week, coloured by what happened each day. Swipe sideways to move through the months.",
+        "The figures cover this month only and start clean each month, except money still unclaimed from before, which keeps its own line.",
+        "Every app can back itself up, and says so when a month has gone by without one."
+      ]
+    },
+    {
+      when: "3 September 2026",
+      what: "OT Tracker split out",
+      points: [
+        "Overtime moved out of the driving log into its own app, with the pay rules and the rate calculator.",
+        "Every hour already logged came across. Nothing had to be re-typed.",
+        "The home screen started showing this month's figures above the app icons."
+      ]
+    }
+  ];
+
+  function buildNews() {
+    var wrap = document.createElement("div");
+    RELEASES.forEach(function (r) {
+      var when = document.createElement("p");
+      when.className = "cna-news-when";
+      when.textContent = r.when;
+      wrap.appendChild(when);
+
+      var what = document.createElement("p");
+      what.className = "cna-news-what";
+      what.textContent = r.what;
+      wrap.appendChild(what);
+
+      var ul = document.createElement("ul");
+      ul.className = "cna-news-points";
+      r.points.forEach(function (t) {
+        var li = document.createElement("li");
+        li.textContent = t;
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+    });
+    return wrap;
+  }
+
+  /* ------------------------------------------------------------------
+     Sending days to the phone's own calendar
+
+     Built from the very same summaries the home screen calendar reads,
+     so no sub-app has to be changed, or even know this exists.
+
+     A calendar file is a handover, not a live link: pressing the button
+     hands Apple a copy of the days as they stand. Doing it again later
+     hands over a fresh copy. Every day carries an id built from the app,
+     the activity and the date, so the second copy lands on top of the
+     first rather than beside it.
+     ------------------------------------------------------------------ */
+
+  var CAL_PICKS_KEY = "cna.calendarPicks.v1";
+
+  function readPicks() {
+    try {
+      var v = JSON.parse(localStorage.getItem(CAL_PICKS_KEY) || "{}");
+      return v && typeof v === "object" ? v : {};
+    } catch (e) { return {}; }
+  }
+
+  function writePicks(v) {
+    try { localStorage.setItem(CAL_PICKS_KEY, JSON.stringify(v)); } catch (e) {}
+  }
+
+  /* Folded at 75 octets, counted in bytes rather than letters, because a
+     name with an accent in it takes two. A continuation line begins with
+     one space, which counts towards its own 75. */
+  function icsFold(line) {
+    var enc = window.TextEncoder ? new TextEncoder() : null;
+    function width(ch) { return enc ? enc.encode(ch).length : ch.length; }
+    var out = [], cur = "", n = 0, limit = 74;
+    Array.from(line).forEach(function (ch) {
+      var w = width(ch);
+      if (n + w > limit) { out.push(cur); cur = ""; n = 1; limit = 74; }
+      cur += ch; n += w;
+    });
+    out.push(cur);
+    return out.join("\r\n ");
+  }
+
+  function icsText(s) {
+    return String(s)
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,")
+      .replace(/\r?\n/g, "\\n");
+  }
+
+  /* An all-day event ends on the morning after its last day, so a single
+     day runs from that date to the next one. Stepped in UTC: stepping a
+     local date over a clock change lands on the same day twice. */
+  function dayAfter(iso) {
+    var b = iso.split("-");
+    var d = new Date(Date.UTC(+b[0], +b[1] - 1, +b[2] + 1));
+    return d.toISOString().slice(0, 10);
+  }
+
+  function stamp() {
+    return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  }
+
+  function buildIcs(marks, picks) {
+    var now = stamp();
+    var lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CNA Apps//Calendar//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:CNA Apps"
+    ];
+    var count = 0;
+
+    function event(mark, from, to, detail) {
+      var title = detail ? mark.label + " " + detail : mark.label;
+      lines.push(
+        "BEGIN:VEVENT",
+        "UID:cna-" + mark.app + "-" + mark.key + "-" + from.replace(/-/g, "") + "@cna-apps",
+        "DTSTAMP:" + now,
+        "LAST-MODIFIED:" + now,
+        "DTSTART;VALUE=DATE:" + from.replace(/-/g, ""),
+        "DTEND;VALUE=DATE:" + dayAfter(to).replace(/-/g, ""),
+        icsFold("SUMMARY:" + icsText(title)),
+        "TRANSP:TRANSPARENT",
+        "END:VEVENT"
+      );
+      count++;
+    }
+
+    marks.forEach(function (m) {
+      if (picks[m.app + ":" + m.key] === false) return;
+      Object.keys(m.days).sort().forEach(function (iso) {
+        event(m, iso, iso, m.days[iso]);
+      });
+      m.spans.forEach(function (sp) { event(m, sp.from, sp.to, sp.detail); });
+    });
+
+    lines.push("END:VCALENDAR");
+    return { text: lines.join("\r\n") + "\r\n", count: count };
+  }
+
+  /* Handed straight to the phone's share sheet where that exists, which
+     is what puts Calendar in the list on an iPhone. Everywhere else it
+     saves as a file, which opens in Calendar when tapped. Both are called
+     inside the press itself — a share asked for later is refused. */
+  function handOver(text) {
+    var blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
+    var file = null;
+    try { file = new File([blob], "CNA Apps.ics", { type: "text/calendar" }); } catch (e) {}
+
+    if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ files: [file], title: "CNA Apps" })
+        .then(function () { return "shared"; })
+        .catch(function (err) {
+          if (err && err.name === "AbortError") return "cancelled";
+          return saveFile(blob);
+        });
+    }
+    return Promise.resolve(saveFile(blob));
+  }
+
+  function saveFile(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "CNA Apps.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    return "saved";
+  }
+
+  function initCalendarExport() {
+    var picksBox = document.getElementById("cna-cal-picks");
+    var sendBtn = document.getElementById("cna-cal-send");
+    var note = document.getElementById("cna-cal-note");
+    if (!picksBox || !sendBtn) return;
+
+    var marks = [];
+
+    function paint() {
+      marks = readMarks();
+      var picks = readPicks();
+      picksBox.textContent = "";
+      note.hidden = true;
+
+      if (!marks.length) {
+        var empty = document.createElement("p");
+        empty.className = "cna-empty";
+        empty.textContent = "Nothing logged yet.";
+        picksBox.appendChild(empty);
+        sendBtn.disabled = true;
+        return;
+      }
+
+      marks.forEach(function (m) {
+        var id = m.app + ":" + m.key;
+        var row = document.createElement("label");
+        row.className = "cna-check";
+
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = picks[id] !== false;      /* new activities start ticked */
+        box.addEventListener("change", function () {
+          var now = readPicks();
+          now[id] = box.checked;
+          writePicks(now);
+          sendBtn.disabled = !anyTicked();
+        });
+
+        var dot = document.createElement("i");
+        dot.style.background = m.colour;
+
+        var name = document.createElement("span");
+        var days = Object.keys(m.days).length + m.spans.length;
+        name.textContent = m.label + " · " + days + (days === 1 ? " day" : " days");
+
+        row.appendChild(box);
+        row.appendChild(dot);
+        row.appendChild(name);
+        picksBox.appendChild(row);
+      });
+
+      sendBtn.disabled = !anyTicked();
+    }
+
+    function anyTicked() {
+      return [].some.call(picksBox.querySelectorAll("input"), function (b) { return b.checked; });
+    }
+
+    sendBtn.addEventListener("click", function () {
+      var built = buildIcs(marks, readPicks());
+      if (!built.count) {
+        note.hidden = false;
+        note.textContent = "Nothing ticked has any days in it yet.";
+        return;
+      }
+      note.hidden = false;
+      note.textContent = "Preparing " + built.count + (built.count === 1 ? " day…" : " days…");
+
+      handOver(built.text).then(function (how) {
+        if (how === "cancelled") { note.textContent = "Left it. Nothing was sent."; return; }
+        note.textContent = how === "shared"
+          ? built.count + (built.count === 1 ? " day" : " days") + " handed over. Choose Calendar to add them."
+          : built.count + (built.count === 1 ? " day" : " days") + " saved as a file. Open it to add them to Calendar.";
+      }).catch(function () {
+        note.textContent = "Could not hand it over. Try again.";
+      });
+    });
+
+    paint();
+    return paint;
+  }
+
+  /* ------------------------------------------------------------------
      Settings screen — only present on the home screen
      ------------------------------------------------------------------ */
 
@@ -1000,7 +1352,12 @@
       panel.hidden = !settings;
       home.hidden = !!settings;
       window.scrollTo(0, 0);
-      if (settings) refreshUpdates();
+      if (settings) {
+        refreshUpdates();
+        /* day counts move as things are logged, so they are read fresh
+           every time rather than left as they were on first load */
+        if (repaintCalPicks) repaintCalPicks();
+      }
     }
     openBtn.addEventListener("click", function () { show(true); });
     closeBtn.addEventListener("click", function () { show(false); });
@@ -1131,6 +1488,14 @@
 
     checkBtn.addEventListener("click", function () { refreshUpdates(); });
 
+    var newsBtn = document.getElementById("cna-whats-new");
+    if (newsBtn) {
+      newsBtn.addEventListener("click", function () {
+        modalOpener = newsBtn;
+        openModal("What\u2019s new", buildNews());
+      });
+    }
+
     list.addEventListener("click", function (e) {
       var btn = e.target.closest(".cna-update-btn");
       if (!btn) return;
@@ -1174,6 +1539,8 @@
     initStrip();
     initCalendar();
     homeScreen = initHomeScreen();
+    initModal();
+    repaintCalPicks = initCalendarExport();
     initSettings();
 
     if (!("serviceWorker" in navigator)) return;

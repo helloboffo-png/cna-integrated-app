@@ -148,13 +148,42 @@
     </div>
   </div>
 
+  <!-- Ticked activities are written into a calendar file the phone hands
+       to its own Calendar app. Built from the same summaries the home
+       screen already reads, so no app has to be touched to feed it. -->
+  <h2 class="cna-section-title">Add to Apple Calendar</h2>
+  <div class="cna-card">
+    <div id="cna-cal-picks" class="cna-checks"></div>
+    <button id="cna-cal-send" class="cna-btn" type="button">Add to Apple Calendar</button>
+    <p id="cna-cal-note" class="cna-note" hidden></p>
+  </div>
+
   <h2 class="cna-section-title">App updates</h2>
   <div class="cna-card">
     <div id="cna-update-list" class="cna-update-list"></div>
-    <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>
+    <div class="cna-btn-row">
+      <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>
+      <button id="cna-whats-new" class="cna-btn" type="button">What's new</button>
+    </div>
   </div>
 
 </section>
+
+<!-- The small window. Empty until something opens it. -->
+<div id="cna-modal" class="cna-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cna-modal-title">
+  <div class="cna-sheet" tabindex="-1">
+    <header class="cna-sheet-head">
+      <h2 id="cna-modal-title">What&rsquo;s new</h2>
+      <button id="cna-modal-close" class="cna-gear" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </header>
+    <div id="cna-modal-body" class="cna-sheet-body"></div>
+  </div>
+</div>
 
 </div>
 
