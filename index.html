@@ -20,7 +20,11 @@
 
 <div id="cna-home">
 
-  <header class="cna-header cna-header-bare">
+  <!-- The date and the wrench share one line. The wrench used to sit
+       alone in an empty strip above it, which read as a leftover. -->
+  <header class="cna-today" id="cna-today">
+    <span class="cna-today-day" id="cna-today-day"></span>
+    <span class="cna-today-date" id="cna-today-date"></span>
     <button id="cna-settings-open" class="cna-gear" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -28,11 +32,6 @@
       </svg>
     </button>
   </header>
-
-  <div class="cna-today" id="cna-today">
-    <span class="cna-today-day" id="cna-today-day"></span>
-    <span class="cna-today-date" id="cna-today-date"></span>
-  </div>
 
   <!-- Filled in from the small summary each app leaves for the home
        screen. Empty until at least one app has been opened once. -->
@@ -110,7 +109,7 @@
           <circle cx="12" cy="12" r="9"/>
           <text x="12" y="12.9" text-anchor="middle" dominant-baseline="middle"
                 font-family="Inter Tight, system-ui, sans-serif" font-weight="700"
-                font-size="10.8" fill="currentColor" stroke="none">fw</text>
+                font-size="11" fill="currentColor" stroke="none">fw</text>
         </svg>
       </span>
       <span class="cna-app-label">farmerswife</span>

@@ -551,7 +551,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.8</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.9</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -738,7 +738,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.8 (7 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.9 (7 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -1004,11 +1004,11 @@
         ],
         items: [
           { key: "owed", value: money(owed).replace(/\.00$/, ""), label: "driving & parking",
-            alert: owed > 0, weight: 20, go: "#month" },
-          /* this month only, like every figure here — the home screen
-             starts each month clean */
-          { key: "todo", value: String(openThisMonth.length), label: "receipts to send",
-            alert: openThisMonth.length > 0, weight: 10, go: "#taxi" }
+            alert: owed > 0, weight: 20, go: "#month" }
+          /* There is no second figure for unsent receipts: the job below
+             the figures already says "2 parking receipts to send" and
+             takes you to the same screen. The same number twice is not
+             worth a line of the home page. */
         ].concat(olderOwed > 0 ? [
           /* The one thing a clean slate must not do is bury money from
              before it. Anything still unclaimed from an earlier month

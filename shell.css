@@ -45,6 +45,25 @@
   --cna-font: "Inter Tight", -apple-system, "SF Pro Text", "Segoe UI", Roboto,
     system-ui, sans-serif;
 
+  /* Five sizes, and nothing between them. The home screen had grown
+     twelve — 9, 10, 10.8, 11, 12, 13, 13.5, 14, 15, 18, 19, 20 — which is
+     the single biggest reason it read as unfinished. Every piece of text
+     on this page now picks one of these.
+       label  section headings, figure labels' siblings, legends
+       small  secondary text, calendar numbers, app names
+       body   rows meant to be read and tapped
+       title  the date
+       figure the numbers                                            */
+  --t-label: 11px;
+  --t-small: 13px;
+  --t-body: 15px;
+  --t-title: 20px;
+  --t-figure: 26px;
+
+  /* One card, used for every panel on the home screen, so the page reads
+     as three parts of one thing rather than three unrelated pieces. */
+  --cna-radius: 14px;
+
   --cna-paper: #F4F5F2;
   --cna-card: #FFFFFF;
   --cna-ink: #22282E;
@@ -138,7 +157,7 @@ body:has(> .cna-topbar) {
   background: var(--cna-card);
   color: var(--cna-ink);
 
-  font: 600 15px/1 var(--cna-font);
+  font: 600 var(--t-body)/1 var(--cna-font);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -176,11 +195,17 @@ body:has(> .cna-topbar) {
   min-height: 100vh;
 }
 
+/* The ground sits below the cards, never level with them. At #212830 it
+   was a shade lighter than the card colour itself, so in night mode the
+   panels were holding on by their 1px border alone — measured 1.02
+   against the ground, which is no separation at all. Dropping to the
+   same paper the sub-apps use takes it to 1.14 and makes the page one
+   set of surfaces rather than two. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-cna-theme="light"]) .cna-hub { background: #212830; }
+  :root:not([data-cna-theme="light"]) .cna-hub { background: var(--cna-paper); }
 }
 
-:root[data-cna-theme="dark"] .cna-hub { background: #212830; }
+:root[data-cna-theme="dark"] .cna-hub { background: #171B20; }
 :root[data-cna-theme="light"] .cna-hub { background: #F4F5F2; }
 
 .cna-hub * { box-sizing: border-box; }
@@ -188,31 +213,27 @@ body:has(> .cna-topbar) {
 .cna-wrap {
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
 }
 
-.cna-header { margin-bottom: 22px; }
-
-/* With the title gone the header holds only the wrench, so it needs
-   just enough height to sit in rather than a heading's worth. */
-.cna-header-bare { height: 30px; margin-bottom: 10px; }
+.cna-header { margin-bottom: 24px; }
 
 .cna-header h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--t-title);
   font-weight: 800;
   letter-spacing: -.01em;
 }
 
 .cna-header p {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--t-small);
   color: var(--cna-ink-soft);
 }
 
 .cna-section-title {
-  margin: 0 0 10px;
-  font-size: 12px;
+  margin: 0 0 8px;
+  font-size: var(--t-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .09em;
@@ -228,7 +249,13 @@ body:has(> .cna-topbar) {
    all, so a phone with no apps opened yet looks as it did before.
    --------------------------------------------------------------- */
 
-.cna-cal:not(:empty) { margin: 0 0 22px; }
+.cna-cal:not(:empty) {
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid var(--cna-line);
+  border-radius: var(--cna-radius);
+  background: var(--cna-card);
+}
 
 .cna-cal-head {
   display: flex;
@@ -237,7 +264,7 @@ body:has(> .cna-topbar) {
   gap: 10px;
   width: 100%;
   margin: 0 0 8px;
-  padding: 2px 2px 6px;
+  padding: 2px 2px 8px;
   background: none;
   border: none;
   border-bottom: 1px solid var(--cna-line);
@@ -249,13 +276,20 @@ body:has(> .cna-topbar) {
 .cna-cal-head:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; border-radius: 6px; }
 
 .cna-cal-title {
-  font-size: 12px;
+  font-size: var(--t-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .09em;
   color: var(--cna-ink-soft);
 }
-.cna-cal-hint { font-size: 10px; color: var(--cna-ink-soft); opacity: .75; }
+/* Matched to the heading beside it rather than set a size smaller in
+   lower case, which read as a stray link. */
+.cna-cal-hint {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--cna-ink-soft);
+}
 
 .cna-cal-dow {
   display: grid;
@@ -264,12 +298,11 @@ body:has(> .cna-topbar) {
   margin-bottom: 4px;
 }
 .cna-cal-dow span {
-  font-size: 9px;
+  font-size: var(--t-label);
   font-weight: 600;
   letter-spacing: .06em;
   text-align: center;
   color: var(--cna-ink-soft);
-  opacity: .8;
 }
 
 .cna-cal-week-row { display: flex; flex-direction: column; gap: 2px; }
@@ -321,10 +354,14 @@ body:has(> .cna-topbar) {
 button.cna-cal-cell { cursor: pointer; }
 .cna-cal-blank { visibility: hidden; }
 
-.cna-cal-n { font-size: 12px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.cna-cal-n { font-size: var(--t-small); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
 
-.cna-cal-today { background: color-mix(in srgb, var(--cna-accent) 15%, transparent); }
-.cna-cal-today .cna-cal-n { color: var(--cna-accent); font-weight: 700; }
+/* Today is marked by the tinted chip, and its number stays ink. Accent
+   red on its own tint measured 3.43, under the 4.5 a number this size
+   needs; white on the accent is no better at 4.33. The chip carries the
+   meaning perfectly well on its own. */
+.cna-cal-today { background: color-mix(in srgb, var(--cna-accent) 18%, transparent); }
+.cna-cal-today .cna-cal-n { font-weight: 700; }
 .cna-cal-picked { background: color-mix(in srgb, var(--cna-ink) 12%, transparent); }
 
 .cna-cal-dots { display: flex; gap: 2px; height: 4px; align-items: center; }
@@ -335,8 +372,8 @@ button.cna-cal-cell { cursor: pointer; }
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: 12px;
+  font-size: var(--t-small);
 }
 .cna-cal-detail-day { font-weight: 700; }
 .cna-cal-detail-bit { display: inline-flex; align-items: center; gap: 5px; color: var(--cna-ink-soft); }
@@ -347,7 +384,9 @@ button.cna-cal-cell { cursor: pointer; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cna-line);
 }
 .cna-cal-nav { display: flex; gap: 4px; flex: none; }
 .cna-cal-nav button {
@@ -357,7 +396,7 @@ button.cna-cal-cell { cursor: pointer; }
   border: 1px solid var(--cna-line);
   border-radius: 8px;
   color: var(--cna-ink-soft);
-  font: 600 15px/1 var(--cna-font);
+  font: 600 var(--t-body)/1 var(--cna-font);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -367,14 +406,14 @@ button.cna-cal-cell { cursor: pointer; }
 .cna-cal-back {
   width: auto !important;
   padding: 0 10px;
-  font-size: 11px !important;
+  font-size: var(--t-label) !important;
   font-weight: 600;
   color: var(--cna-accent) !important;
   border-color: color-mix(in srgb, var(--cna-accent) 45%, var(--cna-line)) !important;
 }
 
 .cna-cal-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.cna-cal-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; color: var(--cna-ink-soft); }
+.cna-cal-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: var(--t-label); color: var(--cna-ink-soft); }
 .cna-cal-legend i { width: 6px; height: 6px; border-radius: 50%; display: block; }
 
 /* ---------------------------------------------------------------
@@ -385,27 +424,36 @@ button.cna-cal-cell { cursor: pointer; }
    small and spaced above a heavy numeral, with a rule under it.
    --------------------------------------------------------------- */
 
+/* The date and the settings wrench share one line. The wrench used to
+   float alone in an empty strip of its own above everything, which read
+   as a leftover rather than a header. Room is kept clear on the right so
+   a long date never runs underneath it. */
 .cna-today {
+  position: relative;
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 
-  margin: 0 0 18px;
-  padding-bottom: 10px;
+  margin: 0 0 16px;
+  padding: 0 46px 12px 0;
   border-bottom: 1px solid var(--cna-line);
 }
+
+.cna-today .cna-gear { top: -2px; right: 0; }
 
 /* The day sits beside the date rather than above it. The phone's own
    status bar is already carrying the time and the day; two big lines of
    it here cost 79px of a 667px screen, which is a whole figure's worth
    of room spent on something nobody came to the home screen to read. */
+/* Quiet, not red. Red on this page now means one thing only — something
+   wants doing — and a weekday never does. */
 .cna-today-day {
-  font-size: 13px;
+  font-size: var(--t-label);
   font-weight: 600;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--cna-accent);
+  color: var(--cna-ink-soft);
 }
 
 /* ---------------------------------------------------------------
@@ -419,10 +467,32 @@ button.cna-cal-cell { cursor: pointer; }
    looks exactly as it did before.
    --------------------------------------------------------------- */
 
-.cna-strip:not(:empty) { margin: -12px 0 22px; }
+/* A panel like the other two, not loose numbers on the page. */
+.cna-strip:not(:empty) {
+  margin: 0 0 24px;
+  padding: 14px 12px;
+  border: 1px solid var(--cna-line);
+  border-radius: var(--cna-radius);
+  background: var(--cna-card);
+}
 
-.cna-strip-row { display: flex; flex-wrap: wrap; gap: 18px; }
-.cna-strip-row + .cna-strip-row { margin-top: 10px; gap: 14px; }
+/* An even three columns rather than a wrapping row. A fourth figure used
+   to fall onto a second line on its own, at a smaller size, and read as
+   something broken; on a grid it lands squarely under the first and
+   reads as deliberate. */
+/* Columns fit themselves rather than being fixed at three. A plain
+   "repeat(3, 1fr)" will not shrink a column below its own contents, so
+   "$18.40" quietly stole width from "$86" and the row came out uneven —
+   the very thing the grid was meant to fix. Given a floor instead, the
+   row holds three on a phone and drops to two when there is genuinely
+   not the room: a small screen, or the largest text size, where three
+   would have pushed a figure out of its column. */
+.cna-strip-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 14px 10px;
+}
+.cna-strip-row + .cna-strip-row { margin-top: 14px; }
 
 .cna-fig {
   display: block;
@@ -438,28 +508,30 @@ button.cna-cal-cell { cursor: pointer; }
 
 .cna-fig-n {
   display: block;
-  font-size: 19px;
+  font-size: var(--t-figure);
   font-weight: 600;
   letter-spacing: -.01em;
   font-variant-numeric: tabular-nums;
 }
 
+/* Sentence case, not tiny capitals. Capitals are what marks a section
+   heading on this page; a figure's own label is not one, and at 10px
+   with letter-spacing it was the least readable text on the screen. */
 .cna-fig-l {
-  font-size: 10px;
+  display: block;
+  margin-top: 2px;
+  font-size: var(--t-small);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: .07em;
   color: var(--cna-ink-soft);
 }
 
-/* red is reserved for a figure that wants something done about it */
-.cna-fig-hot .cna-fig-n { color: var(--cna-accent); }
-
-.cna-strip-row + .cna-strip-row .cna-fig-n { font-size: 14px; }
-.cna-strip-row + .cna-strip-row .cna-fig-l { font-size: 9px; }
+/* A figure is never red now. Red belongs to the list below, which says
+   what to actually do about it — when three of four numbers were red,
+   none of them stood out and the page just looked alarmed. */
+.cna-strip-row + .cna-strip-row .cna-fig-n { font-size: var(--t-title); }
 
 .cna-today-date {
-  font-size: 20px;
+  font-size: var(--t-title);
   font-weight: 600;
   letter-spacing: -.01em;
   line-height: 1.1;
@@ -474,22 +546,25 @@ button.cna-cal-cell { cursor: pointer; }
    height at all — a clear day should look clear.
    --------------------------------------------------------------- */
 
-.cna-todo:not(:empty) { margin: 0 0 20px; }
-
-.cna-todo-head {
-  margin-bottom: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--cna-ink-soft);
+.cna-todo:not(:empty) {
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid var(--cna-line);
+  border-radius: var(--cna-radius);
+  background: var(--cna-card);
 }
 
-.cna-todo-list {
-  border: 1px solid var(--cna-line);
-  border-radius: 12px;
-  background: var(--cna-card);
-  overflow: hidden;
+/* Sits inside the panel above a rule, exactly like the calendar's, so
+   both panels are built the same way. */
+.cna-todo-head {
+  margin: 0 0 8px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--cna-line);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--cna-ink-soft);
 }
 
 .cna-todo-row {
@@ -497,13 +572,24 @@ button.cna-cal-cell { cursor: pointer; }
   align-items: center;
   gap: 10px;
 
-  padding: 9px 12px;
-  min-height: 38px;
+  padding: 9px 2px;
+  min-height: 40px;
   border-bottom: 1px solid var(--cna-line);
 
   color: inherit;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* The one place red is spent. Every other red on this page has been
+   taken out so that this dot actually carries meaning. */
+.cna-todo-row::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cna-accent);
 }
 
 .cna-todo-row:last-child { border-bottom: none; }
@@ -512,14 +598,14 @@ a.cna-todo-row:active { background: var(--cna-paper); }
 .cna-todo-text {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: var(--t-body);
+  font-weight: 500;
   line-height: 1.3;
 }
 
 .cna-todo-go {
   flex: 0 0 auto;
-  font-size: 18px;
+  font-size: var(--t-body);
   line-height: 1;
   color: var(--cna-ink-soft);
 }
@@ -590,7 +676,7 @@ a.cna-todo-row:focus-visible {
 }
 
 .cna-app-label {
-  font-size: 12px;
+  font-size: var(--t-small);
   font-weight: 500;
   line-height: 1.25;
   text-align: center;
@@ -690,7 +776,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   color: var(--cna-accent-ink);
   box-shadow: var(--cna-shadow);
 
-  font: 700 15px/1 var(--cna-font);
+  font: 700 var(--t-body)/1 var(--cna-font);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -710,7 +796,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 .cna-foot {
   margin: 0;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--t-small);
   color: var(--cna-ink-soft);
 }
 
@@ -746,16 +832,16 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 
 .cna-card {
   padding: 14px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   border: 1px solid var(--cna-line);
-  border-radius: 14px;
+  border-radius: var(--cna-radius);
   background: var(--cna-card);
   box-shadow: var(--cna-shadow);
 }
 
 .cna-hint {
   margin: 12px 0 0;
-  font-size: 13px;
+  font-size: var(--t-small);
   line-height: 1.45;
   color: var(--cna-ink-soft);
 }
@@ -783,7 +869,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   background: transparent;
   color: var(--cna-ink-soft);
 
-  font: 600 13px/1.2 var(--cna-font);
+  font: 600 var(--t-small)/1.2 var(--cna-font);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -821,14 +907,14 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 .cna-update-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 15px;
+  font-size: var(--t-body);
   font-weight: 600;
 }
 
 .cna-update-state {
   display: block;
   margin-top: 2px;
-  font-size: 12.5px;
+  font-size: var(--t-small);
   font-weight: 400;
   line-height: 1.4;
   color: var(--cna-ink-soft);
@@ -841,7 +927,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   border-radius: 9px;
   background: var(--cna-accent);
   color: var(--cna-accent-ink);
-  font: 700 13px/1 var(--cna-font);
+  font: 700 var(--t-small)/1 var(--cna-font);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -853,7 +939,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   border-radius: 10px;
   background: transparent;
   color: var(--cna-ink);
-  font: 600 14px/1 var(--cna-font);
+  font: 600 var(--t-small)/1 var(--cna-font);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -888,7 +974,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   padding: 10px 0;
   border-bottom: 1px solid var(--cna-line);
 
-  font-size: 15px;
+  font-size: var(--t-body);
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -919,14 +1005,14 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
    explanation of what the button is for. */
 .cna-note {
   margin: 12px 0 0;
-  font-size: 13px;
+  font-size: var(--t-small);
   line-height: 1.45;
   color: var(--cna-ink-soft);
 }
 
 .cna-empty {
   margin: 2px 0 14px;
-  font-size: 14px;
+  font-size: var(--t-body);
   color: var(--cna-ink-soft);
 }
 
@@ -998,7 +1084,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 .cna-sheet-head h2 {
   flex: 1 1 auto;
   margin: 0;
-  font-size: 17px;
+  font-size: var(--t-title);
   font-weight: 700;
 }
 
@@ -1012,8 +1098,8 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 
 /* one release, newest first */
 .cna-news-when {
-  margin: 14px 0 0;
-  font-size: 12px;
+  margin: 16px 0 0;
+  font-size: var(--t-label);
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -1021,8 +1107,8 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 }
 
 .cna-news-what {
-  margin: 3px 0 0;
-  font-size: 15.5px;
+  margin: 4px 0 0;
+  font-size: var(--t-body);
   font-weight: 700;
 }
 
@@ -1033,7 +1119,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 
 .cna-news-points li {
   margin: 4px 0;
-  font-size: 14px;
+  font-size: var(--t-small);
   line-height: 1.5;
   color: var(--cna-ink-soft);
 }
@@ -1062,7 +1148,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   color: var(--cna-accent-ink);
   box-shadow: var(--cna-shadow);
 
-  font: 700 14px/1.35 var(--cna-font);
+  font: 700 var(--t-small)/1.35 var(--cna-font);
 }
 
 .cna-update-bar span { flex: 1; }
@@ -1074,7 +1160,7 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   border-radius: 8px;
   background: var(--cna-accent-ink);
   color: var(--cna-accent);
-  font: 700 13px/1 inherit;
+  font: 700 var(--t-small)/1 inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
