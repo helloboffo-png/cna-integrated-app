@@ -1367,10 +1367,10 @@
     var lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//CNA Apps//Calendar//EN",
+      "PRODID:-//CNA Integrated App//Calendar//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      "X-WR-CALNAME:CNA Apps"
+      "X-WR-CALNAME:CNA Integrated App"
     ];
     var count = 0;
 
@@ -1418,7 +1418,7 @@
   function handOver(text, onFallback) {
     var blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
     var file = null;
-    try { file = new File([blob], "CNA Apps.ics", { type: "text/calendar" }); } catch (e) {}
+    try { file = new File([blob], "CNA Integrated App.ics", { type: "text/calendar" }); } catch (e) {}
 
     function offerLink(why) {
       var url = URL.createObjectURL(blob);
@@ -1438,7 +1438,7 @@
 
     if (!welcome) return Promise.resolve(offerLink("share-refused-file"));
 
-    return navigator.share({ files: [file], title: "CNA Apps" })
+    return navigator.share({ files: [file], title: "CNA Integrated App" })
       .then(function () { return "shared"; })
       .catch(function (err) {
         if (err && err.name === "AbortError") return "cancelled";
@@ -1522,7 +1522,7 @@
       var a = document.createElement("a");
       a.className = "cna-btn cna-btn-link";
       a.href = url;
-      a.download = "CNA Apps.ics";
+      a.download = "CNA Integrated App.ics";
       a.type = "text/calendar";
       a.rel = "noopener";
       a.textContent = "Open the file with " + days(count);
@@ -2012,7 +2012,7 @@
 
       var name = document.createElement("div");
       name.className = "cna-update-name";
-      name.textContent = "CNA Apps";
+      name.textContent = "CNA Integrated App";
 
       var state = document.createElement("span");
       state.className = "cna-update-state";

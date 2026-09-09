@@ -1,6 +1,6 @@
 {
-  "name": "CNA Apps",
-  "short_name": "CNA Apps",
+  "name": "CNA Integrated App",
+  "short_name": "CIA",
   "description": "Work apps for the crew — vehicle and overtime logging, overseas OT forms. Works fully offline, no account needed.",
   "start_url": "./index.html",
   "scope": "./",
