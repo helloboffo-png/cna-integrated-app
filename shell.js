@@ -1744,6 +1744,12 @@
       allBtn.disabled = false;
     }
 
+    /* "A", "A and B", "A, B and C" — not "A and B and C" */
+    function listOf(names) {
+      if (names.length <= 1) return names[0] || "";
+      return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+    }
+
     function ticked() {
       return [].map.call(listBox.querySelectorAll("input:checked"), function (b) { return b.value; });
     }
@@ -1779,10 +1785,10 @@
         if (i >= want.length) {
           allBtn.disabled = false;
           var trouble = "";
-          if (stale.length) trouble += " " + stale.join(" and ") +
+          if (stale.length) trouble += " " + listOf(stale) +
             (stale.length === 1 ? " needs" : " need") +
             " updating first — open App updates below.";
-          if (failed.length) trouble += " Couldn't reach " + failed.join(", ") + ".";
+          if (failed.length) trouble += " Couldn't reach " + listOf(failed) + ".";
           note.textContent = (got
             ? "Ready — press each file below to save it. Choose iCloud Drive."
             : "Nothing backed up.") + trouble;
