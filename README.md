@@ -90,6 +90,32 @@ arranges what it finds. Four things go in it, all optional:
 Everything read from a card is treated as untrusted: text only, capped
 lengths, and `go` must be a bare `#screen` inside that app's own folder.
 
+## Backing up
+
+Backup and Restore live on the main page, in Settings, and cover every app
+at once. The container still never reads a sub-app's storage — it opens the
+app out of sight in an iframe, asks it in a `postMessage`, and gets back a
+finished file it never opens.
+
+An app joins in by listening for `{cna:"backup", id, ask}` from the same
+origin and replying with `{cna:"backup-reply", id, app, ...}`. Four asks:
+
+| ask | reply |
+|---|---|
+| `status` | `{ok, name, backupAt, kinds, detail}` |
+| `backup` (+ `kind`: `plain`/`full`) | `{ok, blob, filename, note}` |
+| `describe` (+ `text`) | `{ok, summary}` — used to find which app owns a file |
+| `restore` (+ `text`, `mode`: `merge`/`replace`) | `{ok, message}` |
+
+The app owns its format, what goes in a backup, and the rules for putting
+one back. Rebuild it and its backup changes with it, with nothing to alter
+in the container. An app that does not answer within 60s is reported as
+unreachable rather than failing the others.
+
+Sub-apps must NOT carry their own Backup buttons or backup reminders —
+those moved to the main page. Each one reports `backupAt` and `hasData` in
+its card so the container can raise one reminder for all of them.
+
 ## Adding a new app later
 
 1. Put it in its own folder, e.g. `payslips/`.

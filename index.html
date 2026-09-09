@@ -153,30 +153,73 @@
     </div>
   </div>
 
+  <!-- The two above are settings you change, so they stay open. The three
+       below are tools you use now and then, and folded away they keep the
+       page to one screen — each still says its state on the closed row,
+       which is more than an open panel was telling you. -->
+
   <!-- Ticked activities are written into a calendar file the phone hands
        to its own Calendar app. Built from the same summaries the home
        screen already reads, so no app has to be touched to feed it. -->
-  <h2 class="cna-section-title">Add to Calendar</h2>
-  <div class="cna-card">
-    <div id="cna-cal-picks" class="cna-checks"></div>
-    <button id="cna-cal-send" class="cna-btn" type="button">Add to Calendar</button>
-    <p id="cna-cal-note" class="cna-note" hidden></p>
-    <!-- Filled in only when the phone will not hand the file over by
-         itself, so there is always something real to tap. -->
-    <div id="cna-cal-fallback" hidden></div>
-  </div>
-
-  <h2 class="cna-section-title">App updates</h2>
-  <div class="cna-card">
-    <!-- The container itself first, then the apps it holds. It updates by
-         a different route from theirs, so it is drawn separately. -->
-    <div id="cna-shell-row" class="cna-update-list"></div>
-    <div id="cna-update-list" class="cna-update-list"></div>
-    <div class="cna-btn-row">
-      <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>
-      <button id="cna-whats-new" class="cna-btn" type="button">What's new</button>
+  <details class="cna-fold">
+    <summary>
+      <span class="cna-fold-title">Add to Calendar</span>
+      <span class="cna-fold-meta" id="cna-cal-meta"></span>
+      <span class="cna-fold-chev" aria-hidden="true"></span>
+    </summary>
+    <div class="cna-fold-body">
+      <div id="cna-cal-picks" class="cna-checks"></div>
+      <button id="cna-cal-send" class="cna-btn" type="button">Add to Calendar</button>
+      <p id="cna-cal-note" class="cna-note" hidden></p>
+      <!-- Filled in only when the phone will not hand the file over by
+           itself, so there is always something real to tap. -->
+      <div id="cna-cal-fallback" hidden></div>
     </div>
-  </div>
+  </details>
+
+  <!-- Backup lives here now rather than four times over inside the apps.
+       This page does not read any app's storage: it asks each one for a
+       finished file and never opens it. -->
+  <details class="cna-fold" id="cna-fold-backup">
+    <summary>
+      <span class="cna-fold-title">Backup</span>
+      <span class="cna-fold-meta" id="cna-backup-age"></span>
+      <span class="cna-fold-chev" aria-hidden="true"></span>
+    </summary>
+    <div class="cna-fold-body">
+      <div id="cna-backup-list" class="cna-checks"></div>
+      <label class="cna-check cna-check-plain">
+        <input type="checkbox" id="cna-backup-full" checked>
+        <span>Include receipt photos</span>
+      </label>
+      <div class="cna-btn-row">
+        <button id="cna-backup-all" class="cna-btn" type="button">Back up ticked</button>
+        <button id="cna-restore" class="cna-btn" type="button">Restore</button>
+      </div>
+      <p id="cna-backup-note" class="cna-note" hidden></p>
+      <div id="cna-backup-files" hidden></div>
+      <input type="file" id="cna-restore-file" accept=".json,application/json" hidden>
+      <p class="cna-hint">Save to <strong>iCloud Drive</strong>, not On My iPhone &mdash; then a lost phone doesn't take the backup with it.</p>
+    </div>
+  </details>
+
+  <details class="cna-fold">
+    <summary>
+      <span class="cna-fold-title">App updates</span>
+      <span class="cna-fold-meta" id="cna-updates-meta"></span>
+      <span class="cna-fold-chev" aria-hidden="true"></span>
+    </summary>
+    <div class="cna-fold-body">
+      <!-- The container itself first, then the apps it holds. It updates by
+           a different route from theirs, so it is drawn separately. -->
+      <div id="cna-shell-row" class="cna-update-list"></div>
+      <div id="cna-update-list" class="cna-update-list"></div>
+      <div class="cna-btn-row">
+        <button id="cna-check-updates" class="cna-btn" type="button">Check for updates</button>
+        <button id="cna-whats-new" class="cna-btn" type="button">What's new</button>
+      </div>
+    </div>
+  </details>
 
 </section>
 
@@ -197,6 +240,10 @@
 </div>
 
 </div>
+
+<!-- Each app is opened out of sight only long enough to answer. Nothing
+     is shown, and they are taken down again when the answer arrives. -->
+<div id="cna-askers" aria-hidden="true"></div>
 
 <script src="shell.js"></script>
 </body>

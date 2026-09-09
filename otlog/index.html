@@ -394,7 +394,6 @@
 
   <!-- ============ LOG ============ -->
   <section class="screen active" id="screen-log">
-    <div id="backup-note"></div>
     <div id="carry-banner"></div>
     <div id="today-status"></div>
 
@@ -420,7 +419,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v1.12</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.0</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -496,20 +495,17 @@
       </div>
     </details>
 
-    <details class="card sec" id="sec-backup">
+    <!-- Backing up moved to the main page, where one press covers this
+         app and every other one. -->
+    <details class="card sec" id="sec-storage">
       <summary>
-        <span class="sec-title">Backup</span>
+        <span class="sec-title">Storage</span>
         <span class="sec-meta" id="backup-meta"></span>
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
         <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
-        <p class="hint">Your overtime lives only on this phone. Export a backup now and then; import it on a new phone to get everything back.</p>
-        <div class="btn-row">
-          <button class="secondary" id="export-data">Backup</button>
-          <button class="secondary" id="import-data">Restore</button>
-        </div>
-        <input type="file" id="import-file" accept="application/json,.json" style="display:none">
+        <p class="hint">Back up from Settings on the main page — one press covers this app and every other one.</p>
       </div>
     </details>
 
@@ -759,18 +755,15 @@
         jobs.push({ key: "rate", weight: 8, go: "#settings",
           text: "Set your hourly rate" });
       }
-      var backupAge = db.lastBackupAt
-        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
-      if (anyHours && (backupAge === null || backupAge >= 30)) {
-        jobs.push({ key: "backup", weight: 4, go: "#settings",
-          text: backupAge === null ? "Back up OT Tracker \u2014 never done"
-                                   : "Back up OT Tracker \u2014 " + backupAge + " days ago" });
-      }
+      /* No backup job here any more: the main page raises one reminder
+         covering every app, from the dates each of them reports. */
 
       localStorage.setItem("cna.card.otlog", JSON.stringify({
         app: "otlog",
         name: "OT Tracker",
         at: Date.now(),
+        backupAt: db.lastBackupAt || null,
+        hasData: anyHours,
         todo: jobs,
         marks: [
           /* go is where a tap on that day's dot lands, on the home
@@ -1166,95 +1159,121 @@
      the stamp it would look close enough to accept. */
   var BACKUP_FORMAT = "otlog-backup-1";
 
-  $("export-data").addEventListener("click", function () {
+  /* ---------- backup, asked for from the main page ----------
+
+     The buttons used to be on this screen. Backing up now happens once,
+     from the main page, covering every app in one press — but the main
+     page does not and must not read this app's storage. It asks, in a
+     message, and what it gets back is a finished file it never opens.
+     Everything about what a backup *is* stays here. */
+
+  function buildBackup(kind, cb) {
     var text = JSON.stringify({ format: BACKUP_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
     var blob = new Blob([text], { type: "application/json" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "ot-tracker-backup-" + todayISO() + ".json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
     noteBackupTaken();
-    toast("Backup downloaded");
-  });
+    cb(blob, "ot-tracker-backup-" + todayISO() + ".json",
+       Object.keys(db.entries).length + " day" + (Object.keys(db.entries).length === 1 ? "" : "s"));
+  }
 
-  $("import-data").addEventListener("click", function () { $("import-file").click(); });
-  $("import-file").addEventListener("change", function () {
-    var f = this.files[0];
-    this.value = "";
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      var data;
-      try {
-        var parsed = JSON.parse(reader.result);
-        if (!parsed || parsed.format !== BACKUP_FORMAT) throw new Error("not ours");
-        data = parsed.data;
-        if (!data || typeof data !== "object" || !data.entries || typeof data.entries !== "object") throw new Error("bad shape");
-      } catch (e) {
-        toast("That file isn't an OT Tracker backup");
-        return;
-      }
+  function readBackup(text) {
+    try {
+      var parsed = JSON.parse(text);
+      if (!parsed || parsed.format !== BACKUP_FORMAT) return null;
+      var data = parsed.data;
+      if (!data || typeof data !== "object" || !data.entries || typeof data.entries !== "object") return null;
       var days = Object.keys(data.entries).length;
+      return { data: data, summary: days + " day" + (days === 1 ? "" : "s") };
+    } catch (e) { return null; }
+  }
 
-      function afterRestore(message) {
-        db.lastBackupAt = Date.now();   /* they clearly have a file */
-        db.backupSnoozeUntil = 0;
-        save();
-        applyTheme();
-        loadEntryIntoForm(todayISO());
-        renderAll();
-        toast(message);
-      }
+  function applyBackup(text, mode, cb) {
+    var read = readBackup(text);
+    if (!read) { cb(false, "That file isn't an OT Tracker backup"); return; }
+    var data = read.data;
 
-      /* Adding only what is missing, so nothing already logged here is
-         touched. A day already on this phone always wins, and the pay
-         rules in use now beat ones saved months ago. */
-      function mergeIn() {
-        var added = 0, kept = 0;
-        Object.keys(data.entries).forEach(function (iso) {
-          var e = data.entries[iso];
-          if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
-          var ot = typeof e.ot === "number" ? e.ot : NaN;
-          if (isNaN(ot) || ot <= 0) return;
-          if (db.entries[iso]) { kept++; return; }
-          db.entries[iso] = { date: iso, ot: ot, dayType: DAY_TYPE_LABEL[e.dayType] ? e.dayType : "normal" };
-          added++;
-        });
-        /* a rate is only taken onto one nobody has set here yet */
-        var s2 = data.settings;
-        if (db.settings.baseRate === null && s2 && typeof s2 === "object" &&
-            typeof s2.baseRate === "number" && s2.baseRate > 0) {
-          db.settings.baseRate = s2.baseRate;
-        }
-        afterRestore("Added " + added + " day" + (added === 1 ? "" : "s") +
-          (kept ? " · kept your " + kept + " existing day" + (kept === 1 ? "" : "s") : ""));
-      }
+    function afterRestore(message) {
+      db.lastBackupAt = Date.now();   /* they clearly have a file */
+      db.backupSnoozeUntil = 0;
+      save();
+      applyTheme();
+      loadEntryIntoForm(todayISO());
+      renderAll();
+      cb(true, message);
+    }
 
-      function replaceAll() {
-        try { localStorage.setItem(KEY, JSON.stringify(data)); }
-        catch (e) { toast("Phone storage is full — not restored"); return; }
-        db = load();
-        afterRestore("Everything replaced — " + Object.keys(db.entries).length + " days");
-      }
+    if (mode === "replace") {
+      try { localStorage.setItem(KEY, JSON.stringify(data)); }
+      catch (e) { cb(false, "Phone storage is full — not restored"); return; }
+      db = load();
+      afterRestore("Everything replaced — " + Object.keys(db.entries).length + " days");
+      return;
+    }
 
-      confirmDialog({
-        title: "Restore backup?",
-        message: "This backup holds " + days + " day" + (days === 1 ? "" : "s") + ". " +
-                 "Add missing only keeps every day already on this phone and fills in the gaps. " +
-                 "Replace everything wipes what is here first — only use that on a phone with " +
-                 "nothing on it yet. Driving Log and the other apps are not touched either way.",
-        altLabel: "Add missing only",
-        onAlt: mergeIn,
-        confirmLabel: "Replace everything",
-        onConfirm: replaceAll
+    /* Adding only what is missing, so nothing already logged here is
+       touched. A day already on this phone always wins, and the pay
+       rules in use now beat ones saved months ago. */
+    var added = 0, kept = 0;
+    Object.keys(data.entries).forEach(function (iso) {
+      var e = data.entries[iso];
+      if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+      var ot = typeof e.ot === "number" ? e.ot : NaN;
+      if (isNaN(ot) || ot <= 0) return;
+      if (db.entries[iso]) { kept++; return; }
+      db.entries[iso] = { date: iso, ot: ot, dayType: DAY_TYPE_LABEL[e.dayType] ? e.dayType : "normal" };
+      added++;
+    });
+    /* a rate is only taken onto one nobody has set here yet */
+    var s2 = data.settings;
+    if (db.settings.baseRate === null && s2 && typeof s2 === "object" &&
+        typeof s2.baseRate === "number" && s2.baseRate > 0) {
+      db.settings.baseRate = s2.baseRate;
+    }
+    afterRestore("Added " + added + " day" + (added === 1 ? "" : "s") +
+      (kept ? " · kept your " + kept + " existing day" + (kept === 1 ? "" : "s") : ""));
+  }
+
+  /* The one seam the main page talks through. Same origin only. */
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin || !e.source) return;
+    var msg = e.data;
+    if (!msg || msg.cna !== "backup" || !msg.id) return;
+    function reply(payload) {
+      payload.cna = "backup-reply";
+      payload.id = msg.id;
+      payload.app = "otlog";
+      try { e.source.postMessage(payload, location.origin); } catch (err) {}
+    }
+    if (msg.ask === "status") {
+      var n = Object.keys(db.entries).length;
+      reply({
+        ok: true,
+        name: "OT Tracker",
+        backupAt: db.lastBackupAt || null,
+        kinds: ["plain"],
+        detail: n + " day" + (n === 1 ? "" : "s") + " of overtime"
       });
-    };
-    reader.readAsText(f);
+      return;
+    }
+    if (msg.ask === "backup") {
+      try {
+        buildBackup(msg.kind, function (blob, filename, note) {
+          reply({ ok: true, blob: blob, filename: filename, note: note });
+        });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
+    if (msg.ask === "describe") {
+      var read = readBackup(msg.text);
+      reply(read ? { ok: true, summary: read.summary } : { ok: false, error: "not an OT Tracker backup" });
+      return;
+    }
+    if (msg.ask === "restore") {
+      try {
+        applyBackup(msg.text, msg.mode, function (ok, message) { reply({ ok: ok, message: message }); });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
   });
-
 
   /* ---------- backup reminder ----------
      A backup is a file someone has to remember to make, and nobody does.
@@ -1284,42 +1303,7 @@
     db.backupSnoozeUntil = 0;
     save();
     renderSettings();
-    renderBackupNote();
   }
-  function renderBackupNote() {
-    var box = $("backup-note");
-    if (!box) return;
-    box.textContent = "";
-    if (!Object.keys(db.entries).length) return;                       /* nothing to lose yet */
-    if (db.backupSnoozeUntil && Date.now() < db.backupSnoozeUntil) return;
-    var n = backupAgeDays();
-    if (n !== null && n < BACKUP_STALE_DAYS) return;
-
-    var b = el("div", "carry-banner");
-    b.appendChild(el("p", null, (n === null
-      ? "This has never been backed up."
-      : backupAgeText().replace(/\.$/, "") + " — worth doing again.") +
-      " Everything is on this phone only; lose it and it is gone."));
-    var row = el("div", "btn-row");
-    var go = el("button", "secondary", "Back up now");
-    go.addEventListener("click", function () {
-      switchTab("screen-settings");
-      var sec = $("sec-backup");
-      if (sec) sec.open = true;
-      $("export-data").click();
-    });
-    var later = el("button", "secondary", "Later");
-    later.addEventListener("click", function () {
-      db.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
-      save();
-      box.textContent = "";
-    });
-    row.appendChild(go);
-    row.appendChild(later);
-    b.appendChild(row);
-    box.appendChild(b);
-  }
-
   $("wipe-all").addEventListener("click", function () {
     confirmDialog({
       title: "Erase everything?",
@@ -1427,7 +1411,6 @@
 
   /* ---------- boot ---------- */
   function renderAll() {
-    renderBackupNote();
     renderCarryBanner();
     renderTodayStatus();
     renderLiveCalc();

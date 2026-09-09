@@ -918,6 +918,75 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   outline-offset: 2px;
 }
 
+/* ---------------------------------------------------------------
+   A folded section.
+
+   Appearance and Text size stay open — they are settings you change.
+   These are tools you use now and then, and folded they keep Settings
+   to one screen while still saying their state on the closed row.
+   --------------------------------------------------------------- */
+
+.cna-fold {
+  margin-bottom: 24px;
+  border: 1px solid var(--cna-line);
+  border-radius: var(--cna-radius);
+  background: var(--cna-card);
+  overflow: hidden;
+}
+
+.cna-fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cna-fold > summary::-webkit-details-marker { display: none; }
+.cna-fold > summary:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: -2px; }
+
+.cna-fold-title {
+  flex: 0 0 auto;
+  font-size: var(--t-body);
+  font-weight: 700;
+}
+
+.cna-fold-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--t-small);
+  color: var(--cna-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a chevron drawn rather than typed, so it sits square at any text size */
+.cna-fold-chev {
+  flex: 0 0 auto;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--cna-ink-soft);
+  border-bottom: 2px solid var(--cna-ink-soft);
+  transform: rotate(45deg);
+  margin: -3px 2px 0 0;
+  transition: transform .15s ease;
+}
+.cna-fold[open] > summary .cna-fold-chev {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cna-fold-chev { transition: none; }
+}
+
+.cna-fold-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--cna-line);
+  padding-top: 14px;
+}
+
 /* one line per app */
 .cna-update-list {
   display: grid;
@@ -989,6 +1058,31 @@ a.cna-btn-link {
   font-weight: 700;
 }
 a.cna-btn-link:active { background: var(--cna-paper); }
+a.cna-btn-link + a.cna-btn-link { margin-top: 8px; }
+
+/* an option that is not one of a set — no colour dot, no divider */
+.cna-check-plain {
+  border-bottom: none;
+  padding-top: 14px;
+}
+
+/* a job of this page's own is a button, so it needs the row's own look
+   rather than a browser's idea of one */
+button.cna-todo-row {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--cna-line);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.cna-todo-row:last-child { border-bottom: none; }
+button.cna-todo-row:active { background: var(--cna-paper); }
+button.cna-todo-row:focus-visible {
+  outline: 2px solid var(--cna-accent);
+  outline-offset: -2px;
+}
 
 /* two buttons sharing a row */
 .cna-btn-row {

@@ -322,7 +322,6 @@
 
   <!-- ============ LOG ============ -->
   <section class="screen active" id="screen-log">
-    <div id="backup-note"></div>
     <div id="carry-banner"></div>
     <div id="today-status"></div>
 
@@ -355,7 +354,7 @@
       <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v1.9</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v2.0</p>
   </section>
 
   <!-- ============ RECEIPTS ============ -->
@@ -400,27 +399,10 @@
       </summary>
       <div class="sec-body">
         <p class="hint" id="storage-detail"></p>
-      </div>
-    </details>
-
-    <details class="card sec" id="sec-backup">
-      <summary>
-        <span class="sec-title">Backup</span>
-        <span class="sec-meta" id="backup-meta"></span>
-        <span class="chev"></span>
-      </summary>
-      <div class="sec-body">
         <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
-        <p class="hint">Your rides live only on this phone. Export a backup now and then; import it on a new phone to get everything back.</p>
-        <div class="btn-row">
-          <button class="secondary" id="export-data">Backup</button>
-          <button class="secondary" id="import-data">Restore</button>
-        </div>
-        <p class="hint" style="margin-top:14px;">The plain backup above is small and quick, but holds no receipt screenshots. The full one includes every screenshot, so it is large and takes a while — use it before changing phones.</p>
-        <div class="btn-row">
-          <button class="secondary" id="export-archive" style="flex:1">Full backup, with screenshots</button>
-        </div>
-        <input type="file" id="import-file" accept="application/json,.json" style="display:none">
+        <!-- Backing up moved to the main page, where one press covers this
+             app and every other one. -->
+        <p class="hint">Back up from Settings on the main page — one press covers this app and every other one.</p>
       </div>
     </details>
 
@@ -601,16 +583,13 @@
           text: open.length === 1 ? "1 taxi ride to claim"
                                   : open.length + " taxi rides to claim" });
       }
-      var backupAge = db.lastBackupAt
-        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
-      if (db.rides.length && (backupAge === null || backupAge >= 30)) {
-        jobs.push({ key: "backup", weight: 3, go: "#settings",
-          text: backupAge === null ? "Back up Taxi Claims \u2014 never done"
-                                   : "Back up Taxi Claims \u2014 " + backupAge + " days ago" });
-      }
+      /* No backup job here any more: the main page raises one reminder
+         covering every app, from the dates each of them reports. */
 
       localStorage.setItem("cna.card.taxi", JSON.stringify({
         app: "taxi", name: "Taxi Claims", at: Date.now(),
+        backupAt: db.lastBackupAt || null,
+        hasData: db.rides.length > 0,
         todo: jobs,
         marks: [
           /* go is where a tap on that day's dot lands, on the home
@@ -1215,7 +1194,6 @@
     else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space.");
     $("storage-detail").textContent = lines.join(" ");
     $("wipe-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides");
-    $("backup-meta").textContent = backupAgeDays() === null ? "never" : backupAgeText().replace(/^Backed up |\.$/g, "");
     /* the plain backup carries no screenshots, so saying only "backed up"
        would overstate what is actually protected */
     var age = backupAgeText();
@@ -1244,13 +1222,13 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
   }
 
-  $("export-data").addEventListener("click", function () {
-    var text = JSON.stringify({ format: PLAIN_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
-    download(new Blob([text], { type: "application/json" }), "taxi-claims-backup-" + todayISO() + ".json");
-    db.lastPlainBackupAt = Date.now();
-    noteBackupTaken();
-    toast("Backup downloaded");
-  });
+  /* ---------- backup, asked for from the main page ----------
+
+     The buttons used to be on this screen. Backing up now happens once,
+     from the main page, covering every app in one press — but the main
+     page does not and must not read this app's storage. It asks, in a
+     message, and what it gets back is a finished file it never opens.
+     Everything about what a backup *is* stays here. */
 
   function blobToDataUrl(blob, cb) {
     var r = new FileReader();
@@ -1259,25 +1237,35 @@
     r.readAsDataURL(blob);
   }
 
-  /* Assembled as an array of string pieces handed to Blob rather than one
-     giant JSON.stringify, and photos are read one at a time: a few hundred
-     screenshots is tens of megabytes, and building that as a single string
-     can fail outright on a phone. */
-  $("export-archive").addEventListener("click", function () {
+  /* "plain" is a few kilobytes of text and carries no screenshots.
+     "full" carries every screenshot, assembled as pieces handed to Blob
+     rather than one giant string and read one at a time: a few hundred
+     screenshots is tens of megabytes, and building that as a single
+     string can fail outright on a phone. */
+  function buildBackup(kind, cb) {
+    if (kind !== "full") {
+      var text = JSON.stringify({ format: PLAIN_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
+      db.lastPlainBackupAt = Date.now();
+      noteBackupTaken();
+      cb(new Blob([text], { type: "application/json" }),
+         "taxi-claims-backup-" + todayISO() + ".json",
+         db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") + ", no screenshots");
+      return;
+    }
+
     var withPhotos = db.rides.filter(function (r) { return r.photo; });
     var parts = ['{"format":"' + ARCHIVE_FORMAT + '","saved":' + JSON.stringify(new Date().toISOString()) +
                  ',"data":', JSON.stringify(db), ',"photos":{'];
     var i = 0, written = 0, missing = 0;
-    toast("Building full backup — this can take a while");
     (function next() {
       if (i >= withPhotos.length) {
         parts.push("}}");
         var blob = new Blob(parts, { type: "application/json" });
-        download(blob, "taxi-claims-full-backup-" + todayISO() + ".json");
         db.lastFullBackupAt = Date.now();
         noteBackupTaken();
-        toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
-          (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
+        cb(blob, "taxi-claims-full-backup-" + todayISO() + ".json",
+           written + " screenshot" + (written === 1 ? "" : "s") +
+           (missing ? ", " + missing + " missing" : ""));
         return;
       }
       var rec = withPhotos[i++];
@@ -1292,109 +1280,137 @@
         });
       });
     })();
-  });
+  }
 
-  $("import-data").addEventListener("click", function () { $("import-file").click(); });
-  $("import-file").addEventListener("change", function () {
-    var f = this.files[0];
-    this.value = "";
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      var data, photos;
-      try {
-        var parsed = JSON.parse(reader.result);
-        var isArchive = parsed && parsed.format === ARCHIVE_FORMAT;
-        if (!parsed || (!isArchive && parsed.format !== PLAIN_FORMAT)) throw new Error("not ours");
-        data = parsed.data;
-        if (!data || typeof data !== "object" || !Array.isArray(data.rides)) throw new Error("bad shape");
-        photos = isArchive && parsed.photos && typeof parsed.photos === "object" ? parsed.photos : null;
-      } catch (e) {
-        toast("That file isn't a Taxi Claims backup");
-        return;
-      }
+  function readBackup(text) {
+    try {
+      var parsed = JSON.parse(text);
+      var isArchive = parsed && parsed.format === ARCHIVE_FORMAT;
+      if (!parsed || (!isArchive && parsed.format !== PLAIN_FORMAT)) return null;
+      var data = parsed.data;
+      if (!data || typeof data !== "object" || !Array.isArray(data.rides)) return null;
+      var photos = isArchive && parsed.photos && typeof parsed.photos === "object" ? parsed.photos : null;
       var photoN = photos ? Object.keys(photos).length : 0;
+      return {
+        data: data,
+        photos: photos,
+        summary: data.rides.length + " ride" + (data.rides.length === 1 ? "" : "s") +
+          (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots")
+      };
+    } catch (e) { return null; }
+  }
 
-      /* Only the screenshots for rides actually taken in are written, so a
-         merge never overwrites a picture belonging to a ride already here. */
-      function finish(photoIds, message) {
-        db.lastBackupAt = Date.now();   /* they clearly have a file */
-        if (photoN) db.lastFullBackupAt = Date.now();
-        db.backupSnoozeUntil = 0;
-        save();
-        applyTheme();
-        resetForm();
-        renderAll();
-        if (!photoIds.length) { toast(message); return; }
-        var k = 0, ok = 0;
-        toast("Restoring screenshots…");
-        (function put() {
-          if (k >= photoIds.length) {
-            renderAll();
-            toast(message + " · " + ok + " of " + photoIds.length + " screenshots");
-            return;
-          }
-          var id = photoIds[k++];
-          fetch(photos[id]).then(function (r) { return r.blob(); })
-            .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
-                  function () { put(); });
-        })();
-      }
+  function applyBackup(text, mode, cb) {
+    var read = readBackup(text);
+    if (!read) { cb(false, "That file isn't a Taxi Claims backup"); return; }
+    var data = read.data, photos = read.photos;
+    var photoN = photos ? Object.keys(photos).length : 0;
 
-      /* Adding only what is missing. A ride already on this phone always
-         wins — its own screenshot is left exactly as it is. */
-      function mergeIn() {
-        var added = 0, kept = 0, want = [];
-        var have = {};
-        db.rides.forEach(function (r) { have[r.id] = true; });
-        data.rides.forEach(function (r) {
-          if (!r || typeof r !== "object" || !r.id || !r.date) return;
-          if (have[r.id]) { kept++; return; }
-          db.rides.push({
-            id: r.id,
-            date: r.date,
-            amount: typeof r.amount === "number" ? r.amount : 0,
-            receipt: typeof r.receipt === "string" ? r.receipt : "",
-            note: typeof r.note === "string" ? r.note : "",
-            photo: !!r.photo,
-            claimed: !!r.claimed
-          });
-          have[r.id] = true;
-          added++;
-          if (r.photo && photos && photos[r.id]) want.push(r.id);
-        });
-        finish(want, "Added " + added + " ride" + (added === 1 ? "" : "s") +
-          (kept ? " · kept your " + kept + " existing ride" + (kept === 1 ? "" : "s") : ""));
-      }
+    /* Only the screenshots for rides actually taken in are written, so a
+       merge never overwrites a picture belonging to a ride already here. */
+    function finish(photoIds, message) {
+      db.lastBackupAt = Date.now();   /* they clearly have a file */
+      if (photoN) db.lastFullBackupAt = Date.now();
+      db.backupSnoozeUntil = 0;
+      save();
+      applyTheme();
+      resetForm();
+      renderAll();
+      if (!photoIds.length) { cb(true, message); return; }
+      var k = 0, ok = 0;
+      (function put() {
+        if (k >= photoIds.length) {
+          renderAll();
+          cb(true, message + " · " + ok + " of " + photoIds.length + " screenshots");
+          return;
+        }
+        var id = photoIds[k++];
+        fetch(photos[id]).then(function (r) { return r.blob(); })
+          .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                function () { put(); });
+      })();
+    }
 
-      function replaceAll() {
-        /* clear the screenshots being replaced, so the store is not left
-           holding pictures for rides that no longer exist */
-        db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
-        try { localStorage.setItem(KEY, JSON.stringify(data)); }
-        catch (e) { toast("Phone storage is full — not restored"); return; }
-        db = load();
-        finish(photos ? Object.keys(photos) : [],
-               "Everything replaced — " + db.rides.length + " rides");
-      }
+    if (mode === "replace") {
+      /* clear the screenshots being replaced, so the store is not left
+         holding pictures for rides that no longer exist */
+      db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
+      try { localStorage.setItem(KEY, JSON.stringify(data)); }
+      catch (e) { cb(false, "Phone storage is full — not restored"); return; }
+      db = load();
+      finish(photos ? Object.keys(photos) : [],
+             "Everything replaced — " + db.rides.length + " rides");
+      return;
+    }
 
-      confirmDialog({
-        title: "Restore backup?",
-        message: "This backup holds " +
-                 data.rides.length + " ride" + (data.rides.length === 1 ? "" : "s") +
-                 (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots") + ". " +
-                 "Add missing only keeps every ride already on this phone, screenshots included, " +
-                 "and fills in the gaps. Replace everything wipes what is here first — only use that " +
-                 "on a phone with nothing on it yet. Driving Log and the other apps are not touched either way.",
-        altLabel: "Add missing only",
-        onAlt: mergeIn,
-        confirmLabel: "Replace everything",
-        onConfirm: replaceAll
+    /* Adding only what is missing. A ride already on this phone always
+       wins — its own screenshot is left exactly as it is. */
+    var added = 0, kept = 0, want = [];
+    var have = {};
+    db.rides.forEach(function (r) { have[r.id] = true; });
+    data.rides.forEach(function (r) {
+      if (!r || typeof r !== "object" || !r.id || !r.date) return;
+      if (have[r.id]) { kept++; return; }
+      db.rides.push({
+        id: r.id,
+        date: r.date,
+        amount: typeof r.amount === "number" ? r.amount : 0,
+        receipt: typeof r.receipt === "string" ? r.receipt : "",
+        note: typeof r.note === "string" ? r.note : "",
+        photo: !!r.photo,
+        claimed: !!r.claimed
       });
-    };
-    reader.readAsText(f);
-  });
+      have[r.id] = true;
+      added++;
+      if (r.photo && photos && photos[r.id]) want.push(r.id);
+    });
+    finish(want, "Added " + added + " ride" + (added === 1 ? "" : "s") +
+      (kept ? " · kept your " + kept + " existing ride" + (kept === 1 ? "" : "s") : ""));
+  }
 
+  /* The one seam the main page talks through. Same origin only. */
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin || !e.source) return;
+    var msg = e.data;
+    if (!msg || msg.cna !== "backup" || !msg.id) return;
+    function reply(payload) {
+      payload.cna = "backup-reply";
+      payload.id = msg.id;
+      payload.app = "taxi";
+      try { e.source.postMessage(payload, location.origin); } catch (err) {}
+    }
+    if (msg.ask === "status") {
+      var withPhoto = db.rides.filter(function (r) { return r.photo; }).length;
+      reply({
+        ok: true,
+        name: "Taxi Claims",
+        backupAt: db.lastBackupAt || null,
+        kinds: ["plain", "full"],
+        detail: db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") +
+                ", " + withPhoto + " screenshot" + (withPhoto === 1 ? "" : "s")
+      });
+      return;
+    }
+    if (msg.ask === "backup") {
+      try {
+        buildBackup(msg.kind, function (blob, filename, note) {
+          reply({ ok: true, blob: blob, filename: filename, note: note });
+        });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
+    if (msg.ask === "describe") {
+      var read = readBackup(msg.text);
+      reply(read ? { ok: true, summary: read.summary } : { ok: false, error: "not a Taxi Claims backup" });
+      return;
+    }
+    if (msg.ask === "restore") {
+      try {
+        applyBackup(msg.text, msg.mode, function (ok, message) { reply({ ok: ok, message: message }); });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
+  });
 
   /* ---------- backup reminder ----------
      A backup is a file someone has to remember to make, and nobody does.
@@ -1424,42 +1440,7 @@
     db.backupSnoozeUntil = 0;
     save();
     renderSettings();
-    renderBackupNote();
   }
-  function renderBackupNote() {
-    var box = $("backup-note");
-    if (!box) return;
-    box.textContent = "";
-    if (!db.rides.length) return;                       /* nothing to lose yet */
-    if (db.backupSnoozeUntil && Date.now() < db.backupSnoozeUntil) return;
-    var n = backupAgeDays();
-    if (n !== null && n < BACKUP_STALE_DAYS) return;
-
-    var b = el("div", "carry-banner");
-    b.appendChild(el("p", null, (n === null
-      ? "This has never been backed up."
-      : backupAgeText().replace(/\.$/, "") + " — worth doing again.") +
-      " Everything is on this phone only; lose it and it is gone."));
-    var row = el("div", "btn-row");
-    var go = el("button", "secondary", "Back up now");
-    go.addEventListener("click", function () {
-      switchTab("screen-settings");
-      var sec = $("sec-backup");
-      if (sec) sec.open = true;
-      $("export-archive").click();
-    });
-    var later = el("button", "secondary", "Later");
-    later.addEventListener("click", function () {
-      db.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
-      save();
-      box.textContent = "";
-    });
-    row.appendChild(go);
-    row.appendChild(later);
-    b.appendChild(row);
-    box.appendChild(b);
-  }
-
   $("wipe-all").addEventListener("click", function () {
     confirmDialog({
       title: "Erase everything?",
@@ -1579,7 +1560,6 @@
 
   /* ---------- boot ---------- */
   function renderAll() {
-    renderBackupNote();
     renderCarryBanner();
     renderTodayStatus();
     renderList();

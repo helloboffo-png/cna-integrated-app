@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "1.12.0",
+  "version": "2.0.0",
   "build": 1,
   "date": "2026-09-07",
-  "notes": "Calendar dots lead into the app, and the container shows its own version.",
+  "notes": "Backup moved to the main page, one press for every app.",
   "files": [
     "index.html"
   ]

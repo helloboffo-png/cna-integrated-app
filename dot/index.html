@@ -532,7 +532,6 @@
 
   <!-- ============ TODAY ============ -->
   <section class="screen active" id="screen-log">
-    <div id="backup-note"></div>
     <div id="ot-moved-note"></div>
     <div id="claim-reminder"></div>
     <div id="today-status"></div>
@@ -551,7 +550,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v3.10</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.0</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -696,27 +695,21 @@
       </div>
     </details>
 
-    <details class="card sec" id="sec-backup">
+    <!-- Backing up moved to the main page, where one press covers every
+         app at once. What this app uses is still its own business, so it
+         stays here. -->
+    <details class="card sec" id="sec-storage">
       <summary>
-        <span class="sec-title">Backup</span>
+        <span class="sec-title">Storage</span>
         <span class="sec-meta" id="storage-meta"></span>
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
         <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
-        <p class="hint">Your data lives only on this device. Export a backup now and then; import it on a new phone to restore everything.</p>
         <div class="formula-box" id="storage-box">
           <p class="hint" style="margin:0" id="storage-detail"></p>
         </div>
-        <div class="btn-row">
-          <button class="secondary" id="export-data">Backup</button>
-          <button class="secondary" id="import-data">Restore</button>
-        </div>
-        <p class="hint" style="margin-top:14px;">The plain backup above is small and quick, but holds no receipt screenshots. The full one includes every screenshot, so it is large and takes a while — use it before changing phones.</p>
-        <div class="btn-row">
-          <button class="secondary" id="export-archive">Full backup, with screenshots</button>
-        </div>
-        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+        <p class="hint">Back up from Settings on the main page — one press covers this app and every other one.</p>
       </div>
     </details>
 
@@ -738,7 +731,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v3.10 (7 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.0 (9 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -984,19 +977,18 @@
           text: open.length === 1 ? "1 parking receipt to send"
                                   : open.length + " parking receipts to send" });
       }
-      var backupAge = db.lastBackupAt
-        ? Math.floor((Date.now() - db.lastBackupAt) / 86400000) : null;
-      var worthBacking = Object.keys(db.entries).length > 0 || parkingRows().length > 0;
-      if (worthBacking && (backupAge === null || backupAge >= 30)) {
-        jobs.push({ key: "backup", weight: 5, go: "#settings",
-          text: backupAge === null ? "Back up Driving Log \u2014 never done"
-                                   : "Back up Driving Log \u2014 " + backupAge + " days ago" });
-      }
+      /* No backup job here any more: backing up is one press on the main
+         page covering every app, so the main page raises that itself from
+         the dates below rather than each app nagging separately. */
 
       localStorage.setItem("cna.card.dot", JSON.stringify({
         app: "dot",
         name: "Driving Log",
         at: Date.now(),
+        /* when this app was last backed up, so the main page can raise one
+           reminder for everything instead of four separate ones */
+        backupAt: db.lastBackupAt || null,
+        hasData: Object.keys(db.entries).length > 0 || db.taxi.length > 0,
         todo: jobs,
         marks: [
           /* go is where a tap on that day's dot lands, on the home
@@ -2612,88 +2604,51 @@
     db.backupSnoozeUntil = 0;
     save();
     renderSettings();
-    renderBackupNote();
-  }
-  function renderBackupNote() {
-    var box = $("backup-note");
-    if (!box) return;
-    box.textContent = "";
-    var hasData = Object.keys(db.entries).length || db.taxi.length;
-    if (!hasData) return;
-    if (db.backupSnoozeUntil && Date.now() < db.backupSnoozeUntil) return;
-    var n = backupAgeDays();
-    if (n !== null && n < BACKUP_STALE_DAYS) return;
-
-    var b = el("div", "claim-banner");
-    b.appendChild(el("strong", null, n === null ? "Never backed up" : "Backup is out of date"));
-    b.appendChild(el("span", null, (n === null
-      ? "This has never been backed up."
-      : backupAgeText().replace(/\.$/, "") + ".") +
-      " Everything is on this phone only; lose it and it is gone."));
-    var row = el("div", "btn-row");
-    var go = el("button", "secondary", "Back up now");
-    go.addEventListener("click", function () {
-      switchTab("screen-settings");
-      var sec = $("sec-backup");
-      if (sec) sec.open = true;
-      $("export-archive").click();
-    });
-    var later = el("button", "secondary", "Later");
-    later.addEventListener("click", function () {
-      db.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE_DAYS * DAY_MS;
-      save();
-      box.textContent = "";
-    });
-    row.appendChild(go);
-    row.appendChild(later);
-    b.appendChild(row);
-    box.appendChild(b);
   }
 
-  /* ---------- backup ---------- */
-  $("export-data").addEventListener("click", function () {
-    var blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "drive-ot-backup-" + todayISO() + ".json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-    noteBackupTaken();
-    toast("Backup downloaded");
-  });
+  /* ---------- backup, asked for from the main page ----------
 
-  /* Full backup — the plain one above carries no screenshots at all, so a
-     restore onto a new phone would silently arrive with every receipt
-     picture missing. This writes them in alongside the data.
-     Built as an array of string pieces handed to Blob rather than one giant
-     JSON.stringify, because a few hundred base64 screenshots is tens of
-     megabytes and building that as a single string can fail outright on a
-     phone. Photos are read one at a time for the same reason. */
+     The buttons used to be on this screen. Backing up now happens once,
+     from the main page, covering every app in one press — but the main
+     page does not and must not read this app's storage. It asks, in a
+     message, and what it gets back is a finished file it never opens.
+
+     So everything about what a backup *is* stays here: the format, what
+     goes in it, and the rules for putting one back. Rebuild this app
+     tomorrow and its backup changes with it, with nothing to alter on
+     the main page. */
+
   function blobToDataUrl(blob, cb) {
     var r = new FileReader();
     r.onload = function () { cb(r.result); };
     r.onerror = function () { cb(null); };
     r.readAsDataURL(blob);
   }
-  $("export-archive").addEventListener("click", function () {
+
+  /* kind: "plain" is small and quick and carries no screenshots;
+     "full" carries every screenshot and is the one for changing phones.
+     Built as pieces handed to Blob rather than one giant string, because
+     a few hundred screenshots is tens of megabytes and building that as
+     a single string can fail outright on a phone. */
+  function buildBackup(kind, cb) {
+    if (kind !== "full") {
+      var blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+      noteBackupTaken();
+      cb(blob, "drive-ot-backup-" + todayISO() + ".json", "days and receipts, no screenshots");
+      return;
+    }
+
     var withPhotos = parkingRows().filter(function (r) { return r.photo; });
     var parts = ['{"format":"dotlog-archive-1","data":', JSON.stringify(db), ',"photos":{'];
     var i = 0, written = 0, missing = 0;
-    toast("Building full backup — this can take a while");
     (function next() {
       if (i >= withPhotos.length) {
         parts.push("}}");
         var blob = new Blob(parts, { type: "application/json" });
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "dotlog-full-backup-" + todayISO() + ".json";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
         noteBackupTaken();
-        toast("Full backup ready — " + written + " screenshot" + (written === 1 ? "" : "s") +
-          (missing ? ", " + missing + " missing" : "") + ", " + (blob.size / 1048576).toFixed(1) + " MB");
+        cb(blob, "dotlog-full-backup-" + todayISO() + ".json",
+           written + " screenshot" + (written === 1 ? "" : "s") +
+           (missing ? ", " + missing + " missing" : ""));
         return;
       }
       var rec = withPhotos[i++];
@@ -2708,145 +2663,181 @@
         });
       });
     })();
-  });
+  }
 
-  $("import-data").addEventListener("click", function () { $("import-file").click(); });
-  $("import-file").addEventListener("change", function () {
-    var f = this.files[0];
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var parsed = JSON.parse(reader.result);
-        /* accept both the plain backup and the full archive */
-        var isArchive = parsed && parsed.format === "dotlog-archive-1";
-        var data = isArchive ? parsed.data : parsed;
-        var photos = isArchive && parsed.photos ? parsed.photos : null;
-        if (!data || typeof data.entries !== "object" || !Array.isArray(data.vehicles)) throw new Error("bad shape");
-        var photoN = photos ? Object.keys(photos).length : 0;
+  /* Read a file without applying it, so the main page can say what is in
+     it and offer the choice before anything is touched. */
+  function readBackup(text) {
+    try {
+      var parsed = JSON.parse(text);
+      var isArchive = parsed && parsed.format === "dotlog-archive-1";
+      var data = isArchive ? parsed.data : parsed;
+      var photos = isArchive && parsed.photos ? parsed.photos : null;
+      if (!data || typeof data.entries !== "object" || !Array.isArray(data.vehicles)) return null;
+      var photoN = photos ? Object.keys(photos).length : 0;
+      return {
+        data: data,
+        photos: photos,
+        summary: (function () {
+          var d = Object.keys(data.entries).length;
+          var r = Array.isArray(data.taxi) ? data.taxi.length : 0;
+          var v = data.vehicles.length;
+          return d + (d === 1 ? " day" : " days") + ", " +
+                 r + (r === 1 ? " receipt" : " receipts") + ", " +
+                 v + (v === 1 ? " vehicle" : " vehicles") +
+                 (photoN ? ", " + photoN + (photoN === 1 ? " screenshot" : " screenshots") : ", no screenshots");
+        })()
+      };
+    } catch (e) { return null; }
+  }
 
-        /* Adding only what is missing, so nothing already on this phone is
-           touched. This is the one people actually want when they are
-           bringing an old backup onto a phone they are already using:
-           a day, a receipt or a plate already here always wins, and the
-           backup only fills the gaps. Settings are never taken from the
-           backup — the allowance in use now beats one saved months ago. */
-        function mergeIn() {
-          var addedDays = 0, keptDays = 0, addedRides = 0, addedPlates = 0, filledOt = 0;
-          var wantPhotos = [];
+  /* mode "merge" adds only what is missing and is what people actually
+     want when bringing an old backup onto a phone already in use: a day,
+     a receipt or a plate already here always wins. "replace" wipes first
+     and is only for a phone with nothing on it yet. Settings are never
+     taken from a backup — the allowance in use now beats one saved
+     months ago. */
+  function applyBackup(text, mode, cb) {
+    var read = readBackup(text);
+    if (!read) { cb(false, "That file doesn't look like a backup from this app"); return; }
+    var data = read.data, photos = read.photos;
 
-          Object.keys(data.entries).forEach(function (iso) {
-            var e = data.entries[iso];
-            if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
-            if (!db.entries[iso]) { db.entries[iso] = e; addedDays++; return; }
+    function finish(photoIds, message) {
+      /* Stamped so the apps that were split out of this one can notice
+         that old records have just arrived and take another look. They
+         read this store themselves; nothing here writes into theirs. */
+      db.restoredAt = Date.now();
+      db.lastBackupAt = Date.now();   /* they clearly have a file */
+      db.backupSnoozeUntil = 0;
+      save();
+      resetTaxiForm();
+      renderPlates(); renderTodayStatus(); renderSettings();
+      renderClaimReminder(); renderTaxi();
 
-            keptDays++;
-            /* The day itself stays exactly as it is — the plate here wins.
-               But ot and dayType are dormant fields now; they sit in this
-               store purely so OT Tracker can pick them up. If this day has
-               no overtime recorded and the backup does, take just those two
-               fields rather than throw the hours away. Never overwrites
-               overtime that is already here. */
-            var mine = db.entries[iso];
-            var theirs = typeof e.ot === "number" ? e.ot : 0;
-            if (theirs > 0 && !(typeof mine.ot === "number" && mine.ot > 0)) {
-              mine.ot = theirs;
-              if (e.dayType) mine.dayType = e.dayType;
-              filledOt++;
-            }
-          });
-
-          if (Array.isArray(data.taxi)) {
-            var haveId = {};
-            db.taxi.forEach(function (r) { haveId[r.id] = true; });
-            data.taxi.forEach(function (r) {
-              if (!r || typeof r !== "object" || !r.id || !r.date) return;
-              if (haveId[r.id]) return;
-              db.taxi.push(r);
-              haveId[r.id] = true;
-              addedRides++;
-              if (r.photo && photos && photos[r.id]) wantPhotos.push(r.id);
-            });
-          }
-
-          if (Array.isArray(data.vehicles)) {
-            data.vehicles.forEach(function (p) {
-              if (typeof p === "string" && p && !hasPlate(db.vehicles, p)) {
-                db.vehicles.push(p);
-                addedPlates++;
-              }
-            });
-          }
-
-          if (data.dismissed && typeof data.dismissed === "object") {
-            Object.keys(data.dismissed).forEach(function (k) {
-              if (!db.dismissed[k]) db.dismissed[k] = data.dismissed[k];
-            });
-          }
-
-          finish(wantPhotos, "Added " + addedDays + " day" + (addedDays === 1 ? "" : "s") +
-            ", " + addedRides + " receipt" + (addedRides === 1 ? "" : "s") +
-            (addedPlates ? ", " + addedPlates + " plate" + (addedPlates === 1 ? "" : "s") : "") +
-            (keptDays ? " · kept your " + keptDays + " existing day" + (keptDays === 1 ? "" : "s") : "") +
-            (filledOt ? ", took overtime for " + filledOt + " of them" : ""));
+      if (!photoIds.length) { cb(true, message); return; }
+      var k = 0, ok = 0;
+      (function put() {
+        if (k >= photoIds.length) {
+          renderTaxi();
+          renderStorage();
+          cb(true, message + " · " + ok + " of " + photoIds.length + " screenshots");
+          return;
         }
+        var id = photoIds[k++];
+        fetch(photos[id]).then(function (r) { return r.blob(); })
+          .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
+                function () { put(); });
+      })();
+    }
 
-        function replaceAll() {
-          localStorage.setItem(KEY, JSON.stringify(data));
-          db = load();
-          selectedPlate = null;
-          finish(photos ? Object.keys(photos) : [], "Everything replaced with the backup");
-        }
+    if (mode === "replace") {
+      localStorage.setItem(KEY, JSON.stringify(data));
+      db = load();
+      selectedPlate = null;
+      finish(photos ? Object.keys(photos) : [], "Everything replaced with the backup");
+      return;
+    }
 
-        function finish(photoIds, message) {
-          /* Stamped so the apps that were split out of this one can notice
-             that old records have just arrived and take another look. They
-             read this store themselves; nothing here writes into theirs. */
-          db.restoredAt = Date.now();
-          db.lastBackupAt = Date.now();   /* they clearly have a file */
-          db.backupSnoozeUntil = 0;
-          save();
-          resetTaxiForm();
-          renderPlates(); renderTodayStatus(); renderSettings();
-          renderClaimReminder(); renderTaxi(); renderBackupNote();
+    var addedDays = 0, keptDays = 0, addedRides = 0, addedPlates = 0, filledOt = 0;
+    var wantPhotos = [];
 
-          if (!photoIds.length) { toast(message); return; }
-          var k = 0, ok = 0;
-          toast("Restoring screenshots…");
-          (function put() {
-            if (k >= photoIds.length) {
-              renderTaxi();
-              renderStorage();
-              toast(message + " · " + ok + " of " + photoIds.length + " screenshots");
-              return;
-            }
-            var id = photoIds[k++];
-            fetch(photos[id]).then(function (r) { return r.blob(); })
-              .then(function (b) { photoPut(id, b, function (good) { if (good) ok++; put(); }); },
-                    function () { put(); });
-          })();
-        }
+    Object.keys(data.entries).forEach(function (iso) {
+      var e = data.entries[iso];
+      if (!e || typeof e !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+      if (!db.entries[iso]) { db.entries[iso] = e; addedDays++; return; }
 
-        confirmDialog({
-          title: "Restore backup?",
-          message: "This backup holds " +
-            Object.keys(data.entries).length + " days, " +
-            (Array.isArray(data.taxi) ? data.taxi.length : 0) + " receipts, " +
-            data.vehicles.length + " vehicles" +
-            (photoN ? ", " + photoN + " screenshots" : ", no screenshots") + ". " +
-            "Add missing only keeps everything already on this phone and fills in the gaps. " +
-            "Replace everything wipes what is here first — only use that on a phone with nothing on it yet.",
-          altLabel: "Add missing only",
-          onAlt: mergeIn,
-          confirmLabel: "Replace everything",
-          onConfirm: replaceAll
-        });
-      } catch (e) {
-        toast("That file doesn't look like a backup from this app");
+      keptDays++;
+      /* The day itself stays exactly as it is — the plate here wins. But
+         ot and dayType are dormant fields now; they sit in this store
+         purely so OT Tracker can pick them up. If this day has no
+         overtime recorded and the backup does, take just those two
+         fields rather than throw the hours away. Never overwrites
+         overtime that is already here. */
+      var mine = db.entries[iso];
+      var theirs = typeof e.ot === "number" ? e.ot : 0;
+      if (theirs > 0 && !(typeof mine.ot === "number" && mine.ot > 0)) {
+        mine.ot = theirs;
+        if (e.dayType) mine.dayType = e.dayType;
+        filledOt++;
       }
-    };
-    reader.readAsText(f);
-    this.value = "";
+    });
+
+    if (Array.isArray(data.taxi)) {
+      var haveId = {};
+      db.taxi.forEach(function (r) { haveId[r.id] = true; });
+      data.taxi.forEach(function (r) {
+        if (!r || typeof r !== "object" || !r.id || !r.date) return;
+        if (haveId[r.id]) return;
+        db.taxi.push(r);
+        haveId[r.id] = true;
+        addedRides++;
+        if (r.photo && photos && photos[r.id]) wantPhotos.push(r.id);
+      });
+    }
+
+    if (Array.isArray(data.vehicles)) {
+      data.vehicles.forEach(function (p) {
+        if (typeof p === "string" && p && !hasPlate(db.vehicles, p)) {
+          db.vehicles.push(p);
+          addedPlates++;
+        }
+      });
+    }
+
+    if (data.dismissed && typeof data.dismissed === "object") {
+      Object.keys(data.dismissed).forEach(function (k) {
+        if (!db.dismissed[k]) db.dismissed[k] = data.dismissed[k];
+      });
+    }
+
+    finish(wantPhotos, "Added " + addedDays + " day" + (addedDays === 1 ? "" : "s") +
+      ", " + addedRides + " receipt" + (addedRides === 1 ? "" : "s") +
+      (addedPlates ? ", " + addedPlates + " plate" + (addedPlates === 1 ? "" : "s") : "") +
+      (keptDays ? " · kept your " + keptDays + " existing day" + (keptDays === 1 ? "" : "s") : "") +
+      (filledOt ? ", took overtime for " + filledOt + " of them" : ""));
+  }
+
+  /* The one seam the main page talks through. Same origin only, and it
+     answers three questions and nothing else. */
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin || !e.source) return;
+    var msg = e.data;
+    if (!msg || msg.cna !== "backup" || !msg.id) return;
+    function reply(payload) {
+      payload.cna = "backup-reply";
+      payload.id = msg.id;
+      payload.app = "dot";
+      try { e.source.postMessage(payload, location.origin); } catch (err) {}
+    }
+    if (msg.ask === "status") {
+      reply({
+        ok: true,
+        name: "Driving Log",
+        backupAt: db.lastBackupAt || null,
+        kinds: ["plain", "full"],
+        detail: Object.keys(db.entries).length + " days, " + db.taxi.length + " receipts"
+      });
+      return;
+    }
+    if (msg.ask === "backup") {
+      try {
+        buildBackup(msg.kind, function (blob, filename, note) {
+          reply({ ok: true, blob: blob, filename: filename, note: note });
+        });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
+    if (msg.ask === "describe") {
+      var read = readBackup(msg.text);
+      reply(read ? { ok: true, summary: read.summary } : { ok: false, error: "not a Driving Log backup" });
+      return;
+    }
+    if (msg.ask === "restore") {
+      try {
+        applyBackup(msg.text, msg.mode, function (ok, message) { reply({ ok: ok, message: message }); });
+      } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
+      return;
+    }
   });
 
   /* The GitHub build's "Update ready" prompt reloads the page, which would
@@ -2878,7 +2869,6 @@
   renderTodayStatus();
   renderClaimReminder(); /* puts the roster note up too */
   renderOtMovedNote();
-  renderBackupNote();
   requestPersist();
   publishCard(); /* keep the home screen's figures current on every open */
   openScreenFromHash();

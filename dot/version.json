@@ -1,10 +1,10 @@
 {
   "id": "dot",
   "name": "Driving Log",
-  "version": "3.10.0",
+  "version": "4.0.0",
   "build": 1,
   "date": "2026-09-07",
-  "notes": "Calendar dots lead into the app, and the container shows its own version.",
+  "notes": "Backup moved to the main page, one press for every app.",
   "files": [
     "index.html",
     "icon-192.png",

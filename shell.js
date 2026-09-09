@@ -161,6 +161,8 @@
   /* Set once Settings has drawn the container's own update line, so a
      release that turns up while that screen is open reaches it. */
   var repaintShellRow = null;
+  var repaintBackup = null;
+  var openSettings = null;
 
   function hasUnsavedWork() {
     try {
@@ -408,6 +410,7 @@
         if (!text) return;
         out.push({
           text: text.slice(0, 60),
+          settings: false,
           weight: typeof t.weight === "number" && isFinite(t.weight) ? t.weight : 0,
           /* only a bare #screen name is accepted, so nothing an app
              writes can turn into a link off to somewhere else */
@@ -417,6 +420,33 @@
         });
       });
     });
+    /* Backing up is this page's own job now, not any app's, so it is
+       raised here — once, for the worst of them — from the dates the
+       apps publish in their cards. Four apps nagging separately about
+       the same one press was the thing this replaced. */
+    var withData = backupAges().filter(function (a) { return a.hasData; });
+    if (withData.length) {
+      var never = withData.filter(function (a) { return !a.at; });
+      var oldest = withData.slice().sort(function (a, b) {
+        return (a.at || 0) - (b.at || 0);
+      })[0];
+      var d = ageDays(oldest.at);
+      if (never.length || d >= 30) {
+        out.push({
+          text: never.length === withData.length ? "Back up \u2014 never done"
+              : never.length ? "Back up \u2014 " + never.length + " never done"
+              : "Back up \u2014 oldest is " + d + " days ago",
+          /* Above everything when nothing has ever been backed up: an
+             unclaimed receipt is money waiting, but no backup at all is
+             the whole lot one dropped phone from gone. A merely stale one
+             sits above housekeeping and below money. */
+          weight: never.length ? 25 : 12,
+          go: null,
+          settings: true
+        });
+      }
+    }
+
     /* by the weight each app gave the job, so the order is the app's
        judgement of what matters rather than whichever app was opened
        last */
@@ -447,16 +477,23 @@
       list.className = "cna-todo-list";
 
       jobs.slice(0, TODO_SHOWN).forEach(function (j) {
-        var row = document.createElement(j.go ? "a" : "div");
+        /* an app's job is a link into that app; this page's own job is a
+           button, because Settings is not a page you can link to */
+        var row = document.createElement(j.settings ? "button" : (j.go ? "a" : "div"));
         row.className = "cna-todo-row";
-        if (j.go) row.setAttribute("href", j.go);
+        if (j.settings) {
+          row.type = "button";
+          row.addEventListener("click", function () { if (openSettings) openSettings(); });
+        } else if (j.go) {
+          row.setAttribute("href", j.go);
+        }
 
         var t = document.createElement("span");
         t.className = "cna-todo-text";
         t.textContent = j.text;
         row.appendChild(t);
 
-        if (j.go) {
+        if (j.go || j.settings) {
           var go = document.createElement("span");
           go.className = "cna-todo-go";
           go.setAttribute("aria-hidden", "true");
@@ -1168,6 +1205,17 @@
 
   var RELEASES = [
     {
+      when: "9 September 2026",
+      what: "Back up everything from one place",
+      points: [
+        "Backup and Restore have moved to Settings on the main page. One press covers every app, or tick just the ones you want.",
+        "The Backup buttons inside Driving Log, OT Tracker and Taxi Claims are gone. Each app still writes its own backup in its own format — the main page asks for it rather than reading their records.",
+        "Save the file to iCloud Drive rather than On My iPhone, and losing the phone no longer loses the backup with it.",
+        "Restoring still offers Add missing only, so bringing an old backup onto a phone in use never wipes what is already there.",
+        "Settings folds into one screen: Calendar, Backup and App updates now show their state on the closed row."
+      ]
+    },
+    {
       when: "7 September 2026",
       what: "A cleaner home screen, and fixes",
       points: [
@@ -1414,13 +1462,19 @@
       note.hidden = true;
       if (fallback) { fallback.textContent = ""; fallback.hidden = true; }
 
+      var meta = document.getElementById("cna-cal-meta");
       if (!marks.length) {
         var empty = document.createElement("p");
         empty.className = "cna-empty";
         empty.textContent = "Nothing logged yet.";
         picksBox.appendChild(empty);
         sendBtn.disabled = true;
+        if (meta) meta.textContent = "nothing logged yet";
         return;
+      }
+      if (meta) {
+        var on = marks.filter(function (m) { return picks[m.app + ":" + m.key] !== false; }).length;
+        meta.textContent = on + " of " + marks.length + " ticked";
       }
 
       marks.forEach(function (m) {
@@ -1512,6 +1566,334 @@
   }
 
   /* ------------------------------------------------------------------
+     Backup, for every app at once
+
+     The rule this page lives by is that it never reads another app's
+     storage. Backing up looks like the one job that would have to break
+     it — and it does not.
+
+     Instead this asks. Each app is opened out of sight, just long enough
+     to hear the question and answer it, and what comes back is a
+     finished file this page never opens. Driving Log still decides what
+     a Driving Log backup contains, in its own format, with its own rules
+     for putting one back. Rebuild it tomorrow and its backup changes
+     with it, with nothing here to alter.
+
+     The cost is a page load per app, which is why it happens on a press
+     rather than in the background.
+     ------------------------------------------------------------------ */
+
+  var BACKUP_APPS = ["dot", "otlog", "taxi"];   /* Overseas Tracker is Nantha's and keeps its own arrangements */
+  var ASK_TIMEOUT_MS = 60000;                   /* a full backup with photos is slow, not stuck */
+  var askSeq = 0;
+
+  /* Opens one app out of sight, asks it one question, takes it down
+     again. Never rejects: a silent app is an answer too, and the caller
+     needs to say which app went quiet rather than fail the lot. */
+  function askApp(id, question) {
+    return new Promise(function (resolve) {
+      var host = document.getElementById("cna-askers");
+      if (!host) { resolve({ ok: false, app: id, error: "nowhere to ask from" }); return; }
+
+      var token = "ask" + (++askSeq) + "-" + Date.now();
+      var frame = document.createElement("iframe");
+      frame.setAttribute("title", id);
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;border:0;left:-9999px;top:0";
+      frame.src = at(id + "/");
+
+      var done = false;
+      function finish(payload) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        window.removeEventListener("message", onMessage);
+        try { host.removeChild(frame); } catch (e) {}
+        resolve(payload);
+      }
+
+      var timer = setTimeout(function () {
+        finish({ ok: false, app: id, error: "no answer" });
+      }, ASK_TIMEOUT_MS);
+
+      function onMessage(e) {
+        if (e.origin !== location.origin) return;
+        var msg = e.data;
+        if (!msg || msg.cna !== "backup-reply" || msg.id !== token) return;
+        msg.app = msg.app || id;
+        finish(msg);
+      }
+      window.addEventListener("message", onMessage);
+
+      frame.addEventListener("load", function () {
+        var payload = { cna: "backup", id: token };
+        Object.keys(question).forEach(function (k) { payload[k] = question[k]; });
+        try { frame.contentWindow.postMessage(payload, location.origin); }
+        catch (e) { finish({ ok: false, app: id, error: "could not ask" }); }
+      });
+      frame.addEventListener("error", function () {
+        finish({ ok: false, app: id, error: "would not open" });
+      });
+
+      host.appendChild(frame);
+    });
+  }
+
+  /* How old the oldest backup is, read from what each app publishes in
+     its own card. No storage is touched to work this out. */
+  function backupAges() {
+    var out = [];
+    BACKUP_APPS.forEach(function (id) {
+      var card;
+      try { card = JSON.parse(localStorage.getItem("cna.card." + id) || "null"); }
+      catch (e) { return; }
+      if (!card) return;
+      out.push({
+        id: id,
+        name: String(card.name || id).slice(0, 24),
+        at: typeof card.backupAt === "number" ? card.backupAt : null,
+        hasData: !!card.hasData
+      });
+    });
+    return out;
+  }
+
+  function ageDays(at) {
+    if (!at) return null;
+    return Math.floor((Date.now() - at) / 86400000);
+  }
+
+  function initBackup() {
+    var listBox = document.getElementById("cna-backup-list");
+    var ageLine = document.getElementById("cna-backup-age");
+    var allBtn = document.getElementById("cna-backup-all");
+    var restoreBtn = document.getElementById("cna-restore");
+    var note = document.getElementById("cna-backup-note");
+    var files = document.getElementById("cna-backup-files");
+    var fullBox = document.getElementById("cna-backup-full");
+    var fileInput = document.getElementById("cna-restore-file");
+    if (!listBox || !allBtn) return;
+
+    var known = [];
+
+    function clearOutput() {
+      note.hidden = true;
+      note.textContent = "";
+      files.textContent = "";
+      files.hidden = true;
+    }
+
+    function paint() {
+      known = backupAges();
+      listBox.textContent = "";
+      clearOutput();
+
+      if (!known.length) {
+        var empty = document.createElement("p");
+        empty.className = "cna-empty";
+        empty.textContent = "Open an app once and it will show up here.";
+        listBox.appendChild(empty);
+        allBtn.disabled = true;
+        ageLine.textContent = "";
+        return;
+      }
+
+      /* the state of the worst of them, said on the closed row, so the
+         page answers "am I backed up" without being opened */
+      var withData = known.filter(function (a) { return a.hasData; });
+      var never = withData.filter(function (a) { return !a.at; });
+      var oldest = withData.filter(function (a) { return a.at; })
+        .sort(function (a, b) { return a.at - b.at; })[0];
+      if (!withData.length) ageLine.textContent = "nothing logged yet";
+      else if (never.length) ageLine.textContent = never.length === withData.length
+        ? "never" : never.length + " never done";
+      else {
+        var d = ageDays(oldest.at);
+        ageLine.textContent = d === 0 ? "backed up today"
+          : d === 1 ? "1 day ago" : d + " days ago";
+      }
+
+      known.forEach(function (app) {
+        var row = document.createElement("label");
+        row.className = "cna-check";
+
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = true;
+        box.value = app.id;
+        box.addEventListener("change", function () {
+          allBtn.disabled = !listBox.querySelector("input:checked");
+        });
+
+        var name = document.createElement("span");
+        var d = ageDays(app.at);
+        name.textContent = app.name + " · " + (d === null ? "never backed up"
+          : d === 0 ? "backed up today" : "backed up " + d + " days ago");
+
+        row.appendChild(box);
+        row.appendChild(name);
+        listBox.appendChild(row);
+      });
+      allBtn.disabled = false;
+    }
+
+    function ticked() {
+      return [].map.call(listBox.querySelectorAll("input:checked"), function (b) { return b.value; });
+    }
+
+    /* A file to press, never one this code presses. A page added to the
+       home screen runs with no browser around it, and a press made by
+       script there is very often ignored with no error at all. */
+    function offerFile(blob, filename, label) {
+      var a = document.createElement("a");
+      a.className = "cna-btn cna-btn-link";
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.rel = "noopener";
+      a.textContent = label;
+      files.appendChild(a);
+      files.hidden = false;
+    }
+
+    allBtn.addEventListener("click", function () {
+      var want = ticked();
+      if (!want.length) return;
+      clearOutput();
+      note.hidden = false;
+      note.textContent = "Asking " + want.length + (want.length === 1 ? " app…" : " apps…");
+      allBtn.disabled = true;
+
+      var kind = fullBox && fullBox.checked ? "full" : "plain";
+      var got = 0, failed = [];
+
+      /* one at a time: a full backup is heavy and three at once on a
+         phone is how you get one of them killed */
+      (function next(i) {
+        if (i >= want.length) {
+          allBtn.disabled = false;
+          note.textContent = got
+            ? "Ready — press each file below to save it. Choose iCloud Drive."
+              + (failed.length ? " Couldn't reach " + failed.join(", ") + "." : "")
+            : "Couldn't reach " + failed.join(", ") + ".";
+          paintAges();
+          return;
+        }
+        var id = want[i];
+        var asking = known.filter(function (a) { return a.id === id; })[0];
+        note.textContent = "Asking " + (asking ? asking.name : id) +
+          "… (" + (i + 1) + " of " + want.length + ")";
+        askApp(id, { ask: "backup", kind: kind }).then(function (res) {
+          var owner = known.filter(function (a) { return a.id === id; })[0];
+          var shown = owner ? owner.name : id;
+          if (res && res.ok && res.blob) {
+            got++;
+            offerFile(res.blob, res.filename || (id + "-backup.json"),
+              shown + (res.note ? " — " + res.note : ""));
+          } else {
+            failed.push(shown);
+          }
+          next(i + 1);
+        });
+      })(0);
+    });
+
+    /* the ages come from the cards, which the apps rewrite as they answer */
+    function paintAges() {
+      var fresh = backupAges();
+      fresh.forEach(function (app, i) {
+        var rows = listBox.querySelectorAll(".cna-check span");
+        if (!rows[i]) return;
+        var d = ageDays(app.at);
+        rows[i].textContent = app.name + " · " + (d === null ? "never backed up"
+          : d === 0 ? "backed up today" : "backed up " + d + " days ago");
+      });
+    }
+
+    /* ---- restore ----
+       The file is offered to each app in turn until one recognises it,
+       so there is nothing to choose and nothing to get wrong. The app
+       that owns it decides what is in it and how to put it back. */
+    restoreBtn.addEventListener("click", function () { fileInput.click(); });
+
+    fileInput.addEventListener("change", function () {
+      var f = this.files[0];
+      this.value = "";
+      if (!f) return;
+      clearOutput();
+      note.hidden = false;
+      note.textContent = "Reading the file…";
+
+      var reader = new FileReader();
+      reader.onload = function () {
+        var text = String(reader.result || "");
+        (function findOwner(i) {
+          if (i >= BACKUP_APPS.length) {
+            note.textContent = "No app here recognises that file.";
+            return;
+          }
+          var id = BACKUP_APPS[i];
+          askApp(id, { ask: "describe", text: text }).then(function (res) {
+            if (!res || !res.ok) { findOwner(i + 1); return; }
+            var owner = known.filter(function (a) { return a.id === id; })[0];
+            var ownerName = owner ? owner.name : id;
+            note.textContent = ownerName + " backup — " + res.summary;
+            askMode(id, ownerName, text, res.summary);
+          });
+        })(0);
+      };
+      reader.onerror = function () { note.textContent = "Could not read that file."; };
+      reader.readAsText(f);
+    });
+
+    function askMode(id, name, text, summary) {
+      var body = document.createElement("div");
+
+      var p = document.createElement("p");
+      p.className = "cna-note";
+      p.style.marginTop = "0";
+      p.textContent = "This holds " + summary + ". Add missing only keeps everything already on "
+        + "this phone and fills the gaps. Replace everything wipes what is here first — only "
+        + "use that on a phone with nothing on it yet. No other app is touched either way.";
+      body.appendChild(p);
+
+      function run(mode, label) {
+        var b = document.createElement("button");
+        b.className = "cna-btn";
+        b.type = "button";
+        b.style.marginTop = "10px";
+        b.textContent = label;
+        b.addEventListener("click", function () {
+          closeModal();
+          note.hidden = false;
+          note.textContent = "Restoring into " + name + "…";
+          askApp(id, { ask: "restore", text: text, mode: mode }).then(function (res) {
+            var said = res && res.ok
+              ? name + ": " + (res.message || "restored")
+              : name + ": " + ((res && (res.message || res.error)) || "could not restore");
+            initStrip();
+            initTodos();
+            /* repaint first — it clears whatever the panel was saying —
+               then say what happened, or the answer is wiped the moment
+               it arrives */
+            paint();
+            note.hidden = false;
+            note.textContent = said;
+          });
+        });
+        body.appendChild(b);
+      }
+      run("merge", "Add missing only");
+      run("replace", "Replace everything");
+
+      modalOpener = restoreBtn;
+      openModal("Restore into " + name + "?", body);
+    }
+
+    paint();
+    return paint;
+  }
+
+  /* ------------------------------------------------------------------
      Settings screen — only present on the home screen
      ------------------------------------------------------------------ */
 
@@ -1536,12 +1918,15 @@
       window.scrollTo(0, 0);
       if (settings) {
         refreshUpdates();
+        if (repaintBackup) repaintBackup();
         /* day counts move as things are logged, so they are read fresh
            every time rather than left as they were on first load */
         if (repaintCalPicks) repaintCalPicks();
       }
     }
     openBtn.addEventListener("click", function () { show(true); });
+    /* the home screen's own backup reminder opens this screen */
+    openSettings = function () { show(true); };
     closeBtn.addEventListener("click", function () { show(false); });
 
     /* appearance */
@@ -1710,6 +2095,15 @@
           try { localStorage.setItem(LAST_CHECK_KEY, String(Date.now())); } catch (e) {}
           checkBtn.disabled = false;
           checkBtn.textContent = offline ? "Try again" : "Check for updates";
+
+          var meta = document.getElementById("cna-updates-meta");
+          if (meta) {
+            var waiting = list.querySelectorAll(".cna-update-btn:not([hidden])").length +
+                          (reg && reg.waiting ? 1 : 0);
+            meta.textContent = offline ? "couldn't check"
+              : waiting ? waiting + (waiting === 1 ? " update ready" : " updates ready")
+              : "all up to date";
+          }
         });
     }
 
@@ -1788,6 +2182,7 @@
     homeScreen = initHomeScreen();
     initModal();
     repaintCalPicks = initCalendarExport();
+    repaintBackup = initBackup();
     initSettings();
 
     if (!("serviceWorker" in navigator)) return;
