@@ -1584,13 +1584,20 @@
      ------------------------------------------------------------------ */
 
   var BACKUP_APPS = ["dot", "otlog", "taxi"];   /* Overseas Tracker is Nantha's and keeps its own arrangements */
-  var ASK_TIMEOUT_MS = 60000;                   /* a full backup with photos is slow, not stuck */
+  /* A full backup with hundreds of photos is slow, not stuck. Just
+     answering who you are is not, and the difference matters: an app
+     still on its previous version has no idea what is being asked and
+     will never answer at all, and three of those at a minute each is
+     three minutes of staring at nothing. */
+  var ASK_TIMEOUT_MS = 90000;
+  var PING_TIMEOUT_MS = 8000;
   var askSeq = 0;
 
   /* Opens one app out of sight, asks it one question, takes it down
      again. Never rejects: a silent app is an answer too, and the caller
      needs to say which app went quiet rather than fail the lot. */
   function askApp(id, question) {
+    var quick = question.ask === "status" || question.ask === "describe";
     return new Promise(function (resolve) {
       var host = document.getElementById("cna-askers");
       if (!host) { resolve({ ok: false, app: id, error: "nowhere to ask from" }); return; }
@@ -1614,7 +1621,7 @@
 
       var timer = setTimeout(function () {
         finish({ ok: false, app: id, error: "no answer" });
-      }, ASK_TIMEOUT_MS);
+      }, quick ? PING_TIMEOUT_MS : ASK_TIMEOUT_MS);
 
       function onMessage(e) {
         if (e.origin !== location.origin) return;
@@ -1764,35 +1771,46 @@
       allBtn.disabled = true;
 
       var kind = fullBox && fullBox.checked ? "full" : "plain";
-      var got = 0, failed = [];
+      var got = 0, failed = [], stale = [];
 
       /* one at a time: a full backup is heavy and three at once on a
          phone is how you get one of them killed */
       (function next(i) {
         if (i >= want.length) {
           allBtn.disabled = false;
-          note.textContent = got
+          var trouble = "";
+          if (stale.length) trouble += " " + stale.join(" and ") +
+            (stale.length === 1 ? " needs" : " need") +
+            " updating first — open App updates below.";
+          if (failed.length) trouble += " Couldn't reach " + failed.join(", ") + ".";
+          note.textContent = (got
             ? "Ready — press each file below to save it. Choose iCloud Drive."
-              + (failed.length ? " Couldn't reach " + failed.join(", ") + "." : "")
-            : "Couldn't reach " + failed.join(", ") + ".";
+            : "Nothing backed up.") + trouble;
           paintAges();
           return;
         }
         var id = want[i];
-        var asking = known.filter(function (a) { return a.id === id; })[0];
-        note.textContent = "Asking " + (asking ? asking.name : id) +
-          "… (" + (i + 1) + " of " + want.length + ")";
-        askApp(id, { ask: "backup", kind: kind }).then(function (res) {
-          var owner = known.filter(function (a) { return a.id === id; })[0];
-          var shown = owner ? owner.name : id;
-          if (res && res.ok && res.blob) {
-            got++;
-            offerFile(res.blob, res.filename || (id + "-backup.json"),
-              shown + (res.note ? " — " + res.note : ""));
-          } else {
-            failed.push(shown);
-          }
-          next(i + 1);
+        var owner = known.filter(function (a) { return a.id === id; })[0];
+        var shown = owner ? owner.name : id;
+        note.textContent = "Asking " + shown + "… (" + (i + 1) + " of " + want.length + ")";
+
+        /* Knock first. An app still on its previous version has never
+           heard of any of this and will never answer, and finding that
+           out should take seconds rather than the minute and a half a
+           real backup is allowed. */
+        askApp(id, { ask: "status" }).then(function (alive) {
+          if (!alive || !alive.ok) { stale.push(shown); next(i + 1); return; }
+          note.textContent = "Backing up " + shown + "… (" + (i + 1) + " of " + want.length + ")";
+          askApp(id, { ask: "backup", kind: kind }).then(function (res) {
+            if (res && res.ok && res.blob) {
+              got++;
+              offerFile(res.blob, res.filename || (id + "-backup.json"),
+                shown + (res.note ? " — " + res.note : ""));
+            } else {
+              failed.push(shown);
+            }
+            next(i + 1);
+          });
         });
       })(0);
     });
@@ -1828,10 +1846,14 @@
         var text = String(reader.result || "");
         (function findOwner(i) {
           if (i >= BACKUP_APPS.length) {
-            note.textContent = "No app here recognises that file.";
+            note.textContent = "No app here recognises that file. If the apps "
+              + "have just been updated, try again; otherwise update them under "
+              + "App updates below.";
             return;
           }
           var id = BACKUP_APPS[i];
+          var who = known.filter(function (a) { return a.id === id; })[0];
+          note.textContent = "Checking " + (who ? who.name : id) + "…";
           askApp(id, { ask: "describe", text: text }).then(function (res) {
             if (!res || !res.ok) { findOwner(i + 1); return; }
             var owner = known.filter(function (a) { return a.id === id; })[0];
