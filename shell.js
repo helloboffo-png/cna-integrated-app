@@ -411,6 +411,9 @@
         out.push({
           text: text.slice(0, 60),
           settings: false,
+          /* the app says this job is money waiting to be claimed, so the
+             row opens the claims sheet rather than the app */
+          claim: !!t.claim,
           weight: typeof t.weight === "number" && isFinite(t.weight) ? t.weight : 0,
           /* only a bare #screen name is accepted, so nothing an app
              writes can turn into a link off to somewhere else */
@@ -477,13 +480,17 @@
       list.className = "cna-todo-list";
 
       jobs.slice(0, TODO_SHOWN).forEach(function (j) {
-        /* an app's job is a link into that app; this page's own job is a
-           button, because Settings is not a page you can link to */
-        var row = document.createElement(j.settings ? "button" : (j.go ? "a" : "div"));
+        /* An app's job is a link into that app. A job this page can
+           finish itself — marking claims, backing up — is a button,
+           because neither is a page you can link to. */
+        var acts = j.settings || j.claim;
+        var row = document.createElement(acts ? "button" : (j.go ? "a" : "div"));
         row.className = "cna-todo-row";
-        if (j.settings) {
+        if (acts) {
           row.type = "button";
-          row.addEventListener("click", function () { if (openSettings) openSettings(); });
+          row.addEventListener("click", j.settings
+            ? function () { if (openSettings) openSettings(); }
+            : openClaims);
         } else if (j.go) {
           row.setAttribute("href", j.go);
         }
@@ -493,7 +500,7 @@
         t.textContent = j.text;
         row.appendChild(t);
 
-        if (j.go || j.settings) {
+        if (j.go || j.settings || j.claim) {
           var go = document.createElement("span");
           go.className = "cna-todo-go";
           go.setAttribute("aria-hidden", "true");
@@ -1205,6 +1212,16 @@
 
   var RELEASES = [
     {
+      when: "12 September 2026",
+      what: "Mileage, and marking claims from the main page",
+      points: [
+        "New app: Mileage. Log a trip you drove in your own vehicle on a rest day callback — where you went, how far, and the map screenshot to back it up.",
+        "The mileage rate is not filled in yet. Until it is, the app counts kilometres and says so rather than guessing at money. Set it in the app's own Settings once you know it.",
+        "Tap \u201c2 parking receipts to send\u201d on the main page and everything waiting to be claimed opens in one list \u2014 parking, taxi and mileage together. Tick what you have put through, or mark the lot.",
+        "The app is now called CNA Integrated App, and the home screen icon says CIA."
+      ]
+    },
+    {
       when: "9 September 2026",
       what: "Back up everything from one place",
       points: [
@@ -1583,7 +1600,7 @@
      rather than in the background.
      ------------------------------------------------------------------ */
 
-  var BACKUP_APPS = ["dot", "otlog", "taxi"];   /* Overseas Tracker is Nantha's and keeps its own arrangements */
+  var BACKUP_APPS = ["dot", "otlog", "taxi", "off"];   /* Overseas Tracker is Nantha's and keeps its own arrangements */
   /* A full backup with hundreds of photos is slow, not stuck. Just
      answering who you are is not, and the difference matters: an app
      still on its previous version has no idea what is being asked and
@@ -1597,7 +1614,8 @@
      again. Never rejects: a silent app is an answer too, and the caller
      needs to say which app went quiet rather than fail the lot. */
   function askApp(id, question) {
-    var quick = question.ask === "status" || question.ask === "describe";
+    var quick = question.ask === "status" || question.ask === "describe" ||
+                question.ask === "claims" || question.ask === "claim";
     return new Promise(function (resolve) {
       var host = document.getElementById("cna-askers");
       if (!host) { resolve({ ok: false, app: id, error: "nowhere to ask from" }); return; }
@@ -1922,6 +1940,205 @@
   }
 
   /* ------------------------------------------------------------------
+     Marking things claimed, from the main page
+
+     Same bargain as backup, and for the same reason: this page never
+     reads or writes another app's records. It asks each app what is
+     outstanding, shows the answers together, and asks for the ones
+     ticked to be marked. Each app decides what a claim is and what
+     marking one does.
+
+     One sheet rather than a panel on the main page: everything
+     outstanding can be a dozen rows on a bad month, and the main page is
+     already close to the bottom of a small screen. The row in Needs
+     doing was already saying the right thing, so it opens this.
+     ------------------------------------------------------------------ */
+
+  /* Which apps are even worth opening. Each one already says, in the
+     card it publishes, whether it has a job marked as a claim — so an app
+     with nothing outstanding never gets loaded at all. On a quiet month
+     that is the difference between opening one app and opening four. */
+  function appsWithClaims() {
+    var out = [];
+    BACKUP_APPS.forEach(function (id) {
+      var card;
+      try { card = JSON.parse(localStorage.getItem("cna.card." + id) || "null"); }
+      catch (e) { return; }
+      if (!card || !Array.isArray(card.todo)) return;
+      if (card.todo.some(function (t) { return t && t.claim; })) out.push(id);
+    });
+    return out;
+  }
+
+  function openClaims() {
+    var body = document.createElement("div");
+
+    var note = document.createElement("p");
+    note.className = "cna-note";
+    note.style.margin = "0 0 12px";
+    note.textContent = "Asking each app what is outstanding…";
+    body.appendChild(note);
+
+    var listBox = document.createElement("div");
+    body.appendChild(listBox);
+
+    var actions = document.createElement("div");
+    actions.className = "cna-btn-row";
+    actions.style.marginTop = "14px";
+    actions.hidden = true;
+    body.appendChild(actions);
+
+    modalOpener = null;
+    openModal("Mark claimed", body);
+
+    var found = [];   /* { app, name, item } */
+
+    /* All at once, not one after another. Backing up goes app by app
+       because a full backup is heavy and three of those together is how
+       one of them gets killed on a phone — but this is four small reads,
+       and asking in turn meant four page loads back to back and a
+       thirteen second wait before anything appeared. */
+    var asking = appsWithClaims();
+    if (!asking.length) { note.textContent = "Nothing is waiting to be claimed."; return; }
+
+    Promise.all(asking.map(function (id) {
+      return askApp(id, { ask: "claims" }).then(function (res) {
+        if (!res || !res.ok || !Array.isArray(res.items)) return;
+        res.items.forEach(function (it) {
+          if (!it || !it.id) return;
+          found.push({
+            app: id,
+            name: String(res.name || id).slice(0, 24),
+            id: String(it.id),
+            date: typeof it.date === "string" ? it.date : "",
+            label: String(it.label || "").slice(0, 40),
+            value: String(it.value || "").slice(0, 12)
+          });
+        });
+      });
+    })).then(function () {
+      /* the order apps are listed in, not whichever answered first */
+      found.sort(function (a, b) {
+        var ai = BACKUP_APPS.indexOf(a.app), bi = BACKUP_APPS.indexOf(b.app);
+        return ai === bi ? (a.date < b.date ? -1 : 1) : ai - bi;
+      });
+      draw();
+    });
+
+    function draw() {
+      listBox.textContent = "";
+      if (!found.length) {
+        note.textContent = "Nothing is waiting to be claimed.";
+        return;
+      }
+      note.textContent = "Tick what you have put through, then mark them.";
+
+      /* grouped by the app they came from, so a row is never ambiguous
+         about which app is about to be changed */
+      var byApp = {};
+      found.forEach(function (f) { (byApp[f.app] = byApp[f.app] || []).push(f); });
+
+      BACKUP_APPS.forEach(function (id) {
+        var rows = byApp[id];
+        if (!rows) return;
+
+        var head = document.createElement("div");
+        head.className = "cna-claim-head";
+        head.textContent = rows[0].name;
+        listBox.appendChild(head);
+
+        rows.forEach(function (f) {
+          var row = document.createElement("label");
+          row.className = "cna-check cna-claim";
+
+          var box = document.createElement("input");
+          box.type = "checkbox";
+          box.checked = true;
+          box.dataset.app = f.app;
+          box.dataset.claimId = f.id;
+          box.addEventListener("change", paintButtons);
+
+          var text = document.createElement("span");
+          var when = f.date ? f.date.split("-").slice(1).reverse().join("/") + " · " : "";
+          text.textContent = when + f.label;
+
+          var value = document.createElement("b");
+          value.className = "cna-claim-value";
+          value.textContent = f.value;
+
+          row.appendChild(box);
+          row.appendChild(text);
+          row.appendChild(value);
+          listBox.appendChild(row);
+        });
+      });
+
+      actions.hidden = false;
+      actions.textContent = "";
+
+      var none = document.createElement("button");
+      none.className = "cna-btn";
+      none.type = "button";
+      none.textContent = "Untick all";
+      none.addEventListener("click", function () {
+        var boxes = listBox.querySelectorAll("input");
+        var anyOn = [].some.call(boxes, function (b) { return b.checked; });
+        [].forEach.call(boxes, function (b) { b.checked = !anyOn; });
+        none.textContent = anyOn ? "Tick all" : "Untick all";
+        paintButtons();
+      });
+
+      var go = document.createElement("button");
+      go.className = "cna-btn cna-btn-go";
+      go.type = "button";
+      go.addEventListener("click", function () { run(go); });
+
+      actions.appendChild(none);
+      actions.appendChild(go);
+      paintButtons();
+
+      function paintButtons() {
+        var on = listBox.querySelectorAll("input:checked").length;
+        go.textContent = on === found.length && found.length > 1
+          ? "Mark all " + on + " claimed"
+          : on === 1 ? "Mark 1 claimed" : "Mark " + on + " claimed";
+        go.disabled = !on;
+      }
+    }
+
+    function run(go) {
+      var picked = [].map.call(listBox.querySelectorAll("input:checked"), function (b) {
+        return { app: b.dataset.app, id: b.dataset.claimId };
+      });
+      if (!picked.length) return;
+
+      go.disabled = true;
+      go.textContent = "Marking…";
+      actions.querySelector(".cna-btn").disabled = true;
+
+      var byApp = {};
+      picked.forEach(function (p) { (byApp[p.app] = byApp[p.app] || []).push(p.id); });
+      var apps = Object.keys(byApp);
+      var done = 0, failed = [];
+
+      (function next(i) {
+        if (i >= apps.length) {
+          closeModal();
+          initStrip();
+          initTodos();
+          return;
+        }
+        var id = apps[i];
+        askApp(id, { ask: "claim", ids: byApp[id] }).then(function (res) {
+          if (res && res.ok) done += (res.count || 0);
+          else failed.push(id);
+          next(i + 1);
+        });
+      })(0);
+    }
+  }
+
+  /* ------------------------------------------------------------------
      Settings screen — only present on the home screen
      ------------------------------------------------------------------ */
 
@@ -1929,6 +2146,7 @@
     { id: "dot", name: "Driving Log" },
     { id: "otlog", name: "OT Tracker" },
     { id: "taxi", name: "Taxi Claims" },
+    { id: "off", name: "Mileage" },
     { id: "ot", name: "Overseas Tracker" }
   ];
 

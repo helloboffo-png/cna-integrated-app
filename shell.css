@@ -1060,6 +1060,39 @@ a.cna-btn-link {
 a.cna-btn-link:active { background: var(--cna-paper); }
 a.cna-btn-link + a.cna-btn-link { margin-top: 8px; }
 
+/* ---------------------------------------------------------------
+   The claims sheet: what each app says is still waiting to be put
+   through, gathered in one list.
+   --------------------------------------------------------------- */
+
+.cna-claim-head {
+  margin: 14px 0 2px;
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--cna-ink-soft);
+}
+.cna-claim-head:first-child { margin-top: 0; }
+
+.cna-claim { font-weight: 500; }
+.cna-claim span { flex: 1 1 auto; min-width: 0; }
+.cna-claim-value {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the one that does the thing, rather than the one that changes the
+   ticks, so the pair does not read as two equal choices */
+.cna-btn-go {
+  border-color: var(--cna-accent);
+  background: var(--cna-accent);
+  color: var(--cna-accent-ink);
+  font-weight: 700;
+}
+.cna-btn-go[disabled] { opacity: .5; }
+
 /* an option that is not one of a set — no colour dot, no divider */
 .cna-check-plain {
   border-bottom: none;

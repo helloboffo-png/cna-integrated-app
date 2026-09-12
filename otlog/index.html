@@ -419,7 +419,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.1</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -1273,6 +1273,17 @@
       } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
       return;
     }
+    /* Overtime is not something you claim back a receipt for, so there is
+       never anything here for the main page's claims sheet. Answering
+       with an empty list is the honest reply and keeps that sheet quick. */
+    if (msg.ask === "claims") { reply({ ok: true, name: "OT Tracker", items: [] }); return; }
+    if (msg.ask === "claim") { reply({ ok: true, count: 0 }); return; }
+
+    /* Anything this app has no answer for still gets an answer. Silence
+       reads as "not updated yet" on the other end and costs the main page
+       a long wait before it gives up — a question it simply does not
+       apply to should come back at once. */
+    reply({ ok: false, error: "nothing here answers to " + String(msg.ask).slice(0, 20) });
   });
 
   /* ---------- backup reminder ----------

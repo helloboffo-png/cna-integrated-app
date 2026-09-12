@@ -1,10 +1,10 @@
 {
   "id": "taxi",
   "name": "Taxi Claims",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "build": 1,
-  "date": "2026-09-07",
-  "notes": "Backup moved to the main page, one press for every app.",
+  "date": "2026-09-12",
+  "notes": "Mark claims from the main page, and a new Mileage app.",
   "files": [
     "index.html"
   ]

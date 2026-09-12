@@ -7,15 +7,15 @@
    wrong theme for a frame on the next load */
 (function () {
   try {
-    var raw = localStorage.getItem("taxiclaims.v1");
+    var raw = localStorage.getItem("mileage.v1");
     var t = raw && JSON.parse(raw).settings && JSON.parse(raw).settings.theme;
     if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
   } catch (e) {}
 })();
 </script>
-<title>Taxi Claims</title>
+<title>Mileage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Log taxi and Grab fares you paid for yourself, keep the receipt screenshot, and export the monthly claim — works fully offline.">
+<meta name="description" content="Log mileage driven in your own vehicle on a rest day callback, keep the map screenshot, and claim it back — works fully offline.">
 
 <!-- The container owns the one install identity for every app here, so
      this points at its manifest rather than declaring another. -->
@@ -24,43 +24,45 @@
 <meta name="theme-color" content="#171B20">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Taxi Claims">
+<meta name="apple-mobile-web-app-title" content="Mileage">
 
 <style>
-  /* Its own copy of the look rather than a stylesheet shared with Driving
-     Log. They are meant to be separately upgradable, and a shared file
-     would mean a change to one could break the other. The greys are shared
-     with the rest of the family so the apps still feel like one set; the
-     accent is this app's own, matching the purple of its rides on the home
-     screen calendar, so a purple dot and this app read as the same thing. */
+  /* Its own copy of the look rather than a stylesheet shared with the
+     other apps. They are meant to be separately upgradable, and a shared
+     file would mean a change to one could break another. The greys are
+     shared with the rest of the family so the apps still feel like one
+     set; the accent is this app's own, matching the pink of its trips on
+     the home screen calendar. A pink at hue 333 sits a clear 61 degrees
+     from Taxi Claims' purple, which was the nearest thing already in use
+     and the only one it could have been confused with. */
   :root {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #7B45B0; --accent-ink: #FFFFFF;
+    --line: #DDE1DC; --accent: #B03A6E; --accent-ink: #FFFFFF;
     --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
-    --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
+    --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-      --line: #333B44; --accent: #B07FE0; --accent-ink: #1A0A2B;
+      --line: #333B44; --accent: #E88AB5; --accent-ink: #2B0A1B;
       --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
-      --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
+      --tab-bg: #21262D;
       --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
     }
   }
   :root[data-theme="light"] {
     --paper: #F4F5F2; --card: #FFFFFF; --ink: #22282E; --ink-soft: #5B646D;
-    --line: #DDE1DC; --accent: #7B45B0; --accent-ink: #FFFFFF;
+    --line: #DDE1DC; --accent: #B03A6E; --accent-ink: #FFFFFF;
     --good: #3E9B6B; --good-soft: #E3F1E9; --danger: #C9553D;
-    --plate-bg: #22282E; --plate-ink: #F5F6F4; --tab-bg: #FFFFFF;
+    --tab-bg: #FFFFFF;
     --shadow: 0 1px 3px rgba(30,36,42,.08), 0 4px 14px rgba(30,36,42,.06);
   }
   :root[data-theme="dark"] {
     --paper: #171B20; --card: #21262D; --ink: #E9ECEE; --ink-soft: #9AA4AD;
-    --line: #333B44; --accent: #B07FE0; --accent-ink: #1A0A2B;
+    --line: #333B44; --accent: #E88AB5; --accent-ink: #2B0A1B;
     --good: #52B983; --good-soft: #22352B; --danger: #E07A63;
-    --plate-bg: #F0F1EE; --plate-ink: #22282E; --tab-bg: #21262D;
+    --tab-bg: #21262D;
     --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
   }
 
@@ -106,7 +108,7 @@
   .field-clip { overflow: hidden; border-radius: 10px; }
   .row2 { display: flex; gap: 10px; }
   .row2 > div { flex: 1; }
-  #taxi-month, #month-pick { margin: 8px 0 10px; font-weight: 600; }
+  #trip-month, #month-pick { margin: 8px 0 10px; font-weight: 600; }
 
   button.primary {
     width: 100%; margin-top: 16px;
@@ -133,15 +135,16 @@
   }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); flex: none; }
 
-  .carry-banner {
+  .note-banner {
     background: color-mix(in srgb, var(--accent) 16%, var(--card));
     border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
     border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px;
   }
-  .carry-banner p { margin: 0 0 10px; }
-  .carry-banner button { padding: 8px 14px; }
+  .note-banner p { margin: 0 0 10px; }
+  .note-banner p:last-child { margin-bottom: 0; }
+  .note-banner button { padding: 8px 14px; }
 
-  /* ---- photo ---- */
+  /* ---- the map screenshot ---- */
   .photo-add {
     width: 100%;
     display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -158,34 +161,34 @@
   }
   .photo-prev .btn-row { margin-top: 0; flex-direction: column; }
 
-  /* ---- receipt list ---- */
-  .ride-month {
+  /* ---- trip list ---- */
+  .trip-month {
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
     color: var(--ink-soft); padding: 14px 2px 4px; border-bottom: 1px solid var(--line);
   }
-  .ride-month:first-child { padding-top: 4px; }
-  .ride { display: flex; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
-  .ride:last-child { border-bottom: none; }
-  .ride-thumb {
+  .trip-month:first-child { padding-top: 4px; }
+  .trip { display: flex; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .trip:last-child { border-bottom: none; }
+  .trip-thumb {
     width: 44px; height: 56px; flex: none;
     border-radius: 8px; border: 1px solid var(--line);
     object-fit: cover; background: var(--paper); cursor: zoom-in;
   }
-  .ride-thumb.none {
+  .trip-thumb.none {
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600; color: var(--ink-soft);
     cursor: default; text-align: center; line-height: 1.2;
   }
-  .ride-main { flex: 1; min-width: 0; }
-  .ride-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-  .ride-amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .ride-sub { font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ride-acts { display: flex; gap: 16px; margin-top: 6px; }
-  .ride-acts button {
+  .trip-main { flex: 1; min-width: 0; }
+  .trip-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .trip-amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .trip-sub { font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trip-acts { display: flex; gap: 16px; margin-top: 6px; }
+  .trip-acts button {
     font: inherit; font-size: 12px; font-weight: 600;
     background: none; border: none; cursor: pointer; padding: 2px 0; color: var(--ink);
   }
-  .ride-acts button.danger { color: var(--danger); }
+  .trip-acts button.danger { color: var(--danger); }
   .tag {
     flex: none; font: inherit; font-size: 10px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.06em;
@@ -231,6 +234,10 @@
   details.sec[open] > summary .chev { transform: rotate(-135deg); margin-top: 3px; }
   @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
   .sec-body { padding: 0 16px 16px; }
+  .formula-box {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; margin: 10px 0;
+  }
 
   /* ---- tabs ---- */
   nav.tabs {
@@ -266,9 +273,8 @@
   nav.tabs a.tab-home svg { width: 22px; height: 22px; display: block; }
   nav.tabs a.tab-home:active { opacity: .6; }
   nav.tabs a.tab-home:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  /* A 320px phone splits six tabs into 53px each, which the word "Settings"
-     fills to the pixel. Drop the label a notch there so nothing sits on the
-     screen edge. */
+  /* A 320px phone splits five tabs into 64px each. Drop the label a notch
+     there anyway, so this app matches the others on the same screen. */
   @media (max-width: 359px) {
     nav.tabs button, nav.tabs a.tab-home { font-size: 10px; }
   }
@@ -316,82 +322,84 @@
 
 <div class="app">
   <header class="top">
-    <h1>Taxi Claims</h1>
+    <h1 id="app-title">Mileage</h1>
     <span class="date-line" id="today-line"></span>
   </header>
 
   <!-- ============ LOG ============ -->
   <section class="screen active" id="screen-log">
-    <div id="carry-banner"></div>
+    <div id="rate-note"></div>
     <div id="today-status"></div>
 
     <div class="card">
-      <h2 id="form-title">Log a ride</h2>
-      <p class="hint">Grab or taxi trips you paid for yourself. Save the receipt here, then upload it to the company portal and mark it claimed.</p>
+      <h2 id="trip-form-title">Log a trip</h2>
+      <p class="hint" id="trip-form-hint">Driving your own vehicle on a rest day callback. Screenshot the map showing both ends of the journey, save it here, then claim it through the portal and mark it claimed.</p>
 
-      <label class="field" for="ride-date">Date</label>
-      <div class="field-clip"><input type="date" id="ride-date" max="2100-12-31"></div>
+      <label class="field" for="trip-date">Date</label>
+      <div class="field-clip"><input type="date" id="trip-date" max="2100-12-31"></div>
 
-      <div class="row2">
-        <div>
-          <label class="field" for="ride-amount">Amount ($)</label>
-          <input type="number" id="ride-amount" min="0" step="0.01" inputmode="decimal" placeholder="12.40">
-        </div>
-        <div>
-          <label class="field" for="ride-receipt">Receipt no.</label>
-          <input type="text" id="ride-receipt" placeholder="A-3F92KQ" autocapitalize="characters">
-        </div>
-      </div>
+      <label class="field" for="trip-from">From</label>
+      <input type="text" id="trip-from" placeholder="e.g. Home, Bishan" autocomplete="off">
 
-      <label class="field" for="ride-note">Trip <span style="font-weight:400">(optional)</span></label>
-      <input type="text" id="ride-note" placeholder="e.g. Caldecott to Punggol shoot">
+      <label class="field" for="trip-to">To</label>
+      <input type="text" id="trip-to" placeholder="e.g. Caldecott Broadcast Centre" autocomplete="off">
 
-      <label class="field">Receipt screenshot</label>
+      <label class="field" for="trip-km">Distance (km)</label>
+      <input type="number" id="trip-km" inputmode="decimal" step="0.1" min="0" placeholder="0.0">
+
+      <label class="field">Map screenshot</label>
       <div id="photo-slot"></div>
-      <input type="file" id="ride-file" accept="image/*" style="display:none">
+      <input type="file" id="trip-file" accept="image/*" style="display:none">
 
-      <button class="primary" id="save-ride">Save ride</button>
-      <button class="secondary" id="cancel-ride" style="width:100%; margin-top:8px; display:none;">Cancel edit</button>
+      <button class="primary" id="save-trip">Save this trip</button>
+      <div class="btn-row" id="cancel-row" style="display:none">
+        <button class="secondary" id="cancel-trip">Cancel</button>
+      </div>
     </div>
-
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Taxi Claims · v2.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Mileage · v1.0</p>
   </section>
 
-  <!-- ============ RECEIPTS ============ -->
+  <!-- ============ TRIPS ============ -->
   <section class="screen" id="screen-list">
     <div class="card">
-      <h2>Logged rides</h2>
-      <p class="hint" id="list-summary"></p>
-      <select id="taxi-month" aria-label="Rides to show"></select>
-      <div id="ride-list"></div>
+      <h2>Logged trips</h2>
+      <label class="field" for="trip-month">Show</label>
+      <select id="trip-month"></select>
+      <div id="trip-list"></div>
     </div>
   </section>
 
   <!-- ============ MONTH ============ -->
   <section class="screen" id="screen-month">
     <div class="card">
-      <h2>Month summary</h2>
+      <h2>Month</h2>
       <label class="field" for="month-pick">Month</label>
-      <div class="field-clip"><input type="month" id="month-pick" max="2100-12"></div>
-      <div class="stat-row">
-        <div class="stat"><div class="n" id="stat-count">0</div><div class="l">Rides</div></div>
-        <div class="stat"><div class="n" id="stat-total">$0</div><div class="l">Total</div></div>
-        <div class="stat"><div class="n" id="stat-open">$0</div><div class="l">To claim</div></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Claim list</h2>
-      <p class="hint">Exactly what you key into the company system.</p>
-      <div class="tbl-wrap"><table id="claim-table"></table></div>
-      <div class="totals-line" id="claim-total"></div>
-      <div class="btn-row"><button class="secondary" id="copy-claims">Copy list</button></div>
+      <select id="month-pick"></select>
+      <div id="month-body"></div>
     </div>
   </section>
 
   <!-- ============ SETTINGS ============ -->
   <section class="screen" id="screen-settings">
-    <details class="card sec">
+    <details class="card sec" id="sec-rate" open>
+      <summary>
+        <span class="sec-title">Mileage rate</span>
+        <span class="sec-meta" id="rate-meta"></span>
+        <span class="chev"></span>
+      </summary>
+      <div class="sec-body">
+        <label class="field" for="rate-input">Paid per kilometre</label>
+        <input type="number" id="rate-input" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
+        <div class="formula-box">
+          <p class="hint" style="margin:0" id="rate-example"></p>
+        </div>
+        <div class="btn-row">
+          <button class="secondary" id="save-rate">Save rate</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="card sec" id="sec-storage">
       <summary>
         <span class="sec-title">Storage</span>
         <span class="sec-meta" id="storage-meta"></span>
@@ -400,8 +408,8 @@
       <div class="sec-body">
         <p class="hint" id="storage-detail"></p>
         <p class="hint" id="backup-age" style="font-weight:600;color:var(--ink)"></p>
-        <!-- Backing up moved to the main page, where one press covers this
-             app and every other one. -->
+        <!-- Backing up happens on the main page, where one press covers
+             this app and every other one. -->
         <p class="hint">Back up from Settings on the main page — one press covers this app and every other one.</p>
       </div>
     </details>
@@ -413,8 +421,10 @@
         <span class="chev"></span>
       </summary>
       <div class="sec-body">
-        <p class="hint">Deletes every ride and every screenshot in this app. Nothing in Driving Log or any other app is touched.</p>
-        <button class="secondary danger" id="wipe-all" style="width:100%">Erase everything in Taxi Claims</button>
+        <p class="hint">Wipes every trip logged in this app and puts the rate back to unset. Nothing in Driving Log or any other app is touched.</p>
+        <div class="btn-row">
+          <button class="secondary danger" id="wipe-all">Erase everything</button>
+        </div>
       </div>
     </details>
   </section>
@@ -431,13 +441,14 @@
   </a>
   <button data-screen="screen-log" class="active">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M5 3h14v18l-3.5-2-3.5 2-3.5-2L5 21V3z"/><path d="M9 8.5h6M9 12.5h6"/>
+      <circle cx="6" cy="18" r="2.2"/><path d="M6 15.6c0-4.8 12-3.4 12-8"/>
+      <path d="M18 3.4c1.7 0 3 1.3 3 3 0 2.2-3 5-3 5s-3-2.8-3-5c0-1.7 1.3-3 3-3z"/>
     </svg>Log<span class="ico-bar"></span>
   </button>
   <button data-screen="screen-list">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>
-    </svg>Rides<span class="ico-bar"></span>
+    </svg>Trips<span class="ico-bar"></span>
   </button>
   <button data-screen="screen-month">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -458,7 +469,7 @@
   <div class="modal">
     <h3 id="modal-title"></h3>
     <p class="hint" id="modal-message" style="display:none; font-size:14px; margin:0 0 12px;"></p>
-    <img id="modal-img" alt="Receipt screenshot" style="display:none">
+    <img id="modal-img" alt="Map screenshot" style="display:none">
     <textarea id="modal-text" readonly rows="9" style="display:none"></textarea>
     <div class="btn-row" id="modal-actions"></div>
     <p class="hint" id="modal-hint"></p>
@@ -470,10 +481,10 @@
 (function () {
   "use strict";
 
-  var KEY = "taxiclaims.v1";
-  var SRC_KEY = "driveotlog.v1";        /* Driving Log's own store, read only */
-  var PHOTO_DB = "taxiclaims-photos";
-  var SRC_PHOTO_DB = "dotlog-photos";   /* Driving Log's photo store */
+  var KEY = "mileage.v1";
+  var PHOTO_DB = "mileage-photos";
+  var PLAIN_FORMAT = "mileage-backup-1";
+  var ARCHIVE_FORMAT = "mileage-archive-1";
 
   var $ = function (id) { return document.getElementById(id); };
   var DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -485,6 +496,7 @@
   function fmt(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
   function monthLabel(ym) { var p = ym.split("-"); return MONTHS[+p[1]-1] + " " + p[0]; }
   function money(n) { return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function km(n) { return (Math.round(n * 10) / 10).toFixed(1) + " km"; }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -500,38 +512,43 @@
     toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
   }
 
-  /* ---------- storage ---------- */
+  /* ---------- storage ----------
+     rate starts null rather than at a guess. A wrong rate quietly
+     producing wrong money is worse than no rate producing none, so until
+     somebody sets it this app counts kilometres and says so. */
   function defaults() {
-    return { schema: 1, rides: [], settings: { theme: "auto" } };
+    return { schema: 1, trips: [], settings: { theme: "auto", rate: null } };
   }
+
   function load() {
     var db;
-    try { db = JSON.parse(localStorage.getItem(KEY)) || defaults(); }
-    catch (e) { db = defaults(); }
+    try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { db = null; }
     if (!db || typeof db !== "object") db = defaults();
-    if (!Array.isArray(db.rides)) db.rides = [];
+    if (!Array.isArray(db.trips)) db.trips = [];
     if (!db.settings || typeof db.settings !== "object") db.settings = defaults().settings;
-    if (["light","dark","auto"].indexOf(db.settings.theme) === -1) db.settings.theme = "auto";
-    /* drop anything malformed rather than let it break rendering later */
-    db.rides = db.rides.filter(function (r) {
-      return r && typeof r === "object" && r.id && /^\d{4}-\d{2}-\d{2}$/.test(r.date || "");
+    if (db.settings.theme !== "light" && db.settings.theme !== "dark") db.settings.theme = "auto";
+    if (typeof db.settings.rate !== "number" || !(db.settings.rate > 0)) db.settings.rate = null;
+    db.trips = db.trips.filter(function (t) {
+      return t && typeof t === "object" && t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.date || "");
+    }).map(function (t) {
+      return {
+        id: String(t.id),
+        date: t.date,
+        from: typeof t.from === "string" ? t.from : "",
+        to: typeof t.to === "string" ? t.to : "",
+        km: typeof t.km === "number" && isFinite(t.km) && t.km > 0 ? t.km : 0,
+        photo: !!t.photo,
+        claimed: !!t.claimed
+      };
     });
-    db.rides.forEach(function (r) {
-      if (typeof r.amount !== "number" || isNaN(r.amount) || r.amount < 0) r.amount = 0;
-      if (typeof r.receipt !== "string") r.receipt = "";
-      if (typeof r.note !== "string") r.note = "";
-      r.photo = !!r.photo;
-      r.claimed = !!r.claimed;
-    });
-    db.schema = 1;
     return db;
   }
+
   var db = load();
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); }
-    catch (e) { toast("Phone storage is full — not saved"); }
-    publishCard();
-  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(db)); publishCard(); }
+
+  function amountOf(t) { return db.settings.rate ? t.km * db.settings.rate : null; }
+  function newId() { return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   function applyTheme() {
     var t = db.settings.theme;
@@ -539,70 +556,81 @@
     else document.documentElement.removeAttribute("data-theme");
   }
   applyTheme();
-  window.addEventListener("storage", function (ev) {
-    if (ev.key !== KEY) return;
-    db = load(); applyTheme(); renderAll();
+  /* the container writes this app's theme into the same store, so pick up
+     a change made on the main page without needing a reload */
+  window.addEventListener("storage", function (e) {
+    if (e.key !== KEY) return;
+    db = load();
+    applyTheme();
+    renderAll();
   });
 
   /* ---------- the figure this app puts on the home screen ----------
      The home screen never reads this app's storage. This app decides its
      own numbers and leaves them here in the shape the home screen agrees
-     to read, so Taxi Claims can change freely without the home screen
+     to read, so Mileage can change freely without the home screen
      knowing. weight fixes the order so figures never swap places. */
   function publishCard() {
     try {
-      /* this month only — the home screen starts each month clean */
       var thisMonth = todayISO().slice(0, 7);
-      var open = db.rides.filter(function (r) { return !r.claimed; });
-      var owed = open.filter(function (r) { return r.date.slice(0, 7) === thisMonth; })
-                     .reduce(function (s, r) { return s + r.amount; }, 0);
-      /* but a fare from an earlier month that was never claimed must not
-         vanish with the turn of the month */
-      var olderOwed = open.filter(function (r) { return r.date.slice(0, 7) < thisMonth; })
-                          .reduce(function (s, r) { return s + r.amount; }, 0);
-      /* Which days had a ride, for the home screen's calendar. Purple
-         rather than the red taxi lamp, because red already means "this
-         needs doing" in the figures above and one colour should not mean
-         two things on the same screen. */
+      var open = db.trips.filter(function (t) { return !t.claimed; });
+      var openThis = open.filter(function (t) { return t.date.slice(0, 7) === thisMonth; });
+      var openOlder = open.filter(function (t) { return t.date.slice(0, 7) < thisMonth; });
+
+      var rate = db.settings.rate;
+      var owed = rate ? openThis.reduce(function (s, t) { return s + t.km * rate; }, 0) : 0;
+      var olderOwed = rate ? openOlder.reduce(function (s, t) { return s + t.km * rate; }, 0) : 0;
+      var kmThis = openThis.reduce(function (s, t) { return s + t.km; }, 0);
+
+      /* Which days had a trip, for the home screen's calendar. Pink rather
+         than anything already in use — the nearest is Taxi Claims' purple,
+         and at four pixels across two neighbouring purples would have been
+         one colour. */
       var cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 400);
       var since = cutoff.toISOString().slice(0, 10);
-      var rideDays = {};
-      db.rides.forEach(function (r) {
-        if (r.date < since) return;
-        rideDays[r.date] = (rideDays[r.date] || 0) + r.amount;
+      var tripDays = {};
+      db.trips.forEach(function (t) {
+        if (t.date < since) return;
+        tripDays[t.date] = (tripDays[t.date] || 0) + t.km;
       });
-      Object.keys(rideDays).forEach(function (iso) { rideDays[iso] = money(rideDays[iso]); });
+      Object.keys(tripDays).forEach(function (iso) { tripDays[iso] = km(tripDays[iso]); });
 
-      /* What is still outstanding, in this app's own words. Rides from
-         any month, not only this one — the turn of a month does not
-         claim anything. */
+      /* What is still outstanding, in this app's own words. A rate nobody
+         has set is the one that matters: the app can count the distance
+         but cannot say what it is worth. */
       var jobs = [];
       if (open.length) {
-        jobs.push({ key: "claim", weight: 18, go: "#list", claim: true,
-          text: open.length === 1 ? "1 taxi ride to claim"
-                                  : open.length + " taxi rides to claim" });
+        jobs.push({ key: "claim", weight: 16, go: "#list", claim: true,
+          text: open.length === 1 ? "1 mileage trip to claim"
+                                  : open.length + " mileage trips to claim" });
       }
-      /* No backup job here any more: the main page raises one reminder
-         covering every app, from the dates each of them reports. */
+      if (db.trips.length && !rate) {
+        jobs.push({ key: "rate", weight: 9, go: "#settings",
+          text: "Set the mileage rate" });
+      }
 
-      localStorage.setItem("cna.card.taxi", JSON.stringify({
-        app: "taxi", name: "Taxi Claims", at: Date.now(),
+      localStorage.setItem("cna.card.off", JSON.stringify({
+        app: "off", name: "Mileage", at: Date.now(),
         backupAt: db.lastBackupAt || null,
-        hasData: db.rides.length > 0,
+        hasData: db.trips.length > 0,
         todo: jobs,
         marks: [
           /* go is where a tap on that day's dot lands, on the home
              screen's calendar. A bare #screen in this app's own folder. */
-          { key: "taxi", label: "Taxi", colour: "#9B5FD0", days: rideDays, go: "#list" }
+          { key: "trip", label: "Mileage", colour: "#C94F86", days: tripDays, go: "#list" }
         ],
-        items: [
-          { key: "fares", value: money(owed).replace(/\.00$/, ""), label: "taxi fares",
-            alert: owed > 0, weight: 15, go: "#list" }
-        ].concat(olderOwed > 0 ? [
-          { key: "older", value: money(olderOwed).replace(/\.00$/, ""), label: "older fares",
-            alert: true, weight: 4, go: "#list" }
-        ] : [])
+        items: rate
+          ? [{ key: "owed", value: money(owed).replace(/\.00$/, ""), label: "mileage",
+               alert: owed > 0, weight: 12, go: "#month" }]
+              .concat(olderOwed > 0 ? [
+                { key: "older", value: money(olderOwed).replace(/\.00$/, ""), label: "older mileage",
+                  alert: true, weight: 3, go: "#list" }
+              ] : [])
+          /* No rate set, so no money to show. The distance is still true,
+             and showing it is what makes the missing rate obvious. */
+          : (kmThis > 0 ? [{ key: "km", value: km(kmThis), label: "unclaimed",
+                             alert: true, weight: 12, go: "#month" }] : [])
       }));
     } catch (e) { /* nothing on the home screen is worth failing over */ }
   }
@@ -610,7 +638,7 @@
   /* ---------- photos ----------
      Screenshots go in IndexedDB rather than the main store: localStorage
      is small and shared, and one oversized photo there would take every
-     ride down with it. Every call degrades to "no photo" rather than
+     trip down with it. Every call degrades to "no photo" rather than
      throwing, so the app still works where IndexedDB is unavailable. */
   function openPhotoDb(name, cb) {
     if (!window.indexedDB) return cb(null);
@@ -618,8 +646,7 @@
     /* Always with an upgrade handler that creates the store. Opening a
        database that does not exist creates it — without this it would be
        created empty, and the owning app, opening at the same version,
-       would never get an upgrade event to add the store back. That is a
-       real way to break Driving Log's photos from over here. */
+       would never get an upgrade event to add the store back. */
     try { req = indexedDB.open(name, 1); }
     catch (e) { return cb(null); }
     req.onupgradeneeded = function () {
@@ -691,121 +718,18 @@
     img.src = url;
   }
 
-  /* ---------- one-time carry-over from Driving Log ----------
-     Taxi rides lived inside Driving Log's receipt list, mixed in with
-     parking. This moves the taxi ones across, one at a time.
-
-     A ride's screenshot is only freed from Driving Log after it has been
-     written here AND read back at the same size — a verified copy, never
-     a hopeful one. If any step fails, that ride is left exactly where it
-     was and picked up again next time this app opens. So an interrupted
-     move is never a lost receipt, and running it twice is harmless.
-
-     Parking is not touched: it stays Driving Log's. */
-  function readSource() {
-    try {
-      var raw = localStorage.getItem(SRC_KEY);
-      var src = raw && JSON.parse(raw);
-      if (!src || typeof src !== "object" || !Array.isArray(src.taxi)) return null;
-      return src;
-    } catch (e) { return null; }
-  }
-
-  function carryOver(done) {
-    var src = readSource();
-    if (!src) return done(0);
-    var rows = src.taxi.filter(function (r) { return r && typeof r === "object" && r.kind === "taxi" && r.id; });
-    if (!rows.length) return done(0);
-
-    var have = {};
-    db.rides.forEach(function (r) { have[r.id] = true; });
-
-    var moved = 0, i = 0;
-
-    function drop(id) {
-      for (var k = src.taxi.length - 1; k >= 0; k--) {
-        if (src.taxi[k] && src.taxi[k].id === id) src.taxi.splice(k, 1);
-      }
+  function requestPersist() {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then(function (already) {
+        if (!already) navigator.storage.persist();
+      }, function () {});
     }
-    function take(r) {
-      if (!have[r.id]) {
-        db.rides.push({
-          id: r.id,
-          date: r.date,
-          amount: typeof r.amount === "number" ? r.amount : 0,
-          receipt: typeof r.receipt === "string" ? r.receipt : "",
-          note: typeof r.note === "string" ? r.note : "",
-          photo: !!r.photo,
-          claimed: !!r.claimed
-        });
-        have[r.id] = true;
-      }
-      drop(r.id);
-      moved++;
-    }
-
-    function next() {
-      if (i >= rows.length) return finish();
-      var r = rows[i++];
-
-      /* already carried over on an earlier run but not cleared from the
-         source — just clear it, do not copy twice */
-      if (have[r.id]) { drop(r.id); return next(); }
-      if (!r.photo) { take(r); return next(); }
-
-      copyPhoto(r.id, function (ok) {
-        if (ok) take(r);
-        /* not ok: leave the ride and its screenshot in Driving Log
-           untouched, and try again the next time this app opens */
-        next();
-      });
-    }
-
-    function finish() {
-      save();
-      if (moved) {
-        try { localStorage.setItem(SRC_KEY, JSON.stringify(src)); } catch (e) {}
-      }
-      done(moved);
-    }
-
-    next();
-  }
-
-  /* read from Driving Log, write here, read back and check, only then
-     delete the original */
-  function copyPhoto(id, cb) {
-    openPhotoDb(SRC_PHOTO_DB, function (srcDb) {
-      if (!srcDb) return cb(false);
-      var got;
-      try {
-        got = srcDb.transaction("photos", "readonly").objectStore("photos").get(id);
-      } catch (e) { return cb(false); }
-      got.onerror = function () { cb(false); };
-      got.onsuccess = function () {
-        var blob = got.result;
-        /* the row claims a photo but the store has none — nothing to
-           copy, and nothing to lose by moving the ride across */
-        if (!blob) return cb(true);
-        photoPut(id, blob, function (ok) {
-          if (!ok) return cb(false);
-          photoGet(id, function (back) {
-            var same = back && typeof back.size === "number" &&
-                       typeof blob.size === "number" && back.size === blob.size;
-            if (!same) return cb(false);
-            try {
-              srcDb.transaction("photos", "readwrite").objectStore("photos").delete(id);
-            } catch (e) {}
-            cb(true);
-          });
-        });
-      };
-    });
   }
 
   /* ---------- tabs ---------- */
   var tabButtons = document.querySelectorAll("nav.tabs button");
   function switchTab(screenId) {
+    document.body.setAttribute("data-tab", screenId);
     tabButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.screen === screenId); });
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(screenId).classList.add("active");
@@ -814,421 +738,492 @@
     if (screenId === "screen-settings") renderSettings();
     window.scrollTo(0, 0);
   }
-  tabButtons.forEach(function (b) {
-    b.addEventListener("click", function () { switchTab(b.dataset.screen); });
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () { switchTab(btn.dataset.screen); });
   });
 
   /* ---------- the form ---------- */
   var editingId = null;
-  var formPhoto = null;      /* a newly picked blob, not yet saved */
-  var formPhotoHas = false;  /* the ride being edited already has one */
+  var formPhoto = null;      /* a Blob waiting to be saved */
+  var formPhotoKept = false; /* editing, and the existing photo stays */
 
-  function resetForm() {
-    editingId = null;
-    formPhoto = null;
-    formPhotoHas = false;
-    $("ride-date").value = todayISO();
-    $("ride-amount").value = "";
-    $("ride-receipt").value = "";
-    $("ride-note").value = "";
-    $("form-title").textContent = "Log a ride";
-    $("save-ride").textContent = "Save ride";
-    $("cancel-ride").style.display = "none";
-    renderPhotoSlot();
+  function formIsDirty() {
+    return $("trip-from").value.trim() !== "" ||
+           $("trip-to").value.trim() !== "" ||
+           $("trip-km").value.trim() !== "" ||
+           !!formPhoto;
   }
 
   function renderPhotoSlot() {
     var slot = $("photo-slot");
     slot.textContent = "";
 
-    function addButton() {
-      var b = el("button", "photo-add", "＋ Add screenshot");
+    function addButton(label) {
+      var b = el("button", "photo-add", label);
       b.type = "button";
-      b.addEventListener("click", function () { $("ride-file").click(); });
-      slot.appendChild(b);
-    }
-    function preview(blob) {
-      var wrap = el("div", "photo-prev");
-      var img = document.createElement("img");
-      img.src = objUrl(blob);
-      img.alt = "Receipt screenshot";
-      img.addEventListener("click", function () { openPhoto(blob); });
-      var col = el("div", "btn-row");
-      var rep = el("button", "secondary", "Replace");
-      rep.type = "button";
-      rep.addEventListener("click", function () { $("ride-file").click(); });
-      var rem = el("button", "secondary danger", "Remove");
-      rem.type = "button";
-      rem.addEventListener("click", function () {
-        formPhoto = null; formPhotoHas = false; renderPhotoSlot();
-      });
-      col.appendChild(rep); col.appendChild(rem);
-      wrap.appendChild(img); wrap.appendChild(col);
-      slot.appendChild(wrap);
+      b.addEventListener("click", function () { $("trip-file").click(); });
+      return b;
     }
 
-    if (formPhoto) { preview(formPhoto); return; }
-    if (formPhotoHas && editingId) {
-      var forId = editingId;
-      photoGet(forId, function (blob) {
-        /* the form may have moved on while this read was in flight */
-        if (editingId !== forId || formPhoto) return;
-        slot.textContent = "";
-        if (blob) preview(blob); else addButton();
+    if (formPhoto) {
+      var wrap = el("div", "photo-prev");
+      var img = el("img");
+      img.alt = "Map screenshot";
+      img.src = objUrl(formPhoto);
+      img.addEventListener("click", function () { openPhoto(formPhoto); });
+      wrap.appendChild(img);
+      var acts = el("div", "btn-row");
+      var swap = el("button", "secondary", "Replace");
+      swap.type = "button";
+      swap.addEventListener("click", function () { $("trip-file").click(); });
+      var drop = el("button", "secondary danger", "Remove");
+      drop.type = "button";
+      drop.addEventListener("click", function () {
+        formPhoto = null; formPhotoKept = false; renderPhotoSlot();
       });
+      acts.appendChild(swap); acts.appendChild(drop);
+      wrap.appendChild(acts);
+      slot.appendChild(wrap);
       return;
     }
-    addButton();
+
+    if (editingId && formPhotoKept) {
+      var rec = db.trips.filter(function (t) { return t.id === editingId; })[0];
+      if (rec && rec.photo) {
+        photoGet(rec.id, function (blob) {
+          if (!blob) { formPhotoKept = false; renderPhotoSlot(); return; }
+          var w = el("div", "photo-prev");
+          var i2 = el("img");
+          i2.alt = "Map screenshot";
+          i2.src = objUrl(blob);
+          i2.addEventListener("click", function () { openPhoto(blob); });
+          w.appendChild(i2);
+          var a2 = el("div", "btn-row");
+          var s2 = el("button", "secondary", "Replace");
+          s2.type = "button";
+          s2.addEventListener("click", function () { $("trip-file").click(); });
+          var d2 = el("button", "secondary danger", "Remove");
+          d2.type = "button";
+          d2.addEventListener("click", function () { formPhotoKept = false; renderPhotoSlot(); });
+          a2.appendChild(s2); a2.appendChild(d2);
+          w.appendChild(a2);
+          slot.textContent = "";
+          slot.appendChild(w);
+        });
+        return;
+      }
+    }
+
+    slot.appendChild(addButton("Add the map screenshot"));
   }
 
-  $("ride-file").addEventListener("change", function () {
+  $("trip-file").addEventListener("change", function () {
     var f = this.files[0];
     this.value = "";
     if (!f) return;
-    if (!/^image\//.test(f.type)) { toast("Pick an image file"); return; }
-    toast("Processing screenshot…");
     shrinkImage(f, function (blob) {
-      if (!blob) { toast("Couldn't read that image"); return; }
+      if (!blob) { toast("Couldn't read that picture"); return; }
       formPhoto = blob;
-      formPhotoHas = false;
+      formPhotoKept = false;
       renderPhotoSlot();
     });
   });
 
-  $("cancel-ride").addEventListener("click", function () {
-    resetForm();
-    toast("Edit cancelled");
-  });
+  function resetForm() {
+    editingId = null;
+    formPhoto = null;
+    formPhotoKept = false;
+    $("trip-date").value = todayISO();
+    $("trip-from").value = "";
+    $("trip-to").value = "";
+    $("trip-km").value = "";
+    $("trip-form-title").textContent = "Log a trip";
+    $("trip-form-hint").textContent = "Driving your own vehicle on a rest day callback. Screenshot the map showing both ends of the journey, save it here, then claim it through the portal and mark it claimed.";
+    $("save-trip").textContent = "Save this trip";
+    $("cancel-row").style.display = "none";
+    releaseUrls();
+    renderPhotoSlot();
+  }
 
-  /* a half-typed ride is worth protecting from a container reload */
-  window.cnaHasUnsaved = function () {
-    return !!(formPhoto || $("ride-amount").value.trim() || $("ride-receipt").value.trim() || $("ride-note").value.trim());
-  };
+  function editTrip(id) {
+    var t = db.trips.filter(function (x) { return x.id === id; })[0];
+    if (!t) return;
+    editingId = id;
+    formPhoto = null;
+    formPhotoKept = !!t.photo;
+    $("trip-date").value = t.date;
+    $("trip-from").value = t.from;
+    $("trip-to").value = t.to;
+    $("trip-km").value = t.km ? String(t.km) : "";
+    $("trip-form-title").textContent = "Edit this trip";
+    $("trip-form-hint").textContent = "Change what needs changing and save.";
+    $("save-trip").textContent = "Save changes";
+    $("cancel-row").style.display = "";
+    releaseUrls();
+    renderPhotoSlot();
+    switchTab("screen-log");
+  }
 
-  $("save-ride").addEventListener("click", function () {
-    var date = $("ride-date").value;
-    if (!date) { toast("Pick a date first"); return; }
-    var amtRaw = $("ride-amount").value.trim();
-    var amt = parseFloat(amtRaw);
-    if (amtRaw === "" || isNaN(amt) || amt <= 0) { toast("Enter the fare amount"); return; }
-    /* receipt numbers stay ASCII — the copy/export path assumes it */
-    var receipt = $("ride-receipt").value.trim().toUpperCase().replace(/[^A-Z0-9 \-\/]/g, "");
-    var note = $("ride-note").value.trim().replace(/[^\x20-\x7E]/g, "");
+  $("cancel-trip").addEventListener("click", function () { resetForm(); });
 
-    var id = editingId || ("r" + Date.now() + Math.random().toString(36).slice(2, 6));
-    var existing = editingId ? db.rides.filter(function (r) { return r.id === id; })[0] : null;
+  $("save-trip").addEventListener("click", function () {
+    var date = $("trip-date").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast("Pick a date"); return; }
+    var distance = parseFloat($("trip-km").value);
+    if (!isFinite(distance) || distance <= 0) { toast("How far was it?"); return; }
+    var from = $("trip-from").value.trim().slice(0, 60);
+    var to = $("trip-to").value.trim().slice(0, 60);
 
-    function commit(hasPhoto) {
-      var rec = {
-        id: id, date: date,
-        amount: Math.round(amt * 100) / 100,
-        receipt: receipt, note: note,
-        photo: hasPhoto,
-        claimed: existing ? !!existing.claimed : false
-      };
-      if (existing) db.rides[db.rides.indexOf(existing)] = rec;
-      else db.rides.push(rec);
+    var rec;
+    if (editingId) {
+      rec = db.trips.filter(function (x) { return x.id === editingId; })[0];
+      if (!rec) { resetForm(); return; }
+      /* dropping the picture on an edit takes it out of storage too,
+         rather than leaving it orphaned in there forever */
+      if (!formPhotoKept && !formPhoto && rec.photo) { photoDel(rec.id); rec.photo = false; }
+      rec.date = date; rec.from = from; rec.to = to; rec.km = distance;
+    } else {
+      rec = { id: newId(), date: date, from: from, to: to, km: distance, photo: false, claimed: false };
+      db.trips.push(rec);
+    }
+
+    function done() {
       save();
       resetForm();
-      renderTodayStatus();
-      toast((existing ? "Updated " : "Saved ") + money(rec.amount) + " fare");
+      renderAll();
+      toast(editingId ? "Trip updated" : "Trip saved");
     }
 
     if (formPhoto) {
-      photoPut(id, formPhoto, function (ok) {
-        if (!ok) toast("Screenshot could not be saved — the ride was");
-        commit(ok);
+      photoPut(rec.id, formPhoto, function (ok) {
+        rec.photo = !!ok;
+        if (!ok) toast("Saved, but the picture wouldn't store");
+        done();
       });
-    } else if (formPhotoHas && existing) {
-      commit(true);                 /* kept the one already stored */
     } else {
-      if (existing && existing.photo) photoDel(id);   /* removed on purpose */
-      commit(false);
+      done();
     }
   });
 
   function renderTodayStatus() {
     var box = $("today-status");
     box.textContent = "";
-    var today = db.rides.filter(function (r) { return r.date === todayISO(); });
-    if (!today.length) return;
-    var sum = today.reduce(function (s, r) { return s + r.amount; }, 0);
+    var today = todayISO();
+    var todays = db.trips.filter(function (t) { return t.date === today; });
+    if (!todays.length) return;
+    var total = todays.reduce(function (s, t) { return s + t.km; }, 0);
     var b = el("div", "status-banner");
     b.appendChild(el("span", "dot"));
     b.appendChild(el("span", null,
-      today.length + " ride" + (today.length === 1 ? "" : "s") + " today · " + money(sum)));
+      todays.length + (todays.length === 1 ? " trip" : " trips") + " today · " + km(total)));
+    box.appendChild(b);
+  }
+
+  /* A rate nobody has set is worth saying out loud on the main screen,
+     because every figure this app produces is missing until it is. */
+  function renderRateNote() {
+    var box = $("rate-note");
+    box.textContent = "";
+    if (db.settings.rate) return;
+    if (!db.trips.length) return;
+    var b = el("div", "note-banner");
+    b.appendChild(el("p", null,
+      "No mileage rate set yet, so this app is counting kilometres but can't tell you what they are worth."));
+    var row = el("div", "btn-row");
+    var go = el("button", "secondary", "Set the rate");
+    go.addEventListener("click", function () {
+      switchTab("screen-settings");
+      var sec = $("sec-rate");
+      if (sec) sec.open = true;
+      $("rate-input").focus();
+    });
+    row.appendChild(go);
+    b.appendChild(row);
     box.appendChild(b);
   }
 
   /* ---------- the list ---------- */
-  function monthsWithRides() {
-    var seen = {};
-    db.rides.forEach(function (r) { seen[r.date.slice(0, 7)] = true; });
-    var out = Object.keys(seen).sort().reverse();
-    var cur = todayISO().slice(0, 7);
-    if (out.indexOf(cur) === -1) out.unshift(cur);
-    return out;
+  function monthsWithTrips() {
+    var set = {};
+    db.trips.forEach(function (t) { set[t.date.slice(0, 7)] = true; });
+    var list = Object.keys(set).sort().reverse();
+    if (!list.length) list = [todayISO().slice(0, 7)];
+    return list;
   }
 
-  function fillMonthPicker() {
-    var sel = $("taxi-month");
-    var want = sel.value;
+  function fillMonthSelect(sel, keepValue) {
+    var months = monthsWithTrips();
+    var want = keepValue && months.indexOf(keepValue) !== -1 ? keepValue : months[0];
     sel.textContent = "";
-    var opt = el("option", null, "Still to claim");
-    opt.value = "__open__";
-    sel.appendChild(opt);
-    monthsWithRides().forEach(function (ym) {
+    if (sel.id === "trip-month") {
+      var all = el("option", null, "Everything");
+      all.value = "all";
+      sel.appendChild(all);
+    }
+    months.forEach(function (ym) {
       var o = el("option", null, monthLabel(ym));
       o.value = ym;
       sel.appendChild(o);
     });
-    sel.value = want && [].slice.call(sel.options).some(function (o) { return o.value === want; })
-      ? want : "__open__";
+    sel.value = keepValue === "all" && sel.id === "trip-month" ? "all" : want;
+    return sel.value;
   }
 
+  $("trip-month").addEventListener("change", renderList);
+
   function renderList() {
+    var sel = $("trip-month");
+    var chosen = fillMonthSelect(sel, sel.value || "all");
+    var box = $("trip-list");
+    box.textContent = "";
     releaseUrls();
-    fillMonthPicker();
-    var pick = $("taxi-month").value;
-    var open = db.rides.filter(function (r) { return !r.claimed; });
 
-    var sum = open.reduce(function (s, r) { return s + r.amount; }, 0);
-    $("list-summary").textContent = open.length
-      ? open.length + " ride" + (open.length === 1 ? "" : "s") + " still to claim (" + money(sum) + ")."
-      : "Everything is marked claimed.";
+    var rows = db.trips.slice().sort(function (a, b) {
+      return a.date === b.date ? (a.id < b.id ? 1 : -1) : (a.date < b.date ? 1 : -1);
+    });
+    if (chosen !== "all") rows = rows.filter(function (t) { return t.date.slice(0, 7) === chosen; });
 
-    var rides = pick === "__open__"
-      ? open.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; })
-      : db.rides.filter(function (r) { return r.date.slice(0, 7) === pick; })
-                .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-
-    var list = $("ride-list");
-    list.textContent = "";
-    if (!rides.length) {
-      list.appendChild(el("div", "empty", pick === "__open__"
-        ? "Nothing outstanding — everything is marked claimed."
-        : "No rides in " + monthLabel(pick) + "."));
+    if (!rows.length) {
+      box.appendChild(el("p", "empty", "Nothing logged here yet."));
       return;
     }
 
-    rides.forEach(function (r) {
-      var row = el("div", "ride");
-
-      var thumb;
-      if (r.photo) {
-        thumb = document.createElement("img");
-        thumb.className = "ride-thumb";
-        thumb.alt = "Receipt";
-        photoGet(r.id, function (blob) {
-          if (blob) {
-            thumb.src = objUrl(blob);
-            thumb.addEventListener("click", function () { openPhoto(blob); });
-          } else {
-            /* the row says there is a screenshot but the phone has since
-               binned it — say so rather than showing a broken image */
-            var gone = el("div", "ride-thumb none", "gone");
-            if (thumb.parentNode) thumb.parentNode.replaceChild(gone, thumb);
-          }
-        });
-      } else {
-        thumb = el("div", "ride-thumb none", "no photo");
+    var lastMonth = null;
+    rows.forEach(function (t) {
+      var ym = t.date.slice(0, 7);
+      if (ym !== lastMonth) {
+        lastMonth = ym;
+        box.appendChild(el("div", "trip-month", monthLabel(ym)));
       }
-      row.appendChild(thumb);
 
-      var main = el("div", "ride-main");
-      var top = el("div", "ride-top");
-      top.appendChild(el("div", "ride-amt", money(r.amount)));
+      var row = el("div", "trip");
 
-      var tag = el("button", "tag " + (r.claimed ? "done" : "todo"), r.claimed ? "Claimed" : "To claim");
+      if (t.photo) {
+        var img = el("img", "trip-thumb");
+        img.alt = "Map screenshot";
+        photoGet(t.id, function (blob) {
+          if (!blob) { img.replaceWith(el("div", "trip-thumb none", "no map")); return; }
+          img.src = objUrl(blob);
+          img.addEventListener("click", function () { openPhoto(blob); });
+        });
+        row.appendChild(img);
+      } else {
+        row.appendChild(el("div", "trip-thumb none", "no map"));
+      }
+
+      var main = el("div", "trip-main");
+      var top = el("div", "trip-top");
+      var amount = amountOf(t);
+      top.appendChild(el("span", "trip-amt", amount === null ? km(t.km) : money(amount)));
+
+      var tag = el("button", "tag " + (t.claimed ? "done" : "todo"), t.claimed ? "Claimed" : "To claim");
       tag.type = "button";
       tag.addEventListener("click", function () {
-        r.claimed = !r.claimed;
+        t.claimed = !t.claimed;
         save();
-        renderList();
-        toast(r.claimed ? "Marked claimed" : "Back on the to-claim list");
+        renderAll();
+        toast(t.claimed ? "Marked claimed" : "Back on the list");
       });
       top.appendChild(tag);
       main.appendChild(top);
 
-      var bits = [fmt(r.date)];
-      if (r.receipt) bits.push(r.receipt);
-      if (r.note) bits.push(r.note);
-      main.appendChild(el("div", "ride-sub", bits.join(" · ")));
+      var where = t.from || t.to ? (t.from || "?") + " → " + (t.to || "?") : "No places written down";
+      main.appendChild(el("div", "trip-sub", fmt(t.date) + " · " + km(t.km) + " · " + where));
 
-      var acts = el("div", "ride-acts");
-      var edit = el("button", null, "Edit");
-      edit.type = "button";
-      edit.addEventListener("click", function () {
-        editingId = r.id;
-        formPhoto = null;
-        formPhotoHas = !!r.photo;
-        $("ride-date").value = r.date;
-        $("ride-amount").value = r.amount;
-        $("ride-receipt").value = r.receipt;
-        $("ride-note").value = r.note;
-        $("form-title").textContent = "Edit ride";
-        $("save-ride").textContent = "Update ride";
-        $("cancel-ride").style.display = "";
-        renderPhotoSlot();
-        switchTab("screen-log");
-        toast("Editing " + money(r.amount) + " on " + fmt(r.date));
-      });
-
+      var acts = el("div", "trip-acts");
+      var ed = el("button", null, "Edit");
+      ed.addEventListener("click", function () { editTrip(t.id); });
       var del = el("button", "danger", "Delete");
-      del.type = "button";
       del.addEventListener("click", function () {
         confirmDialog({
-          title: "Delete this ride?",
-          message: "Delete the " + money(r.amount) + " fare from " + fmt(r.date) +
-                   "? The screenshot goes with it. This can't be undone.",
+          title: "Delete this trip?",
+          message: fmt(t.date) + " · " + km(t.km) + (t.photo ? " · the map screenshot goes too." : "") +
+                   " This can't be undone.",
           confirmLabel: "Delete",
           onConfirm: function () {
-            var i = db.rides.indexOf(r);
-            if (i !== -1) db.rides.splice(i, 1);
-            if (r.photo) photoDel(r.id);
-            if (editingId === r.id) resetForm();
+            if (t.photo) photoDel(t.id);
+            db.trips = db.trips.filter(function (x) { return x.id !== t.id; });
+            if (editingId === t.id) resetForm();
             save();
-            renderList();
-            renderTodayStatus();
-            toast("Deleted");
+            renderAll();
+            toast("Trip deleted");
           }
         });
       });
-
-      acts.appendChild(edit);
-      acts.appendChild(del);
+      acts.appendChild(ed); acts.appendChild(del);
       main.appendChild(acts);
+
       row.appendChild(main);
-      list.appendChild(row);
+      box.appendChild(row);
     });
   }
-  $("taxi-month").addEventListener("change", renderList);
 
   /* ---------- month ---------- */
+  $("month-pick").addEventListener("change", renderMonth);
+
   function renderMonth() {
-    var pick = $("month-pick");
-    if (!pick.value) pick.value = todayISO().slice(0, 7);
-    var rides = db.rides.filter(function (r) { return r.date.slice(0, 7) === pick.value; })
-                        .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var sel = $("month-pick");
+    var ym = fillMonthSelect(sel, sel.value);
+    var box = $("month-body");
+    box.textContent = "";
 
-    var total = rides.reduce(function (s, r) { return s + r.amount; }, 0);
-    var open = rides.filter(function (r) { return !r.claimed; });
-    var openSum = open.reduce(function (s, r) { return s + r.amount; }, 0);
-
-    $("stat-count").textContent = rides.length;
-    $("stat-total").textContent = money(total).replace(/\.00$/, "");
-    $("stat-open").textContent = money(openSum).replace(/\.00$/, "");
-
-    var tbl = $("claim-table");
-    tbl.textContent = "";
-    var totals = $("claim-total");
-
-    if (!rides.length) {
-      totals.textContent = "";
-      tbl.appendChild(el("caption", "empty", "No rides in " + monthLabel(pick.value) + "."));
+    var rows = db.trips.filter(function (t) { return t.date.slice(0, 7) === ym; })
+                       .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    if (!rows.length) {
+      box.appendChild(el("p", "empty", "Nothing logged in " + monthLabel(ym) + "."));
       return;
     }
 
-    var head = el("tr");
-    ["Date", "Receipt no.", "Trip", "Amount"].forEach(function (h, i) {
-      head.appendChild(el("th", i === 3 ? "num" : null, h));
+    var totalKm = rows.reduce(function (s, t) { return s + t.km; }, 0);
+    var rate = db.settings.rate;
+    var unclaimed = rows.filter(function (t) { return !t.claimed; });
+
+    var stats = el("div", "stat-row");
+    function stat(n, l) {
+      var s = el("div", "stat");
+      s.appendChild(el("div", "n", n));
+      s.appendChild(el("div", "l", l));
+      return s;
+    }
+    stats.appendChild(stat(km(totalKm), "distance"));
+    stats.appendChild(stat(rate ? money(totalKm * rate) : "—", "worth"));
+    stats.appendChild(stat(String(unclaimed.length), "to claim"));
+    box.appendChild(stats);
+
+    var wrap = el("div", "tbl-wrap");
+    var tbl = el("table");
+    var thead = el("thead");
+    var htr = el("tr");
+    ["Date", "Journey", "Distance", rate ? "Amount" : ""].forEach(function (h, i) {
+      if (i === 3 && !rate) return;
+      var th = el("th", i >= 2 ? "num" : null, h);
+      htr.appendChild(th);
     });
-    var thead = el("thead"); thead.appendChild(head); tbl.appendChild(thead);
+    thead.appendChild(htr);
+    tbl.appendChild(thead);
 
     var tb = el("tbody");
-    rides.forEach(function (r) {
+    rows.forEach(function (t) {
       var tr = el("tr");
-      tr.appendChild(el("td", null, fmt(r.date)));
-      tr.appendChild(el("td", null, r.receipt || "–"));
-      tr.appendChild(el("td", null, r.note || "–"));
-      tr.appendChild(el("td", "num", money(r.amount)));
+      tr.appendChild(el("td", null, fmt(t.date)));
+      tr.appendChild(el("td", null, (t.from || "?") + " → " + (t.to || "?")));
+      tr.appendChild(el("td", "num", km(t.km)));
+      if (rate) tr.appendChild(el("td", "num", money(t.km * rate)));
       tb.appendChild(tr);
     });
     tbl.appendChild(tb);
+    wrap.appendChild(tbl);
+    box.appendChild(wrap);
 
-    var line = rides.length + " ride" + (rides.length === 1 ? "" : "s") + " = " + money(total) + ".";
-    if (open.length) line += " " + open.length + " still to claim (" + money(openSum) + ").";
-    totals.textContent = line;
-  }
-  $("month-pick").addEventListener("change", renderMonth);
+    var line = el("div", "totals-line");
+    line.appendChild(el("strong", null, rate
+      ? monthLabel(ym) + ": " + km(totalKm) + " · " + money(totalKm * rate)
+      : monthLabel(ym) + ": " + km(totalKm)));
+    box.appendChild(line);
+    if (!rate) box.appendChild(el("p", "hint", "Set the mileage rate in Settings and the amounts fill themselves in."));
 
-  /* Plain text rather than a file: it pastes straight into an email or a
-     chat, and never runs into a phone blocking a download. */
-  $("copy-claims").addEventListener("click", function () {
-    var ym = $("month-pick").value || todayISO().slice(0, 7);
-    var rides = db.rides.filter(function (r) { return r.date.slice(0, 7) === ym; })
-                        .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-    if (!rides.length) { toast("Nothing to copy for " + monthLabel(ym)); return; }
-    var lines = ["Taxi Claims — " + monthLabel(ym), ""];
-    var total = 0;
-    rides.forEach(function (r) {
-      total += r.amount;
-      lines.push(fmt(r.date) + "  " + money(r.amount) +
-                 (r.receipt ? "  " + r.receipt : "") +
-                 (r.note ? "  " + r.note : ""));
+    var acts = el("div", "btn-row");
+    var copy = el("button", "secondary", "Copy this month");
+    copy.addEventListener("click", function () {
+      var lines = [monthLabel(ym) + " — mileage"];
+      rows.forEach(function (t) {
+        lines.push(fmt(t.date) + "  " + km(t.km) +
+          "  " + (t.from || "?") + " -> " + (t.to || "?") +
+          (rate ? "  " + money(t.km * rate) : ""));
+      });
+      lines.push("");
+      lines.push("Total: " + km(totalKm) + (rate ? "  " + money(totalKm * rate) : ""));
+      showText(monthLabel(ym), lines.join("\n"));
     });
-    lines.push("");
-    lines.push("TOTAL  " + rides.length + " rides  " + money(total));
-    showText("Copy for " + monthLabel(ym), lines.join("\n"));
-  });
+    acts.appendChild(copy);
+    box.appendChild(acts);
+  }
 
   /* ---------- settings ---------- */
   var persistState = "unknown";
-  function requestPersist() {
-    if (!navigator.storage || !navigator.storage.persist) { persistState = "unsupported"; return; }
-    navigator.storage.persisted().then(function (already) {
-      if (already) { persistState = "granted"; renderSettings(); return; }
-      navigator.storage.persist().then(function (ok) {
-        persistState = ok ? "granted" : "denied";
-        renderSettings();
-      }, function () { persistState = "unknown"; });
+  function checkPersist() {
+    if (!navigator.storage || !navigator.storage.persisted) return;
+    navigator.storage.persisted().then(function (p) {
+      persistState = p ? "granted" : "denied";
+      renderSettings();
     }, function () { persistState = "unknown"; });
   }
 
   function renderSettings() {
-    var withPhoto = db.rides.filter(function (r) { return r.photo; }).length;
+    var withPhoto = db.trips.filter(function (t) { return t.photo; }).length;
+    $("rate-meta").textContent = db.settings.rate ? money(db.settings.rate) + "/km" : "not set";
+    $("rate-input").value = db.settings.rate ? String(db.settings.rate) : "";
+    $("rate-example").textContent = db.settings.rate
+      ? "A 12 km trip comes to " + money(12 * db.settings.rate) + "."
+      : "Nothing is worked out until this is filled in. Ask what the company pays per kilometre and put it here.";
+
     $("storage-meta").textContent = withPhoto + (withPhoto === 1 ? " screenshot" : " screenshots");
-    var lines = [db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") +
-                 " and " + withPhoto + " screenshot" + (withPhoto === 1 ? "" : "s") + " saved on this phone."];
+    var lines = [db.trips.length + (db.trips.length === 1 ? " trip" : " trips") +
+                 " and " + withPhoto + (withPhoto === 1 ? " screenshot" : " screenshots") + " saved on this phone."];
     if (persistState === "granted") lines.push("The phone has been asked to keep these and agreed.");
     else if (persistState === "denied") lines.push("NOT protected — the phone may delete these if it runs low on space.");
     $("storage-detail").textContent = lines.join(" ");
-    $("wipe-meta").textContent = db.rides.length + (db.rides.length === 1 ? " ride" : " rides");
-    /* the plain backup carries no screenshots, so saying only "backed up"
-       would overstate what is actually protected */
-    var age = backupAgeText();
-    if (withPhoto && !db.lastFullBackupAt) age += " That backup held no screenshots.";
-    $("backup-age").textContent = age;
+    $("backup-age").textContent = backupAgeText();
+    $("wipe-meta").textContent = db.trips.length + (db.trips.length === 1 ? " trip" : " trips");
   }
 
-  /* ---------- backup ----------
-     Two files on purpose, the same pair Driving Log offers. The plain one
-     is a few kilobytes of text. The full one carries every screenshot as
-     well, which is the only kind worth taking before changing phones —
-     on this app especially, since the receipt IS the screenshot.
+  $("save-rate").addEventListener("click", function () {
+    var v = parseFloat($("rate-input").value);
+    if (!isFinite(v) || v <= 0) { toast("Put in what you're paid per kilometre"); return; }
+    db.settings.rate = v;
+    save();
+    renderAll();
+    toast("Rate saved — " + money(v) + " per km");
+  });
 
-     The format is stamped so a backup from another app in this family is
-     refused outright rather than half-restored into the wrong place. */
-  var PLAIN_FORMAT = "taxiclaims-backup-1";
-  var ARCHIVE_FORMAT = "taxiclaims-archive-1";
-
-  function download(blob, name) {
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-  }
+  $("wipe-all").addEventListener("click", function () {
+    confirmDialog({
+      title: "Erase everything?",
+      message: "Every trip and every map screenshot in Mileage is deleted, and the rate goes back to unset. " +
+               "Driving Log and the other apps are not touched. This can't be undone.",
+      confirmLabel: "Erase",
+      onConfirm: function () {
+        db.trips.forEach(function (t) { if (t.photo) photoDel(t.id); });
+        var theme = db.settings.theme;   /* an appearance choice is not data */
+        db = defaults();
+        db.settings.theme = theme;
+        save();
+        resetForm();
+        renderAll();
+        toast("Everything erased");
+      }
+    });
+  });
 
   /* ---------- backup, asked for from the main page ----------
 
-     The buttons used to be on this screen. Backing up now happens once,
+     There are no backup buttons on this screen. Backing up happens once,
      from the main page, covering every app in one press — but the main
      page does not and must not read this app's storage. It asks, in a
      message, and what it gets back is a finished file it never opens.
      Everything about what a backup *is* stays here. */
+
+  var BACKUP_STALE_DAYS = 30;
+  var DAY_MS = 86400000;
+
+  function backupAgeDays() {
+    if (!db.lastBackupAt) return null;
+    return Math.floor((Date.now() - db.lastBackupAt) / DAY_MS);
+  }
+  function backupAgeText() {
+    var n = backupAgeDays();
+    if (n === null) return "Never backed up.";
+    if (n === 0) return "Backed up today.";
+    if (n === 1) return "Backed up yesterday.";
+    if (n < 30) return "Backed up " + n + " days ago.";
+    var months = Math.round(n / 30);
+    return "Backed up about " + months + " month" + (months === 1 ? "" : "s") + " ago.";
+  }
+  function noteBackupTaken() {
+    db.lastBackupAt = Date.now();
+    save();
+    renderSettings();
+  }
 
   function blobToDataUrl(blob, cb) {
     var r = new FileReader();
@@ -1245,15 +1240,14 @@
   function buildBackup(kind, cb) {
     if (kind !== "full") {
       var text = JSON.stringify({ format: PLAIN_FORMAT, saved: new Date().toISOString(), data: db }, null, 2);
-      db.lastPlainBackupAt = Date.now();
       noteBackupTaken();
       cb(new Blob([text], { type: "application/json" }),
-         "taxi-claims-backup-" + todayISO() + ".json",
-         db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") + ", no screenshots");
+         "mileage-backup-" + todayISO() + ".json",
+         db.trips.length + (db.trips.length === 1 ? " trip" : " trips") + ", no screenshots");
       return;
     }
 
-    var withPhotos = db.rides.filter(function (r) { return r.photo; });
+    var withPhotos = db.trips.filter(function (t) { return t.photo; });
     var parts = ['{"format":"' + ARCHIVE_FORMAT + '","saved":' + JSON.stringify(new Date().toISOString()) +
                  ',"data":', JSON.stringify(db), ',"photos":{'];
     var i = 0, written = 0, missing = 0;
@@ -1263,8 +1257,8 @@
         var blob = new Blob(parts, { type: "application/json" });
         db.lastFullBackupAt = Date.now();
         noteBackupTaken();
-        cb(blob, "taxi-claims-full-backup-" + todayISO() + ".json",
-           written + " screenshot" + (written === 1 ? "" : "s") +
+        cb(blob, "mileage-full-backup-" + todayISO() + ".json",
+           written + (written === 1 ? " screenshot" : " screenshots") +
            (missing ? ", " + missing + " missing" : ""));
         return;
       }
@@ -1288,30 +1282,29 @@
       var isArchive = parsed && parsed.format === ARCHIVE_FORMAT;
       if (!parsed || (!isArchive && parsed.format !== PLAIN_FORMAT)) return null;
       var data = parsed.data;
-      if (!data || typeof data !== "object" || !Array.isArray(data.rides)) return null;
+      if (!data || typeof data !== "object" || !Array.isArray(data.trips)) return null;
       var photos = isArchive && parsed.photos && typeof parsed.photos === "object" ? parsed.photos : null;
       var photoN = photos ? Object.keys(photos).length : 0;
       return {
         data: data,
         photos: photos,
-        summary: data.rides.length + " ride" + (data.rides.length === 1 ? "" : "s") +
-          (photoN ? ", " + photoN + " screenshot" + (photoN === 1 ? "" : "s") : ", no screenshots")
+        summary: data.trips.length + (data.trips.length === 1 ? " trip" : " trips") +
+          (photoN ? ", " + photoN + (photoN === 1 ? " screenshot" : " screenshots") : ", no screenshots")
       };
     } catch (e) { return null; }
   }
 
   function applyBackup(text, mode, cb) {
     var read = readBackup(text);
-    if (!read) { cb(false, "That file isn't a Taxi Claims backup"); return; }
+    if (!read) { cb(false, "That file isn't a Mileage backup"); return; }
     var data = read.data, photos = read.photos;
     var photoN = photos ? Object.keys(photos).length : 0;
 
-    /* Only the screenshots for rides actually taken in are written, so a
-       merge never overwrites a picture belonging to a ride already here. */
+    /* Only the screenshots for trips actually taken in are written, so a
+       merge never overwrites a picture belonging to a trip already here. */
     function finish(photoIds, message) {
       db.lastBackupAt = Date.now();   /* they clearly have a file */
       if (photoN) db.lastFullBackupAt = Date.now();
-      db.backupSnoozeUntil = 0;
       save();
       applyTheme();
       resetForm();
@@ -1332,40 +1325,45 @@
     }
 
     if (mode === "replace") {
-      /* clear the screenshots being replaced, so the store is not left
-         holding pictures for rides that no longer exist */
-      db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
+      db.trips.forEach(function (t) { if (t.photo) photoDel(t.id); });
       try { localStorage.setItem(KEY, JSON.stringify(data)); }
       catch (e) { cb(false, "Phone storage is full — not restored"); return; }
       db = load();
       finish(photos ? Object.keys(photos) : [],
-             "Everything replaced — " + db.rides.length + " rides");
+             "Everything replaced — " + db.trips.length + " trips");
       return;
     }
 
-    /* Adding only what is missing. A ride already on this phone always
-       wins — its own screenshot is left exactly as it is. */
+    /* Adding only what is missing. A trip already on this phone always
+       wins — its own screenshot is left exactly as it is. The rate in use
+       now beats one saved months ago, and is only taken onto one nobody
+       has set here yet. */
     var added = 0, kept = 0, want = [];
     var have = {};
-    db.rides.forEach(function (r) { have[r.id] = true; });
-    data.rides.forEach(function (r) {
-      if (!r || typeof r !== "object" || !r.id || !r.date) return;
-      if (have[r.id]) { kept++; return; }
-      db.rides.push({
-        id: r.id,
-        date: r.date,
-        amount: typeof r.amount === "number" ? r.amount : 0,
-        receipt: typeof r.receipt === "string" ? r.receipt : "",
-        note: typeof r.note === "string" ? r.note : "",
-        photo: !!r.photo,
-        claimed: !!r.claimed
+    db.trips.forEach(function (t) { have[t.id] = true; });
+    (data.trips || []).forEach(function (t) {
+      if (!t || typeof t !== "object" || !t.id || !t.date) return;
+      if (have[t.id]) { kept++; return; }
+      db.trips.push({
+        id: String(t.id),
+        date: t.date,
+        from: typeof t.from === "string" ? t.from : "",
+        to: typeof t.to === "string" ? t.to : "",
+        km: typeof t.km === "number" && isFinite(t.km) && t.km > 0 ? t.km : 0,
+        photo: !!t.photo,
+        claimed: !!t.claimed
       });
-      have[r.id] = true;
+      have[t.id] = true;
       added++;
-      if (r.photo && photos && photos[r.id]) want.push(r.id);
+      if (t.photo && photos && photos[t.id]) want.push(t.id);
     });
-    finish(want, "Added " + added + " ride" + (added === 1 ? "" : "s") +
-      (kept ? " · kept your " + kept + " existing ride" + (kept === 1 ? "" : "s") : ""));
+    var s2 = data.settings;
+    if (db.settings.rate === null && s2 && typeof s2 === "object" &&
+        typeof s2.rate === "number" && s2.rate > 0) {
+      db.settings.rate = s2.rate;
+    }
+    finish(want, "Added " + added + (added === 1 ? " trip" : " trips") +
+      (kept ? " · kept your " + kept + " existing " + (kept === 1 ? "trip" : "trips") : ""));
   }
 
   /* The one seam the main page talks through. Same origin only. */
@@ -1376,18 +1374,18 @@
     function reply(payload) {
       payload.cna = "backup-reply";
       payload.id = msg.id;
-      payload.app = "taxi";
+      payload.app = "off";
       try { e.source.postMessage(payload, location.origin); } catch (err) {}
     }
     if (msg.ask === "status") {
-      var withPhoto = db.rides.filter(function (r) { return r.photo; }).length;
+      var withPhoto = db.trips.filter(function (t) { return t.photo; }).length;
       reply({
         ok: true,
-        name: "Taxi Claims",
+        name: "Mileage",
         backupAt: db.lastBackupAt || null,
         kinds: ["plain", "full"],
-        detail: db.rides.length + " ride" + (db.rides.length === 1 ? "" : "s") +
-                ", " + withPhoto + " screenshot" + (withPhoto === 1 ? "" : "s")
+        detail: db.trips.length + (db.trips.length === 1 ? " trip" : " trips") +
+                ", " + withPhoto + (withPhoto === 1 ? " screenshot" : " screenshots")
       });
       return;
     }
@@ -1401,7 +1399,7 @@
     }
     if (msg.ask === "describe") {
       var read = readBackup(msg.text);
-      reply(read ? { ok: true, summary: read.summary } : { ok: false, error: "not a Taxi Claims backup" });
+      reply(read ? { ok: true, summary: read.summary } : { ok: false, error: "not a Mileage backup" });
       return;
     }
     if (msg.ask === "restore") {
@@ -1410,22 +1408,23 @@
       } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
       return;
     }
-     /* ---- claiming, driven from the main page ----
+    /* ---- claiming, driven from the main page ----
        Same bargain as backup: the main page asks what is outstanding and
        asks for it to be marked, and never touches the records itself.
        What counts as a claim, and what marking one does, stays here. */
     if (msg.ask === "claims") {
       reply({
         ok: true,
-        name: "Taxi Claims",
-        items: db.rides.filter(function (r) { return !r.claimed; })
+        name: "Mileage",
+        items: db.trips.filter(function (t) { return !t.claimed; })
           .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
-          .map(function (r) {
+          .map(function (t) {
+            var amount = amountOf(t);
             return {
-              id: r.id,
-              date: r.date,
-              label: "Taxi" + (r.receipt ? " \u00b7 " + r.receipt : ""),
-              value: money(r.amount)
+              id: t.id,
+              date: t.date,
+              label: km(t.km) + " · " + ((t.from || "?") + " → " + (t.to || "?")),
+              value: amount === null ? km(t.km) : money(amount)
             };
           })
       });
@@ -1436,8 +1435,8 @@
       var want = {};
       ids.forEach(function (id) { want[String(id)] = true; });
       var n = 0;
-      db.rides.forEach(function (r) {
-        if (want[r.id] && !r.claimed) { r.claimed = true; n++; }
+      db.trips.forEach(function (t) {
+        if (want[t.id] && !t.claimed) { t.claimed = true; n++; }
       });
       if (n) { save(); renderAll(); }
       reply({ ok: true, count: n });
@@ -1449,54 +1448,6 @@
        a long wait before it gives up — a question this app simply has no
        part in should come back at once. */
     reply({ ok: false, error: "no answer to " + String(msg.ask).slice(0, 20) });
-  });
-
-  /* ---------- backup reminder ----------
-     A backup is a file someone has to remember to make, and nobody does.
-     This counts the days since the last one and says so, once there is
-     something worth losing. "Later" snoozes for a week rather than
-     dismissing forever — a reminder you can silence permanently is not a
-     reminder, and the whole point is the phone that never gets backed up. */
-  var BACKUP_STALE_DAYS = 30;
-  var BACKUP_SNOOZE_DAYS = 7;
-  var DAY_MS = 86400000;
-
-  function backupAgeDays() {
-    if (!db.lastBackupAt) return null;
-    return Math.floor((Date.now() - db.lastBackupAt) / DAY_MS);
-  }
-  function backupAgeText() {
-    var n = backupAgeDays();
-    if (n === null) return "Never backed up.";
-    if (n === 0) return "Backed up today.";
-    if (n === 1) return "Backed up yesterday.";
-    if (n < 30) return "Backed up " + n + " days ago.";
-    var months = Math.round(n / 30);
-    return "Backed up about " + months + " month" + (months === 1 ? "" : "s") + " ago.";
-  }
-  function noteBackupTaken() {
-    db.lastBackupAt = Date.now();
-    db.backupSnoozeUntil = 0;
-    save();
-    renderSettings();
-  }
-  $("wipe-all").addEventListener("click", function () {
-    confirmDialog({
-      title: "Erase everything?",
-      message: "Every ride and every screenshot in Taxi Claims is deleted. " +
-               "Driving Log and the other apps are not touched. This can't be undone.",
-      confirmLabel: "Erase",
-      onConfirm: function () {
-        db.rides.forEach(function (r) { if (r.photo) photoDel(r.id); });
-        var theme = db.settings.theme;   /* an appearance choice is not data */
-        db = defaults();
-        db.settings.theme = theme;
-        save();
-        resetForm();
-        renderAll();
-        toast("Taxi Claims is empty");
-      }
-    });
   });
 
   /* ---------- dialog ---------- */
@@ -1528,13 +1479,6 @@
     var no = el("button", "secondary", "Cancel");
     no.addEventListener("click", closeModal);
     acts.appendChild(no);
-    /* an optional safer choice, offered before the destructive one so the
-       row reads left to right from least to most damaging */
-    if (opts.altLabel) {
-      var alt = el("button", "secondary", opts.altLabel);
-      alt.addEventListener("click", function () { closeModal(); opts.onAlt(); });
-      acts.appendChild(alt);
-    }
     acts.appendChild(go);
     overlay.hidden = false;
     go.focus();
@@ -1564,12 +1508,12 @@
 
   function openPhoto(blob) {
     resetModal();
-    $("modal-title").textContent = "Receipt";
+    $("modal-title").textContent = "Map screenshot";
     var img = $("modal-img");
     img.src = objUrl(blob);
     img.style.display = "block";
     var file = null;
-    try { file = new File([blob], "receipt.jpg", { type: blob.type || "image/jpeg" }); } catch (e) {}
+    try { file = new File([blob], "map.jpg", { type: blob.type || "image/jpeg" }); } catch (e) {}
     if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
       var share = el("button", "secondary", "Share");
       share.addEventListener("click", function () {
@@ -1580,26 +1524,16 @@
     overlay.hidden = false;
   }
 
-  /* ---------- the one-time note about the move ---------- */
-  var carryResult = null, carryDismissed = false;
-  function renderCarryBanner() {
-    var box = $("carry-banner");
-    box.textContent = "";
-    if (carryDismissed || !carryResult || carryResult <= 0) return;
-    var n = carryResult;
-    var b = el("div", "carry-banner");
-    b.appendChild(el("p", null,
-      "Brought over " + n + " taxi ride" + (n === 1 ? "" : "s") + " from Driving Log, screenshots and all. " +
-      "Parking stays in Driving Log."));
-    var ok = el("button", "secondary", "Got it");
-    ok.addEventListener("click", function () { carryDismissed = true; box.textContent = ""; });
-    b.appendChild(ok);
-    box.appendChild(b);
-  }
+  /* The container's "Update ready" prompt reloads the page, which would
+     throw away anything typed but not saved. That prompt lives outside
+     this closure, so this is the one deliberate seam it can ask through. */
+  window.cnaHasUnsaved = function () {
+    try { return formIsDirty(); } catch (e) { return false; }
+  };
 
   /* ---------- boot ---------- */
   function renderAll() {
-    renderCarryBanner();
+    renderRateNote();
     renderTodayStatus();
     renderList();
     renderMonth();
@@ -1608,18 +1542,16 @@
 
   var now = new Date();
   $("today-line").textContent = DAYS[now.getDay()] + " " + fmt(todayISO());
+  document.body.setAttribute("data-tab", "screen-log");
   resetForm();
   publishCard();
   requestPersist();
+  checkPersist();
   renderAll();
 
-  carryOver(function (moved) {
-    carryResult = moved;
-    if (moved) { renderAll(); toast("Brought over " + moved + " ride" + (moved === 1 ? "" : "s")); }
-  });
-
   /* A figure on the home screen links to the screen it came from, as
-     "taxi/#list". Anything unrecognised is ignored. */
+     "off/#list". Anything unrecognised is ignored and the app opens
+     where it always does. */
   function openScreenFromHash() {
     var want = (location.hash || "").replace(/^#/, "");
     if (!want) return;

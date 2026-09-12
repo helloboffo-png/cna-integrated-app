@@ -550,7 +550,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.1</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -731,7 +731,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.0 (9 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.1 (9 Sep 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -973,7 +973,7 @@
          nothing to do. */
       var jobs = [];
       if (open.length) {
-        jobs.push({ key: "send", weight: 20, go: "#taxi",
+        jobs.push({ key: "send", weight: 20, go: "#taxi", claim: true,
           text: open.length === 1 ? "1 parking receipt to send"
                                   : open.length + " parking receipts to send" });
       }
@@ -2838,6 +2838,45 @@
       } catch (err) { reply({ ok: false, error: String(err && err.message || err) }); }
       return;
     }
+     /* ---- claiming, driven from the main page ----
+       Same bargain as backup: the main page asks what is outstanding and
+       asks for it to be marked, and never touches the records itself.
+       What counts as a claim, and what marking one does, stays here. */
+    if (msg.ask === "claims") {
+      reply({
+        ok: true,
+        name: "Driving Log",
+        items: parkingRows().filter(function (r) { return !r.claimed; })
+          .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+          .map(function (r) {
+            return {
+              id: r.id,
+              date: r.date,
+              label: "Parking" + (r.receipt ? " \u00b7 " + r.receipt : ""),
+              value: money(r.amount)
+            };
+          })
+      });
+      return;
+    }
+    if (msg.ask === "claim") {
+      var ids = Array.isArray(msg.ids) ? msg.ids : [];
+      var want = {};
+      ids.forEach(function (id) { want[String(id)] = true; });
+      var n = 0;
+      db.taxi.forEach(function (r) {
+        if (want[r.id] && !r.claimed) { r.claimed = true; n++; }
+      });
+      if (n) { save(); renderTaxi(); renderMonth(); renderClaimReminder(); renderTodayStatus(); }
+      reply({ ok: true, count: n });
+      return;
+    }
+ 
+    /* Anything this app has no answer for still gets an answer. Silence
+       reads as "not updated yet" at the other end and costs the main page
+       a long wait before it gives up — a question this app simply has no
+       part in should come back at once. */
+    reply({ ok: false, error: "no answer to " + String(msg.ask).slice(0, 20) });
   });
 
   /* The GitHub build's "Update ready" prompt reloads the page, which would

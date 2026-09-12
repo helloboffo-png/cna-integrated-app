@@ -1,0 +1,11 @@
+{
+  "id": "off",
+  "name": "Mileage",
+  "version": "1.0.0",
+  "build": 1,
+  "date": "2026-09-12",
+  "notes": "Mileage driven in your own vehicle on a rest day callback.",
+  "files": [
+    "index.html"
+  ]
+}
