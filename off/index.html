@@ -125,6 +125,16 @@
   }
   button.secondary.danger { color: var(--danger); border-color: var(--danger); }
   .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .route { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .route-btn {
+    font: inherit; font-weight: 600; font-size: 15px;
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 8px; cursor: pointer;
+  }
+  .route-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .route-btn:active { filter: brightness(0.95); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .btn-row button { flex: 1; }
 
   .status-banner {
@@ -338,6 +348,15 @@
       <label class="field" for="trip-date">Date</label>
       <div class="field-clip"><input type="date" id="trip-date" max="2100-12-31"></div>
 
+      <!-- A callback trip only ever runs one of two ways, so these fill
+           both ends, and the distance from the last time, in one tap.
+           The boxes below stay editable for the odd trip that doesn't fit. -->
+      <label class="field">Route</label>
+      <div class="route" role="group" aria-label="Route">
+        <button type="button" class="route-btn" data-from="Home" data-to="Office" aria-pressed="false">Home <span aria-hidden="true">&rarr;</span><span class="sr"> to </span> Office</button>
+        <button type="button" class="route-btn" data-from="Office" data-to="Home" aria-pressed="false">Office <span aria-hidden="true">&rarr;</span><span class="sr"> to </span> Home</button>
+      </div>
+
       <label class="field" for="trip-from">From</label>
       <input type="text" id="trip-from" placeholder="e.g. Home, Bishan" autocomplete="off">
 
@@ -356,7 +375,7 @@
         <button class="secondary" id="cancel-trip">Cancel</button>
       </div>
     </div>
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Mileage · v1.0</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Mileage · v1.1</p>
   </section>
 
   <!-- ============ TRIPS ============ -->
@@ -843,6 +862,7 @@
     $("cancel-row").style.display = "none";
     releaseUrls();
     renderPhotoSlot();
+    paintRoute();
   }
 
   function editTrip(id) {
@@ -861,10 +881,44 @@
     $("cancel-row").style.display = "";
     releaseUrls();
     renderPhotoSlot();
+    paintRoute();
     switchTab("screen-log");
   }
 
   $("cancel-trip").addEventListener("click", function () { resetForm(); });
+
+  /* ---------- the two routes ---------- */
+  var routeBtns = [].slice.call(document.querySelectorAll(".route-btn"));
+  function says(text, word) { return String(text || "").toLowerCase().indexOf(word) !== -1; }
+  /* the distance is the same either way round, so any earlier trip
+     between home and office, in either direction, is a fair guess */
+  function lastRouteKm() {
+    var hits = db.trips.filter(function (t) {
+      return t.km > 0 &&
+        ((says(t.from, "home") && says(t.to, "office")) ||
+         (says(t.from, "office") && says(t.to, "home")));
+    }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    return hits.length ? hits[0].km : 0;
+  }
+  function paintRoute() {
+    var from = $("trip-from").value.trim(), to = $("trip-to").value.trim();
+    (routeBtns || []).forEach(function (b) {
+      b.setAttribute("aria-pressed", String(from === b.dataset.from && to === b.dataset.to));
+    });
+  }
+  routeBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("trip-from").value = b.dataset.from;
+      $("trip-to").value = b.dataset.to;
+      if (!$("trip-km").value.trim()) {
+        var km = lastRouteKm();
+        if (km) $("trip-km").value = String(km);
+      }
+      paintRoute();
+    });
+  });
+  $("trip-from").addEventListener("input", paintRoute);
+  $("trip-to").addEventListener("input", paintRoute);
 
   $("save-trip").addEventListener("click", function () {
     var date = $("trip-date").value;

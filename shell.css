@@ -322,6 +322,15 @@ body:has(> .cna-topbar) {
 .cna-cal-bar-opens { border-top-left-radius: 3px; border-bottom-left-radius: 3px; margin-left: 3px; }
 .cna-cal-bar-closes { border-top-right-radius: 3px; border-bottom-right-radius: 3px; margin-right: 3px; }
 
+/* An overseas trip is a band behind the numbers rather than a line under
+   them. It is placed in the day row's own grid but taken out of the flow,
+   so it lines up with the days exactly without pushing any of them. */
+.cna-cal-days { position: relative; }
+.cna-cal-days > .cna-cal-cell { position: relative; z-index: 1; }
+.cna-cal-band { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: 0; }
+.cna-cal-band-opens { border-top-left-radius: 9px; border-bottom-left-radius: 9px; }
+.cna-cal-band-closes { border-top-right-radius: 9px; border-bottom-right-radius: 9px; }
+
 .cna-cal-grid {
   display: flex;
   flex-direction: column;
@@ -650,6 +659,28 @@ a.cna-todo-row:focus-visible {
 /* Home screen: a grid of app icons, the way a phone lays them out.
    Four to a row, filling from the top left, so adding a third or
    fourth app later just fills the next slot. */
+
+.cna-claims-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--cna-line);
+  border-radius: var(--cna-radius);
+  background: var(--cna-card);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cna-claims-open:active { background: var(--cna-paper); }
+.cna-claims-open:focus-visible { outline: 2px solid var(--cna-accent); outline-offset: 2px; }
+.cna-claims-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cna-claims-title { font-size: var(--t-body); font-weight: 600; line-height: 1.3; }
+.cna-claims-sub { font-size: var(--t-label); color: var(--cna-ink-soft); line-height: 1.3; }
 
 .cna-apps {
   display: grid;

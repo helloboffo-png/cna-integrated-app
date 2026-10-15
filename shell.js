@@ -549,6 +549,106 @@
     return d.getUTCFullYear() === y && d.getUTCMonth() + 1 === mo && d.getUTCDate() === da;
   }
 
+  /* a see-through version of a six-digit hex colour */
+  function tint(hex, a) {
+    var n = parseInt(String(hex).slice(1), 16);
+    return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
+  }
+
+  /* ------------------------------------------------------------------
+     Overseas trips, read from Overseas Tracker's own storage
+
+     The one place this page reads another app's records rather than a
+     card the app wrote for it. Ben asked for it so trips show without
+     waiting on a change to Nantha's app. It only ever reads: the saved
+     projects in its database and the form it has open, never a write.
+     If a later Overseas Tracker keeps its dates differently, this finds
+     nothing and the calendar shows no trips. It never errors. Once that
+     app publishes its own card with marks, the card wins and this stops.
+     ------------------------------------------------------------------ */
+  var OT_COLOUR = "#ED2227";
+  var otTrips = [];             /* [{ from, to, detail }] */
+
+  /* the days one project covers, as runs of consecutive days */
+  function otSpans(project, fallbackName) {
+    var data = project && project.data;
+    if (!data || typeof data !== "object") return [];
+    var detail = String(data.programTitle || fallbackName || "").trim().slice(0, 40);
+    var dates = Array.isArray(data.selectedCalendarDates)
+      ? data.selectedCalendarDates.filter(realDate) : [];
+    if (!dates.length && realDate(data.firstDate) && realDate(data.endDate) && data.firstDate <= data.endDate) {
+      return [{ from: data.firstDate, to: data.endDate, detail: detail }];
+    }
+    dates = dates.filter(function (d, i, a) { return a.indexOf(d) === i; }).sort();
+    var out = [], run = null;
+    dates.forEach(function (d) {
+      if (run) {
+        var b = run.to.split("-");
+        var next = new Date(Date.UTC(+b[0], +b[1] - 1, +b[2] + 1)).toISOString().slice(0, 10);
+        if (d === next) { run.to = d; return; }
+        out.push(run);
+      }
+      run = { from: d, to: d, detail: detail };
+    });
+    if (run) out.push(run);
+    return out;
+  }
+
+  function readOtTrips(done) {
+    var found = [];
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      var seen = {};
+      otTrips = found.filter(function (sp) {
+        var k = sp.from + "|" + sp.to + "|" + sp.detail;
+        if (seen[k]) return false;
+        seen[k] = true;
+        return true;
+      }).slice(0, 200);
+      if (done) done();
+    }
+    /* the form currently open in the app, saved or not */
+    try {
+      var raw = localStorage.getItem("otFormBuilder.draft") || localStorage.getItem("otFormBuilderDraft");
+      if (raw) found = found.concat(otSpans(JSON.parse(raw)));
+    } catch (e) {}
+
+    /* projects saved inside the app */
+    if (!window.indexedDB) { finish(); return; }
+    setTimeout(finish, 4000);   /* a stuck database never holds the calendar up */
+    var req;
+    try { req = indexedDB.open("ot-form-builder-files"); }
+    catch (e) { finish(); return; }
+    /* Opening a database that does not exist yet would create an empty
+       one. Abandoning the upgrade means a phone that has never opened
+       Overseas Tracker is left exactly as it was. */
+    req.onupgradeneeded = function () { try { req.transaction.abort(); } catch (e) {} };
+    req.onerror = function () { finish(); };
+    req.onblocked = function () { finish(); };
+    req.onsuccess = function () {
+      var db = req.result;
+      /* step aside the moment the app itself needs to upgrade */
+      db.onversionchange = function () { try { db.close(); } catch (e) {} };
+      try {
+        if (!db.objectStoreNames.contains("projects")) { db.close(); finish(); return; }
+        var all = db.transaction("projects", "readonly").objectStore("projects").getAll();
+        all.onsuccess = function () {
+          (all.result || []).forEach(function (rec) {
+            if (rec && rec.project) found = found.concat(otSpans(rec.project, rec.programTitle || rec.name));
+          });
+          try { db.close(); } catch (e) {}
+          finish();
+        };
+        all.onerror = function () { try { db.close(); } catch (e) {} finish(); };
+      } catch (e) {
+        try { db.close(); } catch (e2) {}
+        finish();
+      }
+    };
+  }
+
   function readMarks() {
     var out = [];
     APPS.forEach(function (app) {
@@ -610,6 +710,14 @@
         });
       });
     });
+    /* trips read straight from Overseas Tracker, unless it has started
+       saying for itself which days it covers */
+    if (otTrips.length && !out.some(function (m) { return m.app === "ot"; })) {
+      out.push({
+        app: "ot", key: "trip", label: "Overseas", colour: OT_COLOUR,
+        go: "ot/", days: {}, spans: otTrips.slice(), band: true
+      });
+    }
     return out;   /* app order, so a colour never moves between days */
   }
 
@@ -791,12 +899,29 @@
               });
               if (startCol === -1) return;
 
+              var opens = sp.from >= rowFrom, closes = sp.to <= rowTo;
+              if (m.band) {
+                /* A trip is a band behind the numbers, like an all-day
+                   event, with a solid line along its bottom edge. It sits
+                   in the day row itself, so it lines up with the days
+                   exactly and leaves the dots where they are. */
+                var band = document.createElement("span");
+                band.className = "cna-cal-band" +
+                  (opens ? " cna-cal-band-opens" : "") +
+                  (closes ? " cna-cal-band-closes" : "");
+                band.style.background = tint(m.colour, 0.16);
+                band.style.boxShadow = "inset 0 -3px 0 " + m.colour;
+                band.style.gridColumn = (startCol + 1) + " / " + (endCol + 2);
+                band.style.gridRow = "1";
+                daysEl.insertBefore(band, daysEl.firstChild);
+                return;
+              }
               var barsEl = document.createElement("div");
               barsEl.className = "cna-cal-bars";
               var bar = document.createElement("span");
               bar.className = "cna-cal-bar" +
-                (sp.from >= rowFrom ? " cna-cal-bar-opens" : "") +
-                (sp.to <= rowTo ? " cna-cal-bar-closes" : "");
+                (opens ? " cna-cal-bar-opens" : "") +
+                (closes ? " cna-cal-bar-closes" : "");
               bar.style.background = m.colour;
               bar.style.gridColumn = (startCol + 1) + " / " + (endCol + 2);
               barsEl.appendChild(bar);
@@ -934,11 +1059,20 @@
       box.appendChild(foot);
     }
 
+    /* trips come out of a database, which answers a moment later, so
+       the calendar is drawn at once and again when they arrive */
+    function withTrips() {
+      readOtTrips(function () {
+        paint();
+        if (typeof repaintCalPicks === "function") repaintCalPicks();
+      });
+    }
     paint();
+    withTrips();
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) { picked = null; paint(); }
+      if (!document.hidden) { picked = null; paint(); withTrips(); }
     });
-    window.addEventListener("pageshow", function () { picked = null; paint(); });
+    window.addEventListener("pageshow", function () { picked = null; paint(); withTrips(); });
   }
 
   function initHomeScreen() {
@@ -1211,6 +1345,16 @@
      ------------------------------------------------------------------ */
 
   var RELEASES = [
+    {
+      when: "15 October 2026",
+      what: "Overseas trips on the calendar, and Mark claimed",
+      points: [
+        "Overseas trips now show on the home screen calendar as a red band across the days you are away. The dates come straight from Overseas Tracker.",
+        "A Mark claimed button sits under the calendar. It lists everything still waiting: finished months of driving, parking, taxi and mileage. Tick the ones you have put through, or mark the lot.",
+        "Mileage has two route buttons, Home \u2192 Office and Office \u2192 Home. One tap fills both ends and the distance you used last time.",
+        "Two new vehicles in Driving Log: SPK8975L and SPK9078U."
+      ]
+    },
     {
       when: "12 September 2026",
       what: "Mileage, and marking claims from the main page",
@@ -1954,21 +2098,12 @@
      doing was already saying the right thing, so it opens this.
      ------------------------------------------------------------------ */
 
-  /* Which apps are even worth opening. Each one already says, in the
-     card it publishes, whether it has a job marked as a claim — so an app
-     with nothing outstanding never gets loaded at all. On a quiet month
-     that is the difference between opening one app and opening four. */
-  function appsWithClaims() {
-    var out = [];
-    BACKUP_APPS.forEach(function (id) {
-      var card;
-      try { card = JSON.parse(localStorage.getItem("cna.card." + id) || "null"); }
-      catch (e) { return; }
-      if (!card || !Array.isArray(card.todo)) return;
-      if (card.todo.some(function (t) { return t && t.claim; })) out.push(id);
-    });
-    return out;
-  }
+  /* The apps that have anything to claim. All of them are asked every
+     time: a finished month of driving is a claim the cards never flag,
+     and the Mark claimed button has to find it whether or not anything
+     shows in Needs doing. Three small reads, asked all at once. */
+  var CLAIM_APPS = ["dot", "taxi", "off"];
+  function appsWithClaims() { return CLAIM_APPS.slice(); }
 
   function openClaims() {
     var body = document.createElement("div");
@@ -2425,6 +2560,8 @@
     initStrip();
     initTodos();
     initCalendar();
+    var claimsBtn = document.getElementById("cna-claims-open");
+    if (claimsBtn) claimsBtn.addEventListener("click", function () { openClaims(); });
     homeScreen = initHomeScreen();
     initModal();
     repaintCalPicks = initCalendarExport();

@@ -1,10 +1,10 @@
 {
   "id": "off",
   "name": "Mileage",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "build": 1,
-  "date": "2026-09-12",
-  "notes": "Mileage driven in your own vehicle on a rest day callback.",
+  "date": "2026-10-15",
+  "notes": "Home to Office and Office to Home buttons fill the route and the distance.",
   "files": [
     "index.html"
   ]

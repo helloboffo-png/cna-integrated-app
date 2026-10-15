@@ -550,7 +550,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.2</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -731,7 +731,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.1 (9 Sep 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.2 (15 Oct 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -799,7 +799,8 @@
     "PD1451P","PD1515P","PD1620T",
     "SLH7959D","SLH7961X",
     "SNP2084H","SNP2708D","SNP2784H","SNP2789U","SNP2794D","SNP2797X",
-    "SNW7769H","SNW7807G","SNW7810X","SNW7849K"
+    "SNW7769H","SNW7807G","SNW7810X","SNW7849K",
+    "SPK8975L","SPK9078U"
   ];
   /* plates retired from the fleet — stripped from every install, even ones already seeded */
   var RETIRED_PLATES = ["SNW7808G", "SNW7807H", "SNT4123G", "SNP7769H"];
@@ -809,7 +810,7 @@
      first month alone, so every install was going to drift out of date and
      never catch up. A version number lets later changes reach phones that
      are already set up. */
-  var FLEET_VERSION = 1;
+  var FLEET_VERSION = 2;
   /* Plates introduced AFTER the original roster, listed against the version
      that introduced them. Existing installs get exactly these, never the
      whole of SEED_PLATES — otherwise a bump would resurrect every plate the
@@ -817,7 +818,7 @@
      To add a vehicle later: put it in SEED_PLATES (for new installs), add it
      here under the next version number, and bump FLEET_VERSION to match. */
   var PLATE_ADDITIONS = {
-    /* 2: ["SBB1111Z"], */
+    2: ["SPK8975L", "SPK9078U"]
   };
   var fleetChange = null; /* what this load actually changed, shown once on the Log screen */
 
@@ -2843,10 +2844,24 @@
        asks for it to be marked, and never touches the records itself.
        What counts as a claim, and what marking one does, stays here. */
     if (msg.ask === "claims") {
+      /* a finished month of driving is one claim: the allowance goes in
+         as a month, never day by day. Marking it is the same as Dismiss
+         on the month-end reminder, so the two always agree. */
+      var months = pendingClaimMonths().map(function (ym) {
+        var driven = monthEntries(ym).filter(function (e) { return e.plate; }).length;
+        return {
+          id: "month-" + ym,
+          date: "",
+          label: "Driving \u00b7 " + monthLabel(ym).replace(/^(\w{3})\w*/, "$1") + " \u00b7 " + driven + " day" + (driven === 1 ? "" : "s"),
+          value: money(driven * db.settings.allowance),
+          driven: driven
+        };
+      }).filter(function (m) { return m.driven > 0; });
       reply({
         ok: true,
         name: "Driving Log",
-        items: parkingRows().filter(function (r) { return !r.claimed; })
+        items: months.map(function (m) { delete m.driven; return m; }).concat(
+          parkingRows().filter(function (r) { return !r.claimed; })
           .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
           .map(function (r) {
             return {
@@ -2855,7 +2870,7 @@
               label: "Parking" + (r.receipt ? " \u00b7 " + r.receipt : ""),
               value: money(r.amount)
             };
-          })
+          }))
       });
       return;
     }
@@ -2866,6 +2881,10 @@
       var n = 0;
       db.taxi.forEach(function (r) {
         if (want[r.id] && !r.claimed) { r.claimed = true; n++; }
+      });
+      Object.keys(want).forEach(function (id) {
+        var m = /^month-(\d{4}-\d{2})$/.exec(id);
+        if (m && !db.dismissed[m[1]]) { db.dismissed[m[1]] = true; n++; }
       });
       if (n) { save(); renderTaxi(); renderMonth(); renderClaimReminder(); renderTodayStatus(); }
       reply({ ok: true, count: n });
