@@ -166,6 +166,14 @@
     font-size: 13px; font-weight: 600; color: var(--ink);
     margin: 0;
   }
+  .calc-note {
+    display: block; margin-top: 7px;
+    /* the sum above is monospaced so the columns line up; this is a
+       sentence, so it goes back to the app's own face */
+    font-family: "Inter Tight", -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    font-size: 12px; font-weight: 400;
+    color: var(--ink-soft); line-height: 1.45;
+  }
 
   button.primary {
     width: 100%;
@@ -399,27 +407,27 @@
 
     <div class="card">
       <h2>Log overtime</h2>
-      <p class="hint">Pick the date, put in the hours, choose the kind of day.</p>
+      <p class="hint">Pick the date, choose the kind of day, put in the hours.</p>
 
       <label class="field" for="log-date">Date</label>
       <div class="field-clip"><input type="date" id="log-date" max="2100-12-31"></div>
 
-      <label class="field" for="ot-hours">Overtime hours</label>
-      <input type="number" id="ot-hours" min="0" max="24" step="0.5" value="0" inputmode="decimal">
-
       <label class="field">Day type <span style="font-weight:400">(sets the rate)</span></label>
       <div class="seg" id="day-type" role="group" aria-label="Day type">
         <button type="button" data-v="normal" class="on">Normal day<small>1.5&times;</small></button>
-        <button type="button" data-v="off">Off day callback<small>1.5&times;</small></button>
-        <button type="button" data-v="rest">Rest day callback<small>2&times; first 8h</small></button>
+        <button type="button" data-v="off">Off day callback<small>9.5h at 1.5&times;</small></button>
+        <button type="button" data-v="rest">Rest day callback<small>9.5h at 2&times;</small></button>
       </div>
+
+      <label class="field" for="ot-hours">Overtime hours</label>
+      <input type="number" id="ot-hours" min="0" max="24" step="0.5" value="0" inputmode="decimal">
 
       <div class="formula-box"><p class="formula-text" id="live-calc">&nbsp;</p></div>
 
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.2</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -482,11 +490,11 @@
 
         <div class="row2">
           <div>
-            <label class="field" for="mult-low">Normal / off day</label>
+            <label class="field" for="mult-low">Normal &amp; off day</label>
             <input type="number" id="mult-low" min="1" step="0.1" inputmode="decimal">
           </div>
           <div>
-            <label class="field" for="mult-high">Rest day, first 8h</label>
+            <label class="field" for="mult-high">Rest day callback</label>
             <input type="number" id="mult-high" min="1" step="0.1" inputmode="decimal">
           </div>
         </div>
@@ -795,19 +803,60 @@
   });
 
   /* ---------- OT pay rules (shift work) ----------
-     normal day / off day callback : all hours at multLow (1.5x)
-     rest day callback             : first 8h at multHigh (2x), rest at multLow
-     These are the same rules DOT.log applied, kept identical on purpose so
-     a month worked out here matches a month worked out there.            */
-  function otBreakdown(e) { // -> [{hours, mult}]
+     normal day : every hour at multLow (1.5x)
+     off  day   : a flat 9.5h at multLow  (1.5x), plus anything past 9.5h
+     rest day   : a flat 9.5h at multHigh (2x),   plus anything past 9.5h
+
+     Being called in pays the flat 9.5 hours whether you were there two
+     hours or nine. Hours past 9.5 are ordinary overtime on top.
+
+     Overtime is paid the month after it is worked, so nothing from
+     September onwards has been settled yet and all of it is worked out
+     under the new rule. Earlier months were paid at the old figures and
+     are left alone -- re-pricing a month already in someone's bank
+     account would only put the app out of step with their payslip.
+
+     This goes by the date on the day, not by when it was typed in, so
+     logging a day late still prices it as the month it belongs to.      */
+  var RULE2_FROM = "2026-09-01";
+  var CALLBACK_HOURS = 9.5;  /* what a callback pays regardless of the clock */
+  var RULE1_REST_HOURS = 8;  /* the old rest-day split, for settled months */
+
+  function ruleOf(e) {
+    return e.date && e.date >= RULE2_FROM ? 2 : 1;
+  }
+  /* "September 2026", said once so the rule and the wording cannot drift */
+  function ruleFromLabel() {
+    return new Date(RULE2_FROM + "T00:00:00")
+      .toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  }
+
+  function otBreakdown(e) { // -> [{hours, mult, flat}]
     if (!e || e.ot <= 0) return [];
-    if (e.dayType === "rest") {
-      var first = Math.min(e.ot, 8), extra = Math.max(e.ot - 8, 0);
-      var parts = [{ hours: first, mult: db.settings.multHigh }];
-      if (extra > 0) parts.push({ hours: extra, mult: db.settings.multLow });
-      return parts;
+    var low = db.settings.multLow, high = db.settings.multHigh;
+
+    if (ruleOf(e) < 2) {
+      /* rule 1: all hours counted, rest days split at 8h */
+      if (e.dayType === "rest") {
+        var was = [{ hours: Math.min(e.ot, RULE1_REST_HOURS), mult: high }];
+        var over = Math.max(e.ot - RULE1_REST_HOURS, 0);
+        if (over > 0) was.push({ hours: over, mult: low });
+        return was;
+      }
+      return [{ hours: e.ot, mult: low }];
     }
-    return [{ hours: e.ot, mult: db.settings.multLow }];
+
+    if (e.dayType === "normal") return [{ hours: e.ot, mult: low }];
+
+    var parts = [{ hours: CALLBACK_HOURS, mult: e.dayType === "rest" ? high : low, flat: true }];
+    var extra = Math.max(e.ot - CALLBACK_HOURS, 0);
+    if (extra > 0) parts.push({ hours: extra, mult: low });
+    /* an off day pays the same rate either side of 9.5, so showing it as
+       two sums would be arithmetic theatre -- say it once */
+    if (parts.length === 2 && parts[0].mult === parts[1].mult) {
+      parts = [{ hours: parts[0].hours + parts[1].hours, mult: parts[0].mult }];
+    }
+    return parts;
   }
   function otWeightedHours(e) {
     return otBreakdown(e).reduce(function (s, p) { return s + p.hours * p.mult; }, 0);
@@ -860,12 +909,26 @@
     var box = $("live-calc");
     var hrs = currentHours();
     if (hrs <= 0) { box.textContent = "No overtime on this day."; return; }
-    var e = { ot: hrs, dayType: selectedDayType };
-    var parts = otBreakdown(e).map(function (p) { return hoursStr(p.hours) + "h × " + p.mult; });
+    var iso = $("log-date").value;
+    var e = { ot: hrs, dayType: selectedDayType, date: iso };
+    var parts = otBreakdown(e).map(function (p) {
+      return (p.flat ? "flat " : "") + hoursStr(p.hours) + "h × " + p.mult;
+    });
     var line = parts.join("  +  ") + "  =  " + hoursStr(otWeightedHours(e)) + "h paid";
     var pay = otPay(e);
     if (pay !== null) line += "  (" + money(pay) + ")";
     box.textContent = line;
+
+    /* Two callback days with the same hours can be worth different money,
+       one being older than the rule change. Said plainly here, because the
+       alternative is someone deciding the app is broken. */
+    if (ruleOf(e) < 2 && selectedDayType !== "normal") {
+      var note = document.createElement("span");
+      note.className = "calc-note";
+      note.textContent = "Before " + ruleFromLabel() + ", when the callback rule changed. " +
+        "This day keeps the working-out it was paid under.";
+      box.appendChild(note);
+    }
   }
   $("ot-hours").addEventListener("input", renderLiveCalc);
 
@@ -1075,6 +1138,14 @@
                hoursStr(hours) + "h worked, paid as " + hoursStr(weighted) + "h.";
     if (withPay) line += " That is " + money(weighted * db.settings.baseRate) + " of OT.";
     else line += " Add your hourly rate in Settings to see the money.";
+    /* This is the screen people hold against a payslip, so a month worked
+       out under the previous rule has to say so. Two callback days with
+       the same hours on them can be worth different money, and an
+       unexplained difference here reads as a mistake. */
+    if (rows.some(function (e) { return ruleOf(e) < 2 && e.dayType !== "normal"; })) {
+      line += " This is before " + ruleFromLabel() + ", so callback days here keep the " +
+              "working-out they were paid under.";
+    }
     totals.textContent = line;
   }
   $("month-pick").addEventListener("change", renderMonth);

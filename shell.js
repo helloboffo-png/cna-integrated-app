@@ -1347,6 +1347,16 @@
   var RELEASES = [
     {
       when: "15 October 2026",
+      what: "Being called in now pays a fixed amount",
+      points: [
+        "Called in on an off day pays a flat 9.5 hours at 1.5\u00d7. Called in on a rest day pays a flat 9.5 hours at 2\u00d7. It no longer matters whether you were there two hours or nine \u2014 the callback is worth the same.",
+        "Stay past 9.5 hours and the extra is paid on top at 1.5\u00d7.",
+        "September and October have been re-worked under the new rule, because that pay has not come through yet. Months before September are left exactly as they were paid.",
+        "On the Log screen you now choose the kind of day first, then put in the hours."
+      ]
+    },
+    {
+      when: "15 October 2026",
       what: "Overseas trips on the calendar, and Mark claimed",
       points: [
         "Overseas trips now show on the home screen calendar as a red band across the days you are away. The dates come straight from Overseas Tracker.",
