@@ -415,8 +415,8 @@
       <label class="field">Day type <span style="font-weight:400">(sets the rate)</span></label>
       <div class="seg" id="day-type" role="group" aria-label="Day type">
         <button type="button" data-v="normal" class="on">Normal day<small>1.5&times;</small></button>
-        <button type="button" data-v="off">Off day callback<small>9.5h at 1.5&times;</small></button>
-        <button type="button" data-v="rest">Rest day callback<small>9.5h at 2&times;</small></button>
+        <button type="button" data-v="off">Off day callback<small>8.75h at 1.5&times;</small></button>
+        <button type="button" data-v="rest">Rest day callback<small>8.75h at 2&times;</small></button>
       </div>
 
       <label class="field" for="ot-hours">Overtime hours</label>
@@ -427,7 +427,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.2</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.3</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -804,11 +804,12 @@
 
   /* ---------- OT pay rules (shift work) ----------
      normal day : every hour at multLow (1.5x)
-     off  day   : a flat 9.5h at multLow  (1.5x), plus anything past 9.5h
-     rest day   : a flat 9.5h at multHigh (2x),   plus anything past 9.5h
+     off  day   : a flat 8.75h at multLow  (1.5x), plus anything past 9.5h
+     rest day   : a flat 8.75h at multHigh (2x),   plus anything past 9.5h
 
-     Being called in pays the flat 9.5 hours whether you were there two
-     hours or nine. Hours past 9.5 are ordinary overtime on top.
+     Being called in pays the flat 8.75 hours whether you were there two
+     hours or nine -- a 9.5-hour shift less its 45-minute unpaid break.
+     Time on the clock past 9.5 hours is ordinary overtime on top.
 
      Overtime is paid the month after it is worked, so nothing from
      September onwards has been settled yet and all of it is worked out
@@ -819,7 +820,14 @@
      This goes by the date on the day, not by when it was typed in, so
      logging a day late still prices it as the month it belongs to.      */
   var RULE2_FROM = "2026-09-01";
-  var CALLBACK_HOURS = 9.5;  /* what a callback pays regardless of the clock */
+  /* Every shift carries a mandatory 45-minute unpaid break, callbacks
+     included. So a 9.5-hour shift is 8.75 paid hours: that is what a
+     callback is worth, and the clock still has to pass 9.5 before any
+     overtime starts on top. The paid figure is worked out from the other
+     two rather than written down a third time. */
+  var SHIFT_CLOCK_HOURS = 9.5;
+  var SHIFT_BREAK_HOURS = 0.75;
+  var CALLBACK_PAID_HOURS = SHIFT_CLOCK_HOURS - SHIFT_BREAK_HOURS;  /* 8.75 */
   var RULE1_REST_HOURS = 8;  /* the old rest-day split, for settled months */
 
   function ruleOf(e) {
@@ -848,14 +856,12 @@
 
     if (e.dayType === "normal") return [{ hours: e.ot, mult: low }];
 
-    var parts = [{ hours: CALLBACK_HOURS, mult: e.dayType === "rest" ? high : low, flat: true }];
-    var extra = Math.max(e.ot - CALLBACK_HOURS, 0);
+    var parts = [{ hours: CALLBACK_PAID_HOURS, mult: e.dayType === "rest" ? high : low, flat: true }];
+    var extra = Math.max(e.ot - SHIFT_CLOCK_HOURS, 0);
+    /* An off day pays the same rate either side, so the two could be added
+       up and shown once -- but that would quietly swallow the 45 minutes,
+       and someone who typed 12 deserves to see where 11.25 came from. */
     if (extra > 0) parts.push({ hours: extra, mult: low });
-    /* an off day pays the same rate either side of 9.5, so showing it as
-       two sums would be arithmetic theatre -- say it once */
-    if (parts.length === 2 && parts[0].mult === parts[1].mult) {
-      parts = [{ hours: parts[0].hours + parts[1].hours, mult: parts[0].mult }];
-    }
     return parts;
   }
   function otWeightedHours(e) {
@@ -865,7 +871,13 @@
     return db.settings.baseRate ? otWeightedHours(e) * db.settings.baseRate : null;
   }
   function rateLabel(e) {
-    return otBreakdown(e).map(function (p) { return p.mult + "×"; }).join(" / ");
+    /* An off day runs at the same rate either side of the break, and a
+       column reading "1.5x / 1.5x" just looks like a fault. */
+    var rates = [];
+    otBreakdown(e).forEach(function (p) {
+      if (rates[rates.length - 1] !== p.mult) rates.push(p.mult);
+    });
+    return rates.map(function (m) { return m + "×"; }).join(" / ");
   }
 
   /* ---------- tabs ---------- */
@@ -922,11 +934,22 @@
     /* Two callback days with the same hours can be worth different money,
        one being older than the rule change. Said plainly here, because the
        alternative is someone deciding the app is broken. */
-    if (ruleOf(e) < 2 && selectedDayType !== "normal") {
+    var why = "";
+    if (selectedDayType !== "normal") {
+      if (ruleOf(e) < 2) {
+        why = "Before " + ruleFromLabel() + ", when the callback rule changed. " +
+              "This day keeps the working-out it was paid under.";
+      } else if (hrs > SHIFT_CLOCK_HOURS) {
+        /* the only place the arithmetic looks wrong: 12 hours on the clock
+           pays 11.25, and the missing 45 minutes has to be accounted for */
+        why = "45 minutes of unpaid break comes off every shift, so overtime " +
+              "only starts once you pass " + hoursStr(SHIFT_CLOCK_HOURS) + " hours.";
+      }
+    }
+    if (why) {
       var note = document.createElement("span");
       note.className = "calc-note";
-      note.textContent = "Before " + ruleFromLabel() + ", when the callback rule changed. " +
-        "This day keeps the working-out it was paid under.";
+      note.textContent = why;
       box.appendChild(note);
     }
   }

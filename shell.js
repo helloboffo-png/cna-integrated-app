@@ -1346,6 +1346,16 @@
 
   var RELEASES = [
     {
+      when: "16 October 2026",
+      what: "The 45-minute break, which yesterday's figure missed",
+      points: [
+        "Every shift carries a mandatory 45-minute unpaid break, callbacks included. Yesterday's update priced a callback at 9.5 hours and should not have.",
+        "A callback is now worth 8.75 hours \u2014 a 9.5-hour shift less the break. An off day pays that at 1.5\u00d7, a rest day at 2\u00d7.",
+        "Stay past 9.5 hours on the clock and the extra is paid on top at 1.5\u00d7. The 45 minutes sits in between, which is why 12 hours on the clock pays 11.25.",
+        "September and October have been re-worked again at the corrected figure. Months before September are still left exactly as they were paid."
+      ]
+    },
+    {
       when: "15 October 2026",
       what: "Being called in now pays a fixed amount",
       points: [

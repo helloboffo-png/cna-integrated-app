@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "build": 1,
-  "date": "2026-10-15",
-  "notes": "Off and Rest day callbacks pay a flat 9.5 hours.",
+  "date": "2026-10-16",
+  "notes": "A callback pays 8.75 hours: a shift less its 45-minute break.",
   "files": [
     "index.html"
   ]
