@@ -902,6 +902,33 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
   box-shadow: var(--cna-shadow);
 }
 
+/* One kept overseas form: what it is on the left, the way to get it
+   back on the right. Wraps rather than squeezes on a narrow phone. */
+.cna-otkeep-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+
+  padding: 11px 0;
+  border-bottom: 1px solid var(--cna-line);
+}
+.cna-otkeep-row:last-child { border-bottom: 0; }
+
+.cna-otkeep-name {
+  display: block;
+  font-size: var(--t-body);
+  font-weight: 600;
+  color: var(--cna-ink);
+}
+.cna-otkeep-when {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--t-small);
+  color: var(--cna-ink-soft);
+}
+
 .cna-hint {
   margin: 12px 0 0;
   font-size: var(--t-small);
@@ -1077,6 +1104,15 @@ body.cna-editing { -webkit-user-select: none; user-select: none; }
 }
 
 .cna-btn[disabled] { opacity: .55; cursor: default; }
+
+/* Sits in a row beside the text it belongs to, so it must not stretch
+   the way a standalone button does. Defined after .cna-btn on purpose:
+   same specificity, and it has to be the one that wins. */
+.cna-btn-slim {
+  flex: none;
+  width: auto;
+  padding: 8px 14px;
+}
 
 /* The same button, but a link, because it hands over a file and a phone
    only honours that from a press somebody actually made. */

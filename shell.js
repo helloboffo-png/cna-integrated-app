@@ -162,6 +162,7 @@
      release that turns up while that screen is open reaches it. */
   var repaintShellRow = null;
   var repaintBackup = null;
+  var repaintOtKeep = null;
   var openSettings = null;
 
   function hasUnsavedWork() {
@@ -594,6 +595,178 @@
     return out;
   }
 
+  /* ------------------------------------------------------------------
+     Keeping overseas forms
+
+     Overseas Tracker holds one draft at a time, in a single storage key.
+     "Start New Draft" removes that key with no warning and keeps no
+     copy, so a form that was never saved as a Project is gone the moment
+     the next one is started -- taking its dates off the calendar with it.
+
+     How that app manages its own drafts is its business and is not
+     changed here. Instead the container keeps its own copy of whatever
+     the draft held. The calendar reads those copies, and any one of them
+     can be handed back as a file for that app's own Load Project button
+     to open -- the same shape it writes itself. Nothing is ever written
+     into its storage, and none of its files are touched.
+     ------------------------------------------------------------------ */
+
+  var OT_KEEP_KEY = "cna.ot.keep";
+  var OT_KEEP_MAX = 6;
+
+  function otDraftNow() {
+    try {
+      var raw = localStorage.getItem("otFormBuilder.draft") ||
+                localStorage.getItem("otFormBuilderDraft");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function readOtKeep() {
+    try {
+      var list = JSON.parse(localStorage.getItem(OT_KEEP_KEY) || "[]");
+      return Array.isArray(list) ? list.filter(function (k) {
+        return k && typeof k === "object" && k.project;
+      }) : [];
+    } catch (e) { return []; }
+  }
+
+  /* A trip is its dates, so that is the identity. Keying on the title
+     instead would file a new copy on every letter typed into it. */
+  function otKeepKeyOf(project) {
+    var d = project && project.data;
+    if (!d) return "";
+    var dates = Array.isArray(d.selectedCalendarDates)
+      ? d.selectedCalendarDates.filter(realDate).sort() : [];
+    var from = realDate(d.firstDate) ? d.firstDate : dates[0];
+    var to = realDate(d.endDate) ? d.endDate : dates[dates.length - 1];
+    return from && to ? from + "|" + to : "";
+  }
+
+  function keepOtDraft() {
+    var project = otDraftNow();
+    var id = otKeepKeyOf(project);
+    /* A form with no dates on it yet says nothing the calendar can use
+       and nothing worth handing back, so it is not kept. */
+    if (!id) return;
+
+    var list = readOtKeep();
+    var title = String((project.data && project.data.programTitle) || "").trim();
+    var at = Date.now();
+    var row = { id: id, at: at, title: title, project: project };
+
+    var existing = -1;
+    list.forEach(function (k, i) { if (k.id === id) existing = i; });
+    if (existing >= 0) {
+      /* same trip, further along: replace it rather than pile up copies */
+      if (JSON.stringify(list[existing].project) === JSON.stringify(project)) return;
+      list.splice(existing, 1);
+    }
+    list.unshift(row);
+
+    /* Drafts carry signature strokes and can be large. Rather than guess
+       at a size limit, write and drop the oldest until it fits. */
+    while (list.length) {
+      try {
+        localStorage.setItem(OT_KEEP_KEY, JSON.stringify(list.slice(0, OT_KEEP_MAX)));
+        return;
+      } catch (e) {
+        if (list.length === 1) { try { localStorage.removeItem(OT_KEEP_KEY); } catch (e2) {} return; }
+        list.pop();
+      }
+    }
+  }
+
+  function initOtKeep() {
+    if (location.href.indexOf(at("ot/")) !== 0) return;
+    keepOtDraft();
+    /* Capture phase, so this runs before that app's own click handler --
+       which is what makes it possible to copy the draft in the instant
+       before "Start New Draft" deletes it. */
+    document.addEventListener("click", keepOtDraft, true);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) keepOtDraft();
+    });
+    window.addEventListener("pagehide", keepOtDraft);
+    /* a backstop for anything that clears the draft without a click */
+    setInterval(function () { if (!document.hidden) keepOtDraft(); }, 5000);
+  }
+
+  /* The kept forms, offered back as files. Overseas Tracker opens its
+     own project files, and a draft is written in exactly that shape, so
+     a form goes back in through its own Load Project button rather than
+     this page reaching into its storage. */
+  /* shared with the calendar heading, so a month is never spelled two
+     different ways on the same screen */
+  var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  /* "3 - 7 Nov", or "28 Oct - 2 Nov" when it crosses a month. */
+  function datesWords(from, to) {
+    var a = from.split("-"), b = to.split("-");
+    var am = MONTHS_SHORT[+a[1] - 1], bm = MONTHS_SHORT[+b[1] - 1];
+    if (from === to) return +a[2] + " " + am;
+    if (a[1] === b[1] && a[0] === b[0]) return +a[2] + " \u2013 " + (+b[2]) + " " + bm;
+    return +a[2] + " " + am + " \u2013 " + (+b[2]) + " " + bm;
+  }
+
+  function initOtKeepList() {
+    var fold = document.getElementById("cna-fold-otkeep");
+    if (!fold) return null;
+    var listBox = document.getElementById("cna-otkeep-list");
+    var meta = document.getElementById("cna-otkeep-meta");
+    var files = document.getElementById("cna-otkeep-files");
+
+    function paint() {
+      var list = readOtKeep();
+      fold.hidden = !list.length;
+      if (!list.length) return;
+      meta.textContent = list.length === 1 ? "1 kept" : list.length + " kept";
+      files.hidden = true;
+      files.textContent = "";
+      listBox.textContent = "";
+
+      list.forEach(function (k) {
+        var row = document.createElement("div");
+        row.className = "cna-otkeep-row";
+
+        var text = document.createElement("div");
+        var name = document.createElement("span");
+        name.className = "cna-otkeep-name";
+        name.textContent = k.title || "Untitled form";
+        var when = document.createElement("span");
+        when.className = "cna-otkeep-when";
+        when.textContent = datesWords(k.id.split("|")[0], k.id.split("|")[1]);
+        text.appendChild(name);
+        text.appendChild(when);
+
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cna-btn cna-btn-slim";
+        btn.textContent = "Save as file";
+        btn.addEventListener("click", function () {
+          files.hidden = true;
+          files.textContent = "";
+          var blob = new Blob([JSON.stringify(k.project)], { type: "application/json" });
+          var a = document.createElement("a");
+          a.className = "cna-btn cna-btn-link";
+          a.href = URL.createObjectURL(blob);
+          a.download = (k.title || "Overseas form").replace(/[\\/:*?"<>|]/g, " ").trim() + ".json";
+          a.rel = "noopener";
+          a.textContent = "Save \u201c" + (k.title || "Untitled form") + "\u201d";
+          files.appendChild(a);
+          files.hidden = false;
+        });
+
+        row.appendChild(text);
+        row.appendChild(btn);
+        listBox.appendChild(row);
+      });
+    }
+    paint();
+    return paint;
+  }
+
   function readOtTrips(done) {
     var found = [];
     var finished = false;
@@ -610,10 +783,14 @@
       if (done) done();
     }
     /* the form currently open in the app, saved or not */
-    try {
-      var raw = localStorage.getItem("otFormBuilder.draft") || localStorage.getItem("otFormBuilderDraft");
-      if (raw) found = found.concat(otSpans(JSON.parse(raw)));
-    } catch (e) {}
+    var live = otDraftNow();
+    if (live) found = found.concat(otSpans(live));
+
+    /* and every form the container kept before it could be wiped, so a
+       trip stays on the calendar after a new draft is started */
+    readOtKeep().forEach(function (k) {
+      found = found.concat(otSpans(k.project, k.title));
+    });
 
     /* projects saved inside the app */
     if (!window.indexedDB) { finish(); return; }
@@ -732,8 +909,6 @@
     var expanded = false;
     var cursor = null;       /* Date, any day inside the period being shown */
     var picked = null;       /* iso of the day tapped open */
-    var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     function pad2(n) { return (n < 10 ? "0" : "") + n; }
     function iso(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
@@ -1345,6 +1520,16 @@
      ------------------------------------------------------------------ */
 
   var RELEASES = [
+    {
+      when: "18 October 2026",
+      what: "Overseas forms stop disappearing",
+      points: [
+        "Overseas Tracker holds one form at a time. Pressing Start New Draft threw the previous one away with no warning, and its dates came off the calendar with it.",
+        "The main page now keeps its own copy of the last few overseas forms, taken the moment before that app lets go of one. Old trips stay on the calendar.",
+        "Settings \u2192 Overseas forms lists what has been kept. Save one as a file, then press Load Project inside Overseas Tracker to put it back exactly as it was.",
+        "Overseas Tracker itself has not been changed. Saving a form with its own Save Project button is still the surest way to keep it."
+      ]
+    },
     {
       when: "16 October 2026",
       what: "The 45-minute break, which yesterday's figure missed",
@@ -2320,6 +2505,7 @@
       if (settings) {
         refreshUpdates();
         if (repaintBackup) repaintBackup();
+        if (repaintOtKeep) repaintOtKeep();
         /* day counts move as things are logged, so they are read fresh
            every time rather than left as they were on first load */
         if (repaintCalPicks) repaintCalPicks();
@@ -2584,8 +2770,10 @@
     if (claimsBtn) claimsBtn.addEventListener("click", function () { openClaims(); });
     homeScreen = initHomeScreen();
     initModal();
+    initOtKeep();
     repaintCalPicks = initCalendarExport();
     repaintBackup = initBackup();
+    repaintOtKeep = initOtKeepList();
     initSettings();
 
     if (!("serviceWorker" in navigator)) return;

@@ -230,6 +230,22 @@
     </div>
   </details>
 
+  <!-- Overseas Tracker keeps one draft at a time and starting a new one
+       wipes it. These are the container's own copies, so a form can be
+       handed back even after that app has let go of it. -->
+  <details class="cna-fold" id="cna-fold-otkeep" hidden>
+    <summary>
+      <span class="cna-fold-title">Overseas forms</span>
+      <span class="cna-fold-meta" id="cna-otkeep-meta"></span>
+      <span class="cna-fold-chev" aria-hidden="true"></span>
+    </summary>
+    <div class="cna-fold-body">
+      <div id="cna-otkeep-list"></div>
+      <div id="cna-otkeep-files" hidden></div>
+      <p class="cna-hint">Open Overseas Tracker and press <strong>Load Project</strong> to put one back.</p>
+    </div>
+  </details>
+
   <details class="cna-fold">
     <summary>
       <span class="cna-fold-title">App updates</span>
