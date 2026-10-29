@@ -375,7 +375,7 @@
         <button class="secondary" id="cancel-trip">Cancel</button>
       </div>
     </div>
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Mileage · v1.1</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">Mileage · v1.2</p>
   </section>
 
   <!-- ============ TRIPS ============ -->
@@ -615,18 +615,15 @@
       });
       Object.keys(tripDays).forEach(function (iso) { tripDays[iso] = km(tripDays[iso]); });
 
-      /* What is still outstanding, in this app's own words. A rate nobody
-         has set is the one that matters: the app can count the distance
-         but cannot say what it is worth. */
+      /* What is still outstanding, in this app's own words. The only thing
+         worth raising is a trip not yet put through. The rate is not: SAP
+         holds the rates and prices the claim, so a rate nobody has set here
+         is not a job anyone needs to do. */
       var jobs = [];
       if (open.length) {
         jobs.push({ key: "claim", weight: 16, go: "#list", claim: true,
           text: open.length === 1 ? "1 mileage trip to claim"
                                   : open.length + " mileage trips to claim" });
-      }
-      if (db.trips.length && !rate) {
-        jobs.push({ key: "rate", weight: 9, go: "#settings",
-          text: "Set the mileage rate" });
       }
 
       localStorage.setItem("cna.card.off", JSON.stringify({
@@ -975,6 +972,11 @@
 
   /* A rate nobody has set is worth saying out loud on the main screen,
      because every figure this app produces is missing until it is. */
+  /* With no rate set this says why there is no money on screen, and
+     nothing more. It used to push you to Settings to enter a rate; it
+     no longer does. The distance is the claim and SAP holds the rates,
+     so a blank rate here is a choice, not an unfinished job. The rate
+     box is still in Settings for anyone who knows their own figure. */
   function renderRateNote() {
     var box = $("rate-note");
     box.textContent = "";
@@ -982,17 +984,8 @@
     if (!db.trips.length) return;
     var b = el("div", "note-banner");
     b.appendChild(el("p", null,
-      "No mileage rate set yet, so this app is counting kilometres but can't tell you what they are worth."));
-    var row = el("div", "btn-row");
-    var go = el("button", "secondary", "Set the rate");
-    go.addEventListener("click", function () {
-      switchTab("screen-settings");
-      var sec = $("sec-rate");
-      if (sec) sec.open = true;
-      $("rate-input").focus();
-    });
-    row.appendChild(go);
-    b.appendChild(row);
+      "Log the distance and claim it in SAP — the rates are set there, " +
+      "so this app counts the kilometres and leaves the money to the system."));
     box.appendChild(b);
   }
 

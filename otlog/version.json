@@ -1,10 +1,10 @@
 {
   "id": "otlog",
   "name": "OT Tracker",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "build": 1,
-  "date": "2026-10-16",
-  "notes": "A callback pays 8.75 hours: a shift less its 45-minute break.",
+  "date": "2026-10-29",
+  "notes": "An estimated OT figure on the main page, beside the hours.",
   "files": [
     "index.html"
   ]

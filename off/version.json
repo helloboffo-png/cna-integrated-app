@@ -1,10 +1,10 @@
 {
   "id": "off",
   "name": "Mileage",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "build": 1,
-  "date": "2026-10-15",
-  "notes": "Home to Office and Office to Home buttons fill the route and the distance.",
+  "date": "2026-10-29",
+  "notes": "The rate is SAP's job: count the distance, remember to claim it.",
   "files": [
     "index.html"
   ]

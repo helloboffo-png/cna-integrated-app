@@ -427,7 +427,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.3</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.4</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -743,6 +743,11 @@
     try {
       var ym = todayISO().slice(0, 7);
       var hours = monthKeys(ym).reduce(function (s, k) { return s + db.entries[k].ot; }, 0);
+      /* The same weighted figure the month screen shows, so the home
+         screen and this app can never disagree about the money. */
+      var weighted = monthKeys(ym).reduce(function (s, k) {
+        return s + otWeightedHours(db.entries[k]);
+      }, 0);
       /* Which days had overtime, for the home screen's calendar. This app
          picks its own colour and wording; the home screen only draws. */
       var cutoff = new Date();
@@ -778,10 +783,16 @@
              screen's calendar. A bare #screen in this app's own folder. */
           { key: "ot", label: "Overtime", colour: "#3E9B6B", days: otDays, go: "#history" }
         ],
+        /* The estimate only appears once an hourly rate exists. With no
+           rate there is simply no second figure — the home screen is not
+           the place to be nagged about a setting. */
         items: [
           { key: "hours", value: hoursStr(hours), label: "OT hours",
             alert: false, weight: 30, go: "#month" }
-        ]
+        ].concat(db.settings.baseRate ? [
+          { key: "pay", value: money(weighted * db.settings.baseRate),
+            label: "est OT $", alert: false, weight: 29, go: "#month" }
+        ] : [])
       }));
     } catch (e) { /* nothing on the home screen is worth failing over */ }
   }

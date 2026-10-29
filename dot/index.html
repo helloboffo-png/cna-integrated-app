@@ -550,7 +550,7 @@
     </div>
     <!-- version sits here too, not only in Settings: asking a colleague
          what they're running should take one screenshot of the main screen -->
-    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.2</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0;">Driving Log · v4.3</p>
   </section>
 
   <!-- ============ TAXI ============ -->
@@ -731,7 +731,7 @@
     <!-- App version moved to the container's Settings page, which checks
          and updates each app separately. -->
 
-    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.2 (15 Oct 2026)<br>Gimme the moolah</p>
+    <p class="hint" style="text-align:center; margin: 4px 0 0;">Driving Log · v4.3 (29 Oct 2026)<br>Gimme the moolah</p>
   </section>
 </div>
 
@@ -1982,7 +1982,18 @@
       var sub = KIND[r.kind].label + " · " + fmt(r.date) + (r.receipt ? " · " + r.receipt : "");
       main.appendChild(el("div", "ride-sub", sub));
       var sub2 = [];
-      if (r.kind === "parking" && r.plate) sub2.push(r.plate);
+      /* A receipt saved before that day's drive was logged has no plate of
+         its own — park, pay and log the receipt on the spot, log the drive
+         at home. Rather than show nothing for ever, fall back to whatever
+         vehicle the Log tab now holds for that date, so logging the drive
+         later fills the parking in by itself and nobody picks a vehicle
+         twice. Shown, never written back: correct the vehicle you logged
+         and the parking follows, instead of being stuck on the old one.
+         A plate chosen by hand is already on the receipt and always wins. */
+      if (r.kind === "parking") {
+        var plate = r.plate || plateLoggedOn(r.date);
+        if (plate) sub2.push(plate);
+      }
       if (r.note) sub2.push(r.note);
       if (sub2.length) main.appendChild(el("div", "ride-sub", sub2.join(" · ")));
 
@@ -1997,9 +2008,13 @@
         $("taxi-amount").value = r.amount;
         $("taxi-receipt").value = r.receipt || "";
         $("taxi-note").value = r.note || "";
-        renderRcptPlates(r.plate || "");
-        /* keepPlate: show exactly what this receipt was saved with, rather
-           than re-deriving it from whatever is logged for that date now */
+        /* Show what the history line shows: the receipt's own plate, or
+           failing that the vehicle logged for that date. Opening a receipt
+           and saving it does commit that plate, which is honest enough —
+           it was on screen while you pressed Update. */
+        renderRcptPlates(r.plate || plateLoggedOn(r.date));
+        /* keepPlate: hold the plate set just above, rather than letting
+           the kind switch re-derive and overwrite it */
         setRcptKind("parking", true);
         $("cancel-taxi").style.display = "";
         renderPhotoSlot();

@@ -1521,6 +1521,17 @@
 
   var RELEASES = [
     {
+      when: "29 October 2026",
+      what: "What the overtime is worth, on the main page",
+      points: [
+        "The main page now shows an estimated OT figure beside the hours. It uses the hourly rate you have already entered in OT Tracker — no rate, no figure, and no nagging about it.",
+        "It is an estimate for checking a payslip against, not a promise. The figure is worked out exactly the way OT Tracker's own month screen works it out, so the two can never disagree.",
+        "To make room, taxi fares has moved down to the smaller row. Nothing has been removed.",
+        "Mileage no longer asks you to set a rate. SAP holds the rates and prices the claim, so this app counts the kilometres and reminds you to put them through. The rate box stays in Settings for anyone who knows their own figure.",
+        "Parking receipts now show the vehicle you logged that day, even when the receipt was saved first. Park, pay and log the receipt on the spot; log the drive at home and the parking fills itself in. No vehicle picked twice."
+      ]
+    },
+    {
       when: "18 October 2026",
       what: "Overseas forms stop disappearing",
       points: [
