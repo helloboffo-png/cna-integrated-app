@@ -427,7 +427,7 @@
       <button class="primary" id="save-entry">Save this day</button>
     </div>
 
-    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.4</p>
+    <p class="hint" style="text-align:center; margin: 2px 0 0; font-size:13px; color:var(--ink-soft)">OT Tracker · v2.4.1</p>
   </section>
 
   <!-- ============ HISTORY ============ -->
@@ -790,8 +790,11 @@
           { key: "hours", value: hoursStr(hours), label: "OT hours",
             alert: false, weight: 30, go: "#month" }
         ].concat(db.settings.baseRate ? [
+          /* 14 puts this first in the smaller second row: below the hours,
+             and below the three figures that earn the full-size row, but
+             ahead of everything else down there. */
           { key: "pay", value: money(weighted * db.settings.baseRate),
-            label: "est OT $", alert: false, weight: 29, go: "#month" }
+            label: "est OT $", alert: false, weight: 14, go: "#month" }
         ] : [])
       }));
     } catch (e) { /* nothing on the home screen is worth failing over */ }

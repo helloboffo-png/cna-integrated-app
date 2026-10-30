@@ -568,7 +568,13 @@ a.cna-cal-detail-bit:focus-visible { outline: 2px solid var(--cna-accent); outli
 /* A figure is never red now. Red belongs to the list below, which says
    what to actually do about it — when three of four numbers were red,
    none of them stood out and the page just looked alarmed. */
-.cna-strip-row + .cna-strip-row .cna-fig-n { font-size: var(--t-title); }
+/* The lower row sits two pixels under the full-size figures, not a whole
+   step down. Derived from --t-figure rather than written as its own
+   number, so it stays a relationship and the home screen keeps to its
+   five type sizes. */
+.cna-strip-row + .cna-strip-row .cna-fig-n {
+  font-size: calc(var(--t-figure) - 2px);
+}
 
 .cna-today-date {
   font-size: var(--t-title);
