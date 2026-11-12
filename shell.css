@@ -1281,11 +1281,18 @@ button.cna-todo-row:focus-visible {
   justify-content: center;
 
   padding: 16px;
+  /* The page runs under the notch and the status bar, so a flat 16px is
+     not clear of them. The bottom has always allowed for that; the top
+     had not, and it only showed once What's new grew tall enough to fill
+     the screen and put its cross underneath the clock. */
+  padding-top: calc(16px + env(safe-area-inset-top));
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 
-  background: rgba(12, 15, 18, .5);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  /* Dimmed, not blurred. A blur across the whole screen has to be redrawn
+     while a long list scrolls over it, which is what made this window
+     stutter on a phone. Two pixels of it was never worth that; the dim is
+     a little deeper instead, so the window still lifts off the page. */
+  background: rgba(12, 15, 18, .58);
 }
 
 @media (min-height: 640px) {
@@ -1338,6 +1345,9 @@ button.cna-todo-row:focus-visible {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Reaching the end of this list stops there, rather than carrying on
+     into the page behind it and dragging the whole screen about. */
+  overscroll-behavior: contain;
   padding: 4px 16px 16px;
 }
 

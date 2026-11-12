@@ -1521,6 +1521,15 @@
 
   var RELEASES = [
     {
+      when: "12 November 2026",
+      what: "What's new opens properly again",
+      points: [
+        "On phones with a notch the cross to close this window could end up underneath the clock, with no way to press it. The window now keeps clear of the top of the screen whatever text size you are on.",
+        "It had also become slow to open and jerky to scroll, because it was drawing every update ever made. It now shows the recent ones, with Show earlier updates for the rest.",
+        "Scrolling to the end of a window no longer drags the page behind it about."
+      ]
+    },
+    {
       when: "29 October 2026",
       what: "What the overtime is worth, on the main page",
       points: [
@@ -1651,9 +1660,17 @@
     }
   ];
 
+  /* Only the recent handful is drawn when the window opens. Every release
+     at once came to some seventy lines in a scrolling window, which is
+     what made it stutter on a phone — and it reads as a history of the
+     whole build rather than a note about what changed lately, which is
+     all anyone opens this for. The rest is one press away. */
+  var NEWS_AT_FIRST = 4;
+
   function buildNews() {
     var wrap = document.createElement("div");
-    RELEASES.forEach(function (r) {
+
+    function add(r) {
       var when = document.createElement("p");
       when.className = "cna-news-when";
       when.textContent = r.when;
@@ -1672,7 +1689,25 @@
         ul.appendChild(li);
       });
       wrap.appendChild(ul);
-    });
+    }
+
+    RELEASES.slice(0, NEWS_AT_FIRST).forEach(add);
+
+    if (RELEASES.length > NEWS_AT_FIRST) {
+      var more = document.createElement("button");
+      more.type = "button";
+      more.className = "cna-btn";
+      more.style.marginTop = "18px";
+      more.textContent = "Show earlier updates";
+      more.addEventListener("click", function () {
+        /* taken out first, so the older releases land after the newer
+           ones rather than after the button */
+        wrap.removeChild(more);
+        RELEASES.slice(NEWS_AT_FIRST).forEach(add);
+      });
+      wrap.appendChild(more);
+    }
+
     return wrap;
   }
 
